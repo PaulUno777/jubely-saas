@@ -1,11 +1,37 @@
 # Jubely backend (Phase 1)
 
+[![Backend CI](https://github.com/PaulUno777/jubely-saas/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/PaulUno777/jubely-saas/actions/workflows/backend-ci.yml)
+
 Go API for **Option 2 onboarding**: only a **superadmin** creates tenants; **merchant admins** join via **invitation token**. Tenants carry `self_serve` (default `false`) so Phase 3 can enable public registration without schema changes.
 
 ## Requirements
 
 - Go 1.23+
 - PostgreSQL 14+ (Supabase works)
+
+## Local dev (Docker Compose)
+
+This repository will host multiple projects, so the compose file is at root:
+- `docker-compose.yml`
+
+### Start local stack
+
+```bash
+docker compose up --build
+```
+
+Services:
+- API: `http://localhost:8080`
+- PostgreSQL: `localhost:5432` (`jubely` / `jubely`)
+
+### Notes
+- `DATABASE_URL` is overridden in compose to use the `postgres` service.
+- Keep `backend/.env` for other vars (`JWT_SECRET`, `BOOTSTRAP_SECRET`, etc.).
+- Stop stack:
+
+```bash
+docker compose down
+```
 
 ## Environment
 

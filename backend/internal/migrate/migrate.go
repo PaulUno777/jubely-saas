@@ -36,29 +36,15 @@ func Up(ctx context.Context, pool *pgxpool.Pool) error {
 		if err != nil {
 			return err
 		}
-		stmts := statementsFromSQL(string(b))
-		for i, stmt := range stmts {
-			if _, err := pool.Exec(ctx, stmt); err != nil {
-				return fmt.Errorf("%s stmt %d: %w", name, i+1, err)
-			}
+		sql := strings.TrimSpace(string(b))
+		if sql == "" {
+			continue
+		}
+		// Execute the full migration file as one script.
+		// This supports PL/pgSQL DO blocks and avoids fragile semicolon splitting.
+		if _, err := pool.Exec(ctx, sql); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
 		}
 	}
 	return nil
-}
-
-func statementsFromSQL(sql string) []string {
-	sql = strings.TrimSpace(sql)
-	if sql == "" {
-		return nil
-	}
-	parts := strings.Split(sql, ";")
-	var out []string
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
-		out = append(out, p)
-	}
-	return out
 }

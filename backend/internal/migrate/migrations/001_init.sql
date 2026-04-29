@@ -1,9 +1,15 @@
 -- Jubely Phase 1 schema: tenants (self_serve), users, invitations, ledger stubs.
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TYPE user_role AS ENUM ('superadmin', 'merchant_admin', 'staff', 'customer');
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+        CREATE TYPE user_role AS ENUM ('superadmin', 'merchant_admin', 'staff', 'customer');
+    END IF;
+END
+$$;
 
-CREATE TABLE tenants (
+CREATE TABLE IF NOT EXISTS tenants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
@@ -12,7 +18,7 @@ CREATE TABLE tenants (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     email TEXT NOT NULL,
@@ -21,15 +27,15 @@ CREATE TABLE users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX idx_users_superadmin_email
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_superadmin_email
     ON users (lower(email))
     WHERE tenant_id IS NULL AND role = 'superadmin';
 
-CREATE UNIQUE INDEX idx_users_tenant_email
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_tenant_email
     ON users (tenant_id, lower(email))
     WHERE tenant_id IS NOT NULL;
 
-CREATE TABLE merchant_invitations (
+CREATE TABLE IF NOT EXISTS merchant_invitations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     email TEXT NOT NULL,
@@ -41,10 +47,10 @@ CREATE TABLE merchant_invitations (
     CONSTRAINT merchant_invitations_role_chk CHECK (role IN ('merchant_admin', 'staff'))
 );
 
-CREATE INDEX idx_merchant_invitations_tenant ON merchant_invitations(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_merchant_invitations_tenant ON merchant_invitations(tenant_id);
 
 -- Event-sourcing placeholder (Phase 2+)
-CREATE TABLE point_events (
+CREATE TABLE IF NOT EXISTS point_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     enrollment_id UUID NULL,
@@ -54,9 +60,9 @@ CREATE TABLE point_events (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_point_events_tenant_created ON point_events(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_point_events_tenant_created ON point_events(tenant_id, created_at DESC);
 
-CREATE TABLE points_rules (
+CREATE TABLE IF NOT EXISTS points_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     rule_json JSONB NOT NULL,
