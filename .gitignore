@@ -6,6 +6,9 @@
 .cursor/rules/**
 !.cursor/rules/architecture.md
 /context/template_inspirations
+**/node_modules/
+**/.next/
+**/dist/
 backend/.gocache/
 backend/.gopath/
 backend/bin/
