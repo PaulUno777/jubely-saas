@@ -1,0 +1,115 @@
+:root {
+  --jubely-bg: #faf3e0;
+  --jubely-surface: #ffffff;
+  --jubely-text: #3d405b;
+  --jubely-text-muted: rgba(61, 64, 91, 0.72);
+  --jubely-primary: #c1440e;
+  --jubely-primary-strong: #a3390c;
+  --jubely-accent: #f2cc8f;
+  --jubely-accent-2: #81b29a;
+  --jubely-border: rgba(45, 27, 18, 0.12);
+  --jubely-radius-lg: 14px;
+  --jubely-radius-md: 10px;
+  --jubely-font-body: "DM Sans", system-ui, sans-serif;
+  --jubely-font-display: "Instrument Serif", Georgia, serif;
+  --jubely-font-mono: "DM Mono", ui-monospace, monospace;
+
+  /* shadcn/ui semantic tokens — Jubilee Terra light */
+  --background: #faf3e0;
+  --foreground: #3d405b;
+  --card: #ffffff;
+  --card-foreground: #3d405b;
+  --popover: #ffffff;
+  --popover-foreground: #3d405b;
+  --primary: #c1440e;
+  --primary-foreground: #ffffff;
+  --secondary: #f2cc8f;
+  --secondary-foreground: #3d405b;
+  --muted: #f5ead3;
+  --muted-foreground: rgba(61, 64, 91, 0.72);
+  --accent: #81b29a;
+  --accent-foreground: #3d405b;
+  --destructive: #dc2626;
+  --destructive-foreground: #fafafa;
+  --border: rgba(45, 27, 18, 0.12);
+  --input: rgba(45, 27, 18, 0.12);
+  --ring: #c1440e;
+  --radius: 0.625rem;
+
+  /* Sidebar tokens */
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--muted);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* Status tokens */
+  --status-active: #22c55e;
+  --status-active-bg: rgba(34, 197, 94, 0.12);
+  --status-late: #f59e0b;
+  --status-late-bg: rgba(245, 158, 11, 0.12);
+  --status-suspended: #ef4444;
+  --status-suspended-bg: rgba(239, 68, 68, 0.12);
+  --status-trial: #8b5cf6;
+  --status-trial-bg: rgba(139, 92, 246, 0.12);
+}
+
+.dark {
+  --jubely-bg: #0f0f0f;
+  --jubely-surface: #1c1c1c;
+  --jubely-text: #f0f0f0;
+  --jubely-text-muted: rgba(240, 240, 240, 0.5);
+  --jubely-primary: #3ecf8e;
+  --jubely-primary-strong: #2eaf74;
+  --jubely-accent: #f4a228;
+  --jubely-accent-2: #3ecf8e;
+  --jubely-border: rgba(255, 255, 255, 0.08);
+  --jubely-font-body: "DM Sans", system-ui, sans-serif;
+  --jubely-font-display: "Instrument Serif", Georgia, serif;
+  --jubely-font-mono: "DM Mono", ui-monospace, monospace;
+
+  /* shadcn/ui semantic tokens — Jubilee Dark */
+  --background: #0f0f0f;
+  --foreground: #f0f0f0;
+  --card: #1c1c1c;
+  --card-foreground: #f0f0f0;
+  --popover: #242424;
+  --popover-foreground: #f0f0f0;
+  --primary: #3ecf8e;
+  --primary-foreground: #0f0f0f;
+  --secondary: #2a2a2a;
+  --secondary-foreground: #f0f0f0;
+  --muted: #262626;
+  --muted-foreground: rgba(240, 240, 240, 0.45);
+  --accent: #f4a228;
+  --accent-foreground: #0f0f0f;
+  --destructive: #ef4444;
+  --destructive-foreground: #f0f0f0;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.06);
+  --ring: #3ecf8e;
+  --radius: 0.75rem;
+
+  /* Sidebar tokens — slightly darker than card for contrast */
+  --sidebar: #161616;
+  --sidebar-foreground: #f0f0f0;
+  --sidebar-primary: #3ecf8e;
+  --sidebar-primary-foreground: #0f0f0f;
+  --sidebar-accent: rgba(255, 255, 255, 0.07);
+  --sidebar-accent-foreground: #f0f0f0;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: #3ecf8e;
+
+  /* Status tokens */
+  --status-active: #22c55e;
+  --status-active-bg: rgba(34, 197, 94, 0.15);
+  --status-late: #f59e0b;
+  --status-late-bg: rgba(245, 158, 11, 0.15);
+  --status-suspended: #ef4444;
+  --status-suspended-bg: rgba(239, 68, 68, 0.15);
+  --status-trial: #8b5cf6;
+  --status-trial-bg: rgba(139, 92, 246, 0.15);
+}

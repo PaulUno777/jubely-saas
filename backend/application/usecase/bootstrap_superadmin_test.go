@@ -36,10 +36,22 @@ func (s *stubUserRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.User
 	return nil, domain.ErrNotFound
 }
 
+func (s *stubUserRepo) UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string, mustChangePassword bool) error {
+	return nil
+}
+
+func (s *stubUserRepo) CountByTenant(ctx context.Context, tenantID uuid.UUID) (int64, error) {
+	return 0, nil
+}
+
+func (s *stubUserRepo) ListPublicByTenant(ctx context.Context, tenantID uuid.UUID, offset, limit int) ([]domain.UserPublic, error) {
+	return nil, nil
+}
+
 type stubHasher struct{}
 
 func (stubHasher) Hash(password string) (string, error) { return "h(" + password + ")", nil }
-func (stubHasher) Compare(hash, password string) error { return nil }
+func (stubHasher) Compare(hash, password string) error  { return nil }
 
 func TestBootstrapSuperadmin_forbidden_when_secret_mismatch(t *testing.T) {
 	t.Parallel()

@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
@@ -10,26 +11,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const ginKeyAuthClaims = "auth_claims"
-
 func AuthMiddleware(signer *authtoken.JWTSigner) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		h := strings.TrimSpace(c.GetHeader("Authorization"))
 		parts := strings.SplitN(h, " ", 2)
 		if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
-			respondError(c, 401, i18n.CodeAuthUnauthorized)
+			respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
 			c.Abort()
 			return
 		}
 		raw := strings.TrimSpace(parts[1])
 		if raw == "" {
-			respondError(c, 401, i18n.CodeAuthUnauthorized)
+			respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
 			c.Abort()
 			return
 		}
 		claims, err := signer.ParseAccessToken(c.Request.Context(), raw)
 		if err != nil {
-			respondError(c, 401, i18n.CodeAuthUnauthorized)
+			respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
 			c.Abort()
 			return
 		}
@@ -42,13 +41,92 @@ func RequireSuperadmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		raw, ok := c.Get(ginKeyAuthClaims)
 		if !ok {
-			respondError(c, 401, i18n.CodeAuthUnauthorized)
+			respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
 			c.Abort()
 			return
 		}
-		claims := raw.(ports.TokenClaims)
+		claims, ok := raw.(ports.TokenClaims)
+		if !ok {
+			respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+			c.Abort()
+			return
+		}
 		if claims.Role != domain.RoleSuperadmin || claims.TenantID != nil {
-			respondError(c, 403, i18n.CodeAuthForbidden)
+			respondError(c, http.StatusForbidden, i18n.CodeAuthForbidden, nil)
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func RequireStaffOrMerchantAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		raw, ok := c.Get(ginKeyAuthClaims)
+		if !ok {
+			respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+			c.Abort()
+			return
+		}
+		claims, ok := raw.(ports.TokenClaims)
+		if !ok {
+			respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+			c.Abort()
+			return
+		}
+		if claims.TenantID == nil {
+			respondError(c, http.StatusForbidden, i18n.CodeAuthForbidden, nil)
+			c.Abort()
+			return
+		}
+		if claims.Role != domain.RoleStaff && claims.Role != domain.RoleMerchantAdmin {
+			respondError(c, http.StatusForbidden, i18n.CodeAuthForbidden, nil)
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func RequireMerchantAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		raw, ok := c.Get(ginKeyAuthClaims)
+		if !ok {
+			respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+			c.Abort()
+			return
+		}
+		claims, ok := raw.(ports.TokenClaims)
+		if !ok {
+			respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+			c.Abort()
+			return
+		}
+		if claims.TenantID == nil || claims.Role != domain.RoleMerchantAdmin {
+			respondError(c, http.StatusForbidden, i18n.CodeAuthForbidden, nil)
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func RequireAdminPortal() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		raw, ok := c.Get(ginKeyAuthClaims)
+		if !ok {
+			respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+			c.Abort()
+			return
+		}
+		claims, ok := raw.(ports.TokenClaims)
+		if !ok {
+			respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+			c.Abort()
+			return
+		}
+		if claims.Role != domain.RoleSuperadmin && claims.Role != domain.RoleMerchantAdmin {
+			respondError(c, http.StatusForbidden, i18n.CodeAuthForbidden, nil)
 			c.Abort()
 			return
 		}

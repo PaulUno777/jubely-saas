@@ -16,7 +16,7 @@ func (s stubClock) Now() time.Time { return s.t }
 
 type stubTenantRepo struct {
 	createErr error
-	created     *domain.Tenant
+	created   *domain.Tenant
 }
 
 func (s *stubTenantRepo) Create(ctx context.Context, t *domain.Tenant) error {
@@ -34,6 +34,20 @@ func (s *stubTenantRepo) FindBySlug(ctx context.Context, slug string) (*domain.T
 
 func (s *stubTenantRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Tenant, error) {
 	return nil, domain.ErrNotFound
+}
+
+func (s *stubTenantRepo) Update(ctx context.Context, t *domain.Tenant) error { return nil }
+
+func (s *stubTenantRepo) ListAll(ctx context.Context, offset, limit int) ([]domain.Tenant, error) {
+	return nil, nil
+}
+
+func (s *stubTenantRepo) CountAll(ctx context.Context) (int64, error) { return 0, nil }
+
+func (s *stubTenantRepo) CountActive(ctx context.Context) (int64, error) { return 0, nil }
+func (s *stubTenantRepo) CountActiveByPlan(ctx context.Context, plan string) (int64, error) {
+	_ = plan
+	return 0, nil
 }
 
 func TestCreateTenant_sets_self_serve_and_slugifies(t *testing.T) {

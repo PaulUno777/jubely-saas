@@ -1,13 +1,16 @@
+-- +goose Up
 -- Jubely Phase 1 schema: tenants (self_serve), users, invitations, ledger stubs.
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- +goose StatementBegin
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
         CREATE TYPE user_role AS ENUM ('superadmin', 'merchant_admin', 'staff', 'customer');
     END IF;
-END
+END;
 $$;
+-- +goose StatementEnd
 
 CREATE TABLE IF NOT EXISTS tenants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -49,7 +52,6 @@ CREATE TABLE IF NOT EXISTS merchant_invitations (
 
 CREATE INDEX IF NOT EXISTS idx_merchant_invitations_tenant ON merchant_invitations(tenant_id);
 
--- Event-sourcing placeholder (Phase 2+)
 CREATE TABLE IF NOT EXISTS point_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -69,3 +71,62 @@ CREATE TABLE IF NOT EXISTS points_rules (
     active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- +goose StatementBegin
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enrollment_status') THEN
+        CREATE TYPE enrollment_status AS ENUM ('active', 'inactive');
+    END IF;
+END;
+$$;
+-- +goose StatementEnd
+
+CREATE TABLE IF NOT EXISTS customers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    phone_e164 TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_tenant_phone
+    ON customers (tenant_id, phone_e164);
+
+CREATE INDEX IF NOT EXISTS idx_customers_tenant ON customers (tenant_id);
+
+CREATE TABLE IF NOT EXISTS enrollments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    status enrollment_status NOT NULL DEFAULT 'active',
+    enrolled_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    left_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_enrollments_tenant ON enrollments(tenant_id, enrolled_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_enrollments_one_active_per_customer
+    ON enrollments (customer_id)
+    WHERE status = 'active' AND left_at IS NULL;
+
+-- +goose StatementBegin
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'point_events_enrollment_id_fk'
+    ) THEN
+        ALTER TABLE point_events
+        ADD CONSTRAINT point_events_enrollment_id_fk
+        FOREIGN KEY (enrollment_id) REFERENCES enrollments(id) ON DELETE SET NULL;
+    END IF;
+END;
+$$;
+-- +goose StatementEnd
+
+-- +goose Down
+-- Baseline rollback intentionally minimal; prefer restore-from-backup in prod.
+SELECT 1;

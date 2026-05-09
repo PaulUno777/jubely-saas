@@ -6,7 +6,7 @@ Go API for **Option 2 onboarding**: only a **superadmin** creates tenants; **mer
 
 ## Requirements
 
-- Go 1.23+
+- **Go**: projects targets **the latest stable Go** (see `go` / `toolchain` in `go.mod`). CI uses `go-version-file: backend/go.mod`. Upgrade with `go get go@latest` and `go get -u ./...` when you intentionally refresh dependencies.
 - PostgreSQL 14+ (Supabase works)
 
 ## Local dev (Docker Compose)
@@ -41,6 +41,7 @@ docker compose down
 | `JWT_SECRET` | yes | Min 32 characters |
 | `JWT_ACCESS_TTL_MINUTES` | no | Default `60` |
 | `HTTP_PORT` | no | Default `8080` |
+| `QR_TOKEN_SECRET` | no | Min 32 chars; defaults to `JWT_SECRET` if omitted (pins QR token signing separately in prod) |
 | `BOOTSTRAP_SECRET` | yes for bootstrap | Shared secret for one-time superadmin creation |
 
 Optional: `.env` in `backend/` (loaded via `godotenv`).
@@ -83,6 +84,74 @@ Authorization: Bearer <token>
 ```
 
 Response includes a **one-time** `token`. Share `GET /v1/invitations/:token` and `POST /v1/invitations/:token/accept` with the merchant.
+
+7. (Optional) Create a staff user for a tenant (not automated in Phase 1): insert a `users` row in Postgres with `role='staff'` for the tenant, then login with `tenant_slug` set to that tenant.
+
+8. Create a customer (staff or merchant admin token required):
+
+```http
+POST /v1/staff/customers
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{"name":"Awa Diop","phone_e164":"+221771234567","email":"awa@example.com"}
+```
+
+Response includes `customer_qr` (HMAC token string) for client display in early phases.
+
+9. Generate a store QR (superadmin token required). This token can be printed/displayed in the store for self-enrollment.
+
+```http
+GET /v1/admin/tenants/<tenantId>/store-qr
+Authorization: Bearer <token>
+```
+
+10. Enroll by scanning a store QR (PWA flow):
+
+```http
+POST /v1/pwa/enrollments/scan
+Content-Type: application/json
+
+{"store_qr":"<storeQrToken>","phone_e164":"+221771234567","name":"Awa Diop"}
+```
+
+Response includes `customer_qr` for client display.
+
+## JSON API (Phase 1 envelope)
+
+All JSON responses use a stable envelope. **`error.message` is localized** from the `Accept-Language` header (supported: `en`, `fr`; fallback `en`). Clients may send **`X-Request-Id`**; otherwise the server generates one and echoes it in `meta`.
+
+**Success (single resource)**
+
+```json
+{ "data": { }, "meta": { "request_id": "…", "locale": "fr" } }
+```
+
+**Success (list / paginated)**
+
+```json
+{
+  "data": [ ],
+  "meta": {
+    "request_id": "…",
+    "locale": "fr",
+    "pagination": { "limit": 20, "offset": 0, "total": 123 }
+  }
+}
+```
+
+**Error**
+
+```json
+{
+  "error": { "code": "error.validation.invalid", "message": "…", "details": { } },
+  "meta": { "request_id": "…", "locale": "fr" }
+}
+```
+
+`error.details` is optional and machine-oriented (stable keys, no user-facing prose). CORS allows and exposes `Accept-Language` and `X-Request-Id` for browser clients.
+
+Manual QA order and UI targets for this iteration are documented under [`context/phase1/`](../context/phase1/) (see `recommandation.md` and screenshots).
 
 ## Migrations
 

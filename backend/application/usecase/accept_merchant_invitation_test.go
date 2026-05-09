@@ -70,6 +70,18 @@ func (m *memUserRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.User,
 	return nil, domain.ErrNotFound
 }
 
+func (m *memUserRepo) UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string, mustChangePassword bool) error {
+	return nil
+}
+
+func (m *memUserRepo) CountByTenant(ctx context.Context, tenantID uuid.UUID) (int64, error) {
+	return 0, nil
+}
+
+func (m *memUserRepo) ListPublicByTenant(ctx context.Context, tenantID uuid.UUID, offset, limit int) ([]domain.UserPublic, error) {
+	return nil, nil
+}
+
 func TestAcceptMerchantInvitation_expired(t *testing.T) {
 	t.Parallel()
 	tid := uuid.New()

@@ -25,6 +25,7 @@ func (s *JWTSigner) SignAccessToken(_ context.Context, c ports.TokenClaims) (str
 		"role":  c.Role.String(),
 		"exp":   exp.Unix(),
 		"iat":   now.Unix(),
+		"mcp":   c.MustChangePassword,
 	}
 	if c.TenantID != nil {
 		claims["tenant_id"] = c.TenantID.String()
@@ -55,6 +56,18 @@ func (s *JWTSigner) ParseAccessToken(_ context.Context, token string) (ports.Tok
 	email, _ := mc["email"].(string)
 	roleStr, _ := mc["role"].(string)
 	role := domain.Role(roleStr)
+	mustChange := false
+	switch v := mc["mcp"].(type) {
+	case bool:
+		mustChange = v
+	case nil:
+		mustChange = false
+	default:
+		// tolerate numeric 0/1 from some JWT libs
+		if f, ok := v.(float64); ok && f != 0 {
+			mustChange = true
+		}
+	}
 
 	var tenantID *uuid.UUID
 	switch v := mc["tenant_id"].(type) {
@@ -71,9 +84,10 @@ func (s *JWTSigner) ParseAccessToken(_ context.Context, token string) (ports.Tok
 	}
 
 	return ports.TokenClaims{
-		UserID:   uid,
-		TenantID: tenantID,
-		Role:     role,
-		Email:    email,
+		UserID:             uid,
+		TenantID:           tenantID,
+		Role:               role,
+		Email:              email,
+		MustChangePassword: mustChange,
 	}, nil
 }

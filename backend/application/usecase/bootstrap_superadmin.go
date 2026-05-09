@@ -11,9 +11,9 @@ import (
 )
 
 type BootstrapSuperadmin struct {
-	Users   ports.UserRepository
-	Hasher  ports.PasswordHasher
-	Secret  string
+	Users  ports.UserRepository
+	Hasher ports.PasswordHasher
+	Secret string
 }
 
 type BootstrapSuperadminInput struct {

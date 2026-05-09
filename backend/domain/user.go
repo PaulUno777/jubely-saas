@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,12 +10,14 @@ import (
 // User is an authenticated operator or end-user.
 // Superadmin has TenantID=nil.
 type User struct {
-	ID           uuid.UUID
-	TenantID     *uuid.UUID
-	Email        string
-	PasswordHash string
-	Role         Role
-	CreatedAt    time.Time
+	ID                 uuid.UUID
+	TenantID           *uuid.UUID
+	Email              string
+	PasswordHash       string
+	Role               Role
+	Permissions        json.RawMessage
+	MustChangePassword bool
+	CreatedAt          time.Time
 }
 
 func (u *User) IsSuperadmin() bool {

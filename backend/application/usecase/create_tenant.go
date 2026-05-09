@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -20,6 +21,10 @@ type CreateTenantInput struct {
 	Slug string
 	// SelfServe defaults to false at DB level; explicit for API documentation / future toggles.
 	SelfServe bool
+	// Plan is one of starter | growth | business (Phase 1). Empty defaults to starter.
+	Plan string
+	// Settings optional JSON object (e.g. logo_url, city). Nil or empty → {}.
+	Settings *json.RawMessage
 }
 
 type CreateTenantOutput struct {
@@ -38,14 +43,32 @@ func (uc *CreateTenant) Execute(ctx context.Context, in CreateTenantInput) (*Cre
 	if name == "" || slug == "" {
 		return nil, fmt.Errorf("%w", domain.ErrInvalid)
 	}
+	plan := strings.TrimSpace(strings.ToLower(in.Plan))
+	if plan == "" {
+		plan = "starter"
+	}
+	if !domain.IsValidTenantPlan(plan) {
+		return nil, fmt.Errorf("%w", domain.ErrInvalid)
+	}
 	now := uc.Clock.Now()
+	settings := json.RawMessage(`{}`)
+	if in.Settings != nil && len(*in.Settings) > 0 {
+		if !json.Valid(*in.Settings) {
+			return nil, fmt.Errorf("%w", domain.ErrInvalid)
+		}
+		settings = append(json.RawMessage(nil), (*in.Settings)...)
+	}
 	t := &domain.Tenant{
-		ID:        uuid.New(),
-		Name:      name,
-		Slug:      slug,
-		SelfServe: in.SelfServe, // MVP Option 2: callers pass false; Phase 3 can pass true.
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:             uuid.New(),
+		Name:           name,
+		Slug:           slug,
+		SelfServe:      in.SelfServe, // MVP Option 2: callers pass false; Phase 3 can pass true.
+		Active:         true,
+		Plan:           plan,
+		ConflictPolicy: "HIGHEST_WINS",
+		Settings:       settings,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 	if err := uc.Tenants.Create(ctx, t); err != nil {
 		return nil, err

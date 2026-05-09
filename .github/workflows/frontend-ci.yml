@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "apps/**"
+      - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -11,6 +12,7 @@ on:
   pull_request:
     paths:
       - "apps/**"
+      - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"

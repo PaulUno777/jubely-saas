@@ -8,10 +8,11 @@ import (
 )
 
 type TokenClaims struct {
-	UserID   uuid.UUID
-	TenantID *uuid.UUID
-	Role     domain.Role
-	Email    string
+	UserID             uuid.UUID
+	TenantID           *uuid.UUID
+	Role               domain.Role
+	Email              string
+	MustChangePassword bool
 }
 
 type TokenSigner interface {

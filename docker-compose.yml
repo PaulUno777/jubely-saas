@@ -9,13 +9,14 @@ services:
     working_dir: /workspace/backend
     command: sh -c "go mod download && go run ./cmd/api"
     ports:
-      - "8080:8080"
+      - "8082:8080"
     env_file:
       - backend/.env
     environment:
       DATABASE_URL: postgresql://jubely:jubely@postgres:5432/jubely
     volumes:
       - ./backend:/workspace/backend
+      - ./backend/.uploads:/workspace/backend/.uploads
       - jubely-go-cache:/go/pkg/mod
       - jubely-go-build:/root/.cache/go-build
     depends_on:
@@ -40,6 +41,17 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    networks:
+      - jubely
+
+  adminer:
+    image: adminer:4
+    container_name: jubely-adminer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
     networks:
       - jubely
 

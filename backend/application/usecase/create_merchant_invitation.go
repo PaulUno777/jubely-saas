@@ -15,11 +15,11 @@ import (
 )
 
 type CreateMerchantInvitation struct {
-	Tenants      ports.TenantRepository
-	Invitations  ports.InvitationRepository
-	Clock        ports.Clock
-	TokenTTL     time.Duration
-	DefaultRole  domain.Role
+	Tenants     ports.TenantRepository
+	Invitations ports.InvitationRepository
+	Clock       ports.Clock
+	TokenTTL    time.Duration
+	DefaultRole domain.Role
 }
 
 type CreateMerchantInvitationInput struct {
