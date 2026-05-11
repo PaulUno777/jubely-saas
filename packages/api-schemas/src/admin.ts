@@ -9,6 +9,7 @@ export const tenantSchema = z.object({
   active: z.boolean(),
   plan: z.string(),
   conflict_policy: z.string().optional(),
+  logo_url: z.string().optional(),
   settings: z.unknown(),
   created_at: z.union([z.string(), z.date(), z.number()]).optional(),
   updated_at: z.union([z.string(), z.date(), z.number()]).optional(),

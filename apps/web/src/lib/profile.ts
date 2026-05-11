@@ -1,0 +1,43 @@
+export type AppProfile = "admin" | "agent" | "customer";
+
+export type ProfileThemeConfig = {
+  defaultTheme: "light" | "dark";
+  enableSystem: boolean;
+  storageKey: string;
+};
+
+export const profileThemeConfig: Record<AppProfile, ProfileThemeConfig> = {
+  admin: {
+    defaultTheme: "dark",
+    enableSystem: false,
+    storageKey: "jubely-theme-admin",
+  },
+  agent: {
+    defaultTheme: "light",
+    enableSystem: true,
+    storageKey: "jubely-theme-agent",
+  },
+  customer: {
+    defaultTheme: "light",
+    enableSystem: true,
+    storageKey: "jubely-theme-customer",
+  },
+};
+
+export const publicThemeConfig: ProfileThemeConfig = {
+  defaultTheme: "light",
+  enableSystem: true,
+  storageKey: "jubely-theme-public",
+};
+
+export function detectProfile(pathname: string): AppProfile | null {
+  if (pathname.startsWith("/root")) return "admin";
+  if (pathname.startsWith("/store") || pathname.startsWith("/agent")) return "agent";
+  if (pathname.startsWith("/customer")) return "customer";
+  return null;
+}
+
+export function themeConfigForPath(pathname: string): ProfileThemeConfig {
+  const profile = detectProfile(pathname);
+  return profile ? profileThemeConfig[profile] : publicThemeConfig;
+}

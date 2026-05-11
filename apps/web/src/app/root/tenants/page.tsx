@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { CreateTenantWizard } from "@/components/root/create-tenant-wizard";
+import { TenantLogo } from "@/components/root/tenant-logo";
 import { useSession } from "@/hooks/useSession";
 import { adminListTenants, adminPatchTenant } from "@/lib/adminApi";
 
@@ -122,9 +123,12 @@ export default function RootTenantsPage() {
                   rows.map((t) => (
                     <TableRow key={t.tenant_id}>
                       <TableCell>
-                        <div>
-                          <p className="text-sm font-medium">{t.name}</p>
-                          <p className="text-xs text-muted-foreground font-mono">{t.slug}</p>
+                        <div className="flex items-center gap-3">
+                          <TenantLogo tenant={t} size="sm" />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{t.name}</p>
+                            <p className="truncate text-xs font-mono text-muted-foreground">{t.slug}</p>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>

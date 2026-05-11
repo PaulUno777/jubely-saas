@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { agentLoginFormSchema, type AgentLoginForm } from "@jubely/api-schemas";
 import { useMutation } from "@tanstack/react-query";
 import { Key, Loader2, LogIn, Smartphone } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -14,6 +15,7 @@ import {
   Button,
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -23,6 +25,8 @@ import {
   MethodCard,
   OtpInput,
 } from "@jubely/ui";
+import { LanguageSelector } from "@/components/preferences/language-selector";
+import { ThemeSelector } from "@/components/preferences/theme-selector";
 import { API_BASE_URL } from "@/lib/env";
 import { decodeSessionFromJWT, saveSession } from "@/lib/session";
 import { startAuthentication } from "@simplewebauthn/browser";
@@ -44,21 +48,24 @@ type LoginResponse = LoginMFARequired | LoginOK;
 
 export default function LoginPage() {
   const router = useRouter();
-  const steps = useMemo(
+  const tLogin = useTranslations("auth.login");
+  const tForm = useTranslations("common.form");
+  const tErrors = useTranslations("errors");
+
+  const mfaSteps = useMemo(
     () => [
-      { label: "Identité" },
-      { label: "Méthode 2FA" },
-      { label: "Vérification" },
-      { label: "Passkey" },
+      { label: tLogin("mfaSteps.identity") },
+      { label: tLogin("mfaSteps.method") },
+      { label: tLogin("mfaSteps.verification") },
     ],
-    [],
+    [tLogin],
   );
 
   const [flow, setFlow] = useState<
     | { screen: "identity" }
-    | { screen: "method"; challengeToken: string; methods: ("totp" | "passkey")[] }
-    | { screen: "totp"; challengeToken: string }
-    | { screen: "passkey"; challengeToken: string }
+    | { screen: "method"; challengeToken: string; methods: MFAMethod[] }
+    | { screen: "totp"; challengeToken: string; availableMethods: MFAMethod[] }
+    | { screen: "passkey"; challengeToken: string; availableMethods: MFAMethod[] }
   >({ screen: "identity" });
 
   const [otp, setOtp] = useState("");
@@ -83,7 +90,7 @@ export default function LoginPage() {
       const msg =
         typeof (json as { error?: { message?: unknown } })?.error?.message === "string"
           ? ((json as { error: { message: string } }).error.message as string)
-          : "Erreur";
+          : tErrors("generic");
       throw new Error(msg);
     }
     return (json as { data?: unknown })?.data ?? json;
@@ -104,22 +111,22 @@ export default function LoginPage() {
         const methods = Array.isArray(resp.methods) ? resp.methods : [];
         const token = String(resp.challenge_token ?? "");
         if (!token) {
-          toast.error("Erreur: challenge manquant");
+          toast.error(tErrors("missingChallenge"));
           return;
         }
         if (methods.length > 1) {
           setFlow({ screen: "method", challengeToken: token, methods });
         } else if (methods[0] === "passkey") {
-          setFlow({ screen: "passkey", challengeToken: token });
+          setFlow({ screen: "passkey", challengeToken: token, availableMethods: methods });
         } else {
-          setFlow({ screen: "totp", challengeToken: token });
+          setFlow({ screen: "totp", challengeToken: token, availableMethods: methods });
         }
         return;
       }
 
       const access = String((resp as LoginOK)?.access_token ?? "");
       if (!access) {
-        toast.error("Connexion invalide");
+        toast.error(tErrors("invalidLogin"));
         return;
       }
       saveSession(access);
@@ -133,25 +140,31 @@ export default function LoginPage() {
       else if (sess?.role === "staff") router.push("/agent");
       else router.push("/customer");
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : tErrors("generic")),
   });
 
-  const currentStep =
-    flow.screen === "identity" ? 0 : flow.screen === "method" ? 1 : flow.screen === "totp" ? 2 : 3;
+  const showMfaStepNav = flow.screen !== "identity";
+  const mfaCurrentStep = flow.screen === "method" ? 1 : 2;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-4 py-12 bg-background">
+    <div className="relative flex min-h-screen flex-col items-center justify-center gap-8 px-4 py-12 bg-background">
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <LanguageSelector profile="agent" />
+        <ThemeSelector profile="agent" />
+      </div>
       <JubelyLogo size="md" />
       <div className="w-full max-w-xl">
-        <AuthStepNav steps={steps} currentStep={currentStep} className="mb-6" />
+        {showMfaStepNav ? (
+          <AuthStepNav steps={mfaSteps} currentStep={mfaCurrentStep} className="mb-6" />
+        ) : null}
 
         {flow.screen === "identity" ? (
-          <AuthCard currentStep={1} totalSteps={3}>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">ACCÈS</p>
-            <h1 className="mt-2 font-display text-3xl font-normal tracking-tight">Bonjour.</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Connectez-vous pour accéder à votre portail (root, store, agent, customer).
+          <AuthCard currentStep={1} totalSteps={1}>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {tLogin("accessEyebrow")}
             </p>
+            <h1 className="mt-2 font-display text-3xl font-normal tracking-tight">{tLogin("title")}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">{tLogin("subtitle")}</p>
 
             <div className="mt-6">
               <Form {...form}>
@@ -161,7 +174,7 @@ export default function LoginPage() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Adresse email</FormLabel>
+                        <FormLabel>{tForm("email")}</FormLabel>
                         <FormControl>
                           <Input type="email" autoComplete="email" {...field} />
                         </FormControl>
@@ -174,7 +187,7 @@ export default function LoginPage() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Mot de passe</FormLabel>
+                        <FormLabel>{tForm("password")}</FormLabel>
                         <FormControl>
                           <Input type="password" autoComplete="current-password" {...field} />
                         </FormControl>
@@ -187,10 +200,15 @@ export default function LoginPage() {
                     name="tenantSlug"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Slug tenant (magasin)</FormLabel>
+                        <FormLabel>{tLogin("tenantSlugLabel")}</FormLabel>
                         <FormControl>
-                          <Input autoComplete="off" placeholder="chez-mama" {...field} />
+                          <Input
+                            autoComplete="off"
+                            placeholder={tLogin("tenantSlugPlaceholder")}
+                            {...field}
+                          />
                         </FormControl>
+                        <FormDescription>{tLogin("tenantSlugHelp")}</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -198,7 +216,7 @@ export default function LoginPage() {
 
                   <Button type="submit" className="w-full" disabled={loginMut.isPending}>
                     {loginMut.isPending ? <Loader2 className="animate-spin" /> : <LogIn size={16} />}
-                    Continuer
+                    {tForm("continue")}
                   </Button>
                 </form>
               </Form>
@@ -208,36 +226,54 @@ export default function LoginPage() {
 
         {flow.screen === "method" ? (
           <AuthCard currentStep={2} totalSteps={3}>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">DEUXIÈME FACTEUR</p>
-            <h2 className="mt-2 font-display text-3xl font-normal tracking-tight">Choisir la méthode</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Comment souhaitez-vous vérifier votre identité ?</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {tLogin("method.eyebrow")}
+            </p>
+            <h2 className="mt-2 font-display text-3xl font-normal tracking-tight">{tLogin("method.title")}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{tLogin("method.subtitle")}</p>
 
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <MethodCard
-                icon={<Smartphone size={20} />}
-                title="App TOTP"
-                description="Google Auth, Authy, 1Password"
-                selected={false}
-                onClick={() => setFlow({ screen: "totp", challengeToken: flow.challengeToken })}
-              />
-              <MethodCard
-                icon={<Key size={20} />}
-                title="Passkey"
-                description="Face ID, Touch ID, clé FIDO2"
-                selected={false}
-                onClick={() => setFlow({ screen: "passkey", challengeToken: flow.challengeToken })}
-              />
+            <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
+              {flow.methods.includes("totp") ? (
+                <MethodCard
+                  icon={<Smartphone size={20} />}
+                  title={tLogin("method.totpTitle")}
+                  description={tLogin("method.totpDescription")}
+                  selected={false}
+                  onClick={() =>
+                    setFlow({
+                      screen: "totp",
+                      challengeToken: flow.challengeToken,
+                      availableMethods: flow.methods,
+                    })
+                  }
+                />
+              ) : null}
+              {flow.methods.includes("passkey") ? (
+                <MethodCard
+                  icon={<Key size={20} />}
+                  title={tLogin("method.passkeyTitle")}
+                  description={tLogin("method.passkeyDescription")}
+                  selected={false}
+                  onClick={() =>
+                    setFlow({
+                      screen: "passkey",
+                      challengeToken: flow.challengeToken,
+                      availableMethods: flow.methods,
+                    })
+                  }
+                />
+              ) : null}
             </div>
           </AuthCard>
         ) : null}
 
         {flow.screen === "totp" ? (
           <AuthCard currentStep={3} totalSteps={3}>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">APP AUTHENTICATOR</p>
-            <h2 className="mt-2 font-display text-3xl font-normal tracking-tight">Code à 6 chiffres</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Ouvrez Google Authenticator ou Authy et saisissez le code.
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {tLogin("totp.eyebrow")}
             </p>
+            <h2 className="mt-2 font-display text-3xl font-normal tracking-tight">{tLogin("totp.title")}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{tLogin("totp.subtitle")}</p>
             <div className="mt-6">
               <OtpInput value={otp} onChange={setOtp} />
             </div>
@@ -248,7 +284,7 @@ export default function LoginPage() {
                 type="button"
                 className="flex-1"
               >
-                Retour
+                {tForm("back")}
               </Button>
               <Button
                 type="button"
@@ -261,7 +297,7 @@ export default function LoginPage() {
                       code: otp,
                     });
                     const access = String((data as { access_token?: unknown })?.access_token ?? "");
-                    if (!access) throw new Error("Réponse invalide");
+                    if (!access) throw new Error(tErrors("invalidLogin"));
                     saveSession(access);
                     if ((data as { must_change_password?: unknown })?.must_change_password) {
                       router.push("/account/password");
@@ -273,11 +309,11 @@ export default function LoginPage() {
                     else if (sess?.role === "staff") router.push("/agent");
                     else router.push("/customer");
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : "Erreur");
+                    toast.error(e instanceof Error ? e.message : tErrors("generic"));
                   }
                 }}
               >
-                Vérifier le code
+                {tLogin("totp.verify")}
               </Button>
             </div>
           </AuthCard>
@@ -285,19 +321,25 @@ export default function LoginPage() {
 
         {flow.screen === "passkey" ? (
           <AuthCard currentStep={3} totalSteps={3}>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">PASSKEY</p>
-            <h2 className="mt-2 font-display text-3xl font-normal tracking-tight">Vérification biométrique</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Utilisez Face ID, Touch ID ou votre clé de sécurité pour vous connecter sans code.
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {tLogin("passkey.eyebrow")}
             </p>
+            <h2 className="mt-2 font-display text-3xl font-normal tracking-tight">{tLogin("passkey.title")}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{tLogin("passkey.subtitle")}</p>
             <div className="mt-6 flex gap-2">
               <Button
                 variant="secondary"
-                onClick={() => setFlow({ screen: "method", challengeToken: flow.challengeToken, methods: ["totp", "passkey"] })}
+                onClick={() =>
+                  setFlow({
+                    screen: "method",
+                    challengeToken: flow.challengeToken,
+                    methods: flow.availableMethods,
+                  })
+                }
                 type="button"
                 className="flex-1"
               >
-                Retour
+                {tForm("back")}
               </Button>
               <Button
                 type="button"
@@ -314,7 +356,7 @@ export default function LoginPage() {
                       ...assertion,
                     });
                     const access = String((finish as { access_token?: unknown })?.access_token ?? "");
-                    if (!access) throw new Error("Réponse invalide");
+                    if (!access) throw new Error(tErrors("invalidLogin"));
                     saveSession(access);
                     if ((finish as { must_change_password?: unknown })?.must_change_password) {
                       router.push("/account/password");
@@ -326,12 +368,12 @@ export default function LoginPage() {
                     else if (sess?.role === "staff") router.push("/agent");
                     else router.push("/customer");
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : "Erreur");
+                    toast.error(e instanceof Error ? e.message : tErrors("generic"));
                   }
                 }}
               >
                 <Key size={16} />
-                Authentifier avec passkey
+                {tLogin("passkey.authenticate")}
               </Button>
             </div>
           </AuthCard>
@@ -340,4 +382,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

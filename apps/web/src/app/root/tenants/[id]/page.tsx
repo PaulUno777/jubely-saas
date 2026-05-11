@@ -39,7 +39,10 @@ import { toast } from "sonner";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { useSession } from "@/hooks/useSession";
+import { TenantLogo } from "@/components/root/tenant-logo";
+import { TenantLogoUpload } from "@/components/root/tenant-logo-upload";
 import { adminCreateTenantUser, adminGetTenant, adminListTenantUsers, adminPatchTenant, adminUploadTenantLogo } from "@/lib/adminApi";
+import { tenantLogoUrl } from "@/lib/tenantLogo";
 
 function TenantInfoFields({
   tenant,
@@ -80,21 +83,20 @@ function TenantInfoFields({
     },
   });
 
+  const settingsRecord =
+    typeof tenant.settings === "object" && tenant.settings !== null && !Array.isArray(tenant.settings)
+      ? (tenant.settings as Record<string, unknown>)
+      : {};
+  const currentLogoUrl = tenantLogoUrl(tenant);
+
   const logoMut = useMutation({
     mutationFn: async () => {
       if (!logoFile) throw new Error("Fichier manquant");
-      if (logoFile.size > 2 * 1024 * 1024) throw new Error("Logo trop lourd (max 2MB).");
-      if (!logoFile.type.startsWith("image/")) throw new Error("Logo invalide (image uniquement).");
-
       const { url } = await adminUploadTenantLogo({ accessToken, file: logoFile });
-      const prevSettings =
-        typeof tenant.settings === "object" && tenant.settings !== null && !Array.isArray(tenant.settings)
-          ? (tenant.settings as Record<string, unknown>)
-          : {};
       return adminPatchTenant({
         accessToken,
         tenantId,
-        body: { settings: { ...prevSettings, logo_url: url } },
+        body: { settings: { ...settingsRecord, logo_url: url } },
       });
     },
     onSuccess: () => {
@@ -108,11 +110,41 @@ function TenantInfoFields({
     },
   });
 
+  const removeLogoMut = useMutation({
+    mutationFn: async () => {
+      const next = { ...settingsRecord };
+      delete next.logo_url;
+      return adminPatchTenant({
+        accessToken,
+        tenantId,
+        body: { settings: next },
+      });
+    },
+    onSuccess: () => {
+      setLogoFile(null);
+      void qc.invalidateQueries({ queryKey: ["admin", "tenant", tenantId] });
+      void qc.invalidateQueries({ queryKey: ["admin", "tenants"] });
+      toast.success("Logo retiré");
+    },
+    onError: (e) => {
+      if (!(e instanceof Error && e.message === "Unauthorized")) toast.error(e instanceof Error ? e.message : "Erreur");
+    },
+  });
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Informations</CardTitle>
-        <CardDescription>Identité, plan et politique de conflit (Phase 4).</CardDescription>
+      <CardHeader className="space-y-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <TenantLogo tenant={tenant} size="lg" />
+          <div className="min-w-0">
+            <CardTitle className="truncate">{name}</CardTitle>
+            <CardDescription className="font-mono">{tenant.slug}</CardDescription>
+          </div>
+        </div>
+        <div>
+          <CardTitle className="text-base">Informations</CardTitle>
+          <CardDescription>Identité, plan et politique de conflit (Phase 4).</CardDescription>
+        </div>
       </CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2 md:col-span-2">
@@ -140,40 +172,17 @@ function TenantInfoFields({
           <input id="t-active" type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
           <Label htmlFor="t-active">Tenant actif</Label>
         </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="t-logo">Logo</Label>
-          <Input
-            id="t-logo"
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/svg+xml"
-            onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+        <div className="md:col-span-2 rounded-xl border border-border bg-muted/20 p-4">
+          <TenantLogoUpload
+            name={name.trim() || tenant.name}
+            currentUrl={currentLogoUrl}
+            file={logoFile}
+            onFileChange={setLogoFile}
+            onSave={() => logoMut.mutate()}
+            onRemove={() => removeLogoMut.mutate()}
+            saving={logoMut.isPending}
+            removing={removeLogoMut.isPending}
           />
-          <div className="flex items-center justify-between gap-3">
-            {logoFile ? (
-              <p className="text-xs text-muted-foreground">
-                Sélectionné: <span className="font-mono">{logoFile.name}</span> ({Math.round(logoFile.size / 1024)} KB)
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Actuel:{" "}
-                {typeof (tenant as unknown as { logo_url?: unknown }).logo_url === "string" &&
-                (tenant as unknown as { logo_url: string }).logo_url ? (
-                  <span className="font-mono break-all">{(tenant as unknown as { logo_url: string }).logo_url}</span>
-                ) : (
-                  "—"
-                )}
-              </p>
-            )}
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!logoFile || logoMut.isPending}
-              onClick={() => logoMut.mutate()}
-            >
-              {logoMut.isPending ? <Loader2 className="animate-spin" size={16} /> : null}
-              Upload
-            </Button>
-          </div>
         </div>
         <div className="md:col-span-2">
           <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !name.trim()}>
@@ -241,13 +250,23 @@ export default function TenantDetailPage() {
   return (
     <>
       <Header fixed>
-        <div className="flex flex-1 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/root/tenants" aria-label="Retour">
               <ArrowLeft size={18} />
             </Link>
           </Button>
-          <h1 className="text-base font-semibold">Détail tenant</h1>
+          {t ? (
+            <>
+              <TenantLogo tenant={t} size="sm" />
+              <div className="min-w-0">
+                <h1 className="truncate text-base font-semibold">{t.name}</h1>
+                <p className="truncate font-mono text-xs text-muted-foreground">{t.slug}</p>
+              </div>
+            </>
+          ) : (
+            <h1 className="text-base font-semibold">Détail tenant</h1>
+          )}
         </div>
       </Header>
 

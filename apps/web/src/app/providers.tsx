@@ -1,10 +1,9 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider } from "next-themes";
 import { useEffect, useState } from "react";
+import { ProfileThemeProvider } from "@/components/preferences/profile-theme-provider";
 import { captureInstallPrompt } from "@/lib/pwaInstall";
-import { Toaster } from "sonner";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -21,13 +20,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ThemeProvider attribute="class" forcedTheme="dark" enableSystem={false}>
-      <QueryClientProvider client={queryClient}>
-        {children}
-        <Toaster richColors theme="dark" />
-      </QueryClientProvider>
-    </ThemeProvider>
+    <ProfileThemeProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </ProfileThemeProvider>
   );
 }
-
-

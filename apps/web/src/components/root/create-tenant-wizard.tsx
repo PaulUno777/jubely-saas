@@ -18,6 +18,7 @@ import {
 import { Check, Copy, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { TenantLogoUpload } from "@/components/root/tenant-logo-upload";
 import { adminCreateTenant, adminCreateTenantUser, adminPatchTenant, adminUploadTenantLogo } from "@/lib/adminApi";
 
 const SLUG_RE = /^[a-z0-9-]{3,40}$/;
@@ -119,10 +120,6 @@ export function CreateTenantWizard({ open, onOpenChange, accessToken, onFinished
   const createMut = useMutation({
     mutationFn: async () => {
       if (!slugOk) throw new Error("Slug invalide (3–40 caractères, a-z 0-9 tirets).");
-      if (logoFile) {
-        if (logoFile.size > 2 * 1024 * 1024) throw new Error("Logo trop lourd (max 2MB).");
-        if (!logoFile.type.startsWith("image/")) throw new Error("Logo invalide (image uniquement).");
-      }
       const tenant = await adminCreateTenant({
         accessToken,
         body: { name: name.trim(), slug: slugValue.trim(), plan, self_serve: false },
@@ -200,7 +197,7 @@ export function CreateTenantWizard({ open, onOpenChange, accessToken, onFinished
                 />
                 {!slugOk ? <p className="text-xs text-destructive">Format requis : {SLUG_RE.toString()}</p> : null}
                 <p className="text-xs text-muted-foreground">
-                  Aperçu : <span className="font-mono">jubilee.app/join/{slugPreview}</span>
+                  Aperçu : <span className="font-mono">jubelee.app/join/{slugPreview}</span>
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -213,19 +210,8 @@ export function CreateTenantWizard({ open, onOpenChange, accessToken, onFinished
                   <Input id="ct-sector" value={sector} onChange={(e) => setSector(e.target.value)} placeholder="Restauration" />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ct-logo">Logo (optionnel)</Label>
-                <Input
-                  id="ct-logo"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                  onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
-                />
-                {logoFile ? (
-                  <p className="text-xs text-muted-foreground">
-                    Fichier: <span className="font-mono">{logoFile.name}</span> ({Math.round(logoFile.size / 1024)} KB)
-                  </p>
-                ) : null}
+              <div className="rounded-xl border border-border bg-muted/20 p-4">
+                <TenantLogoUpload name={name.trim() || "Nouvelle enseigne"} file={logoFile} onFileChange={setLogoFile} />
               </div>
             </div>
           ) : null}

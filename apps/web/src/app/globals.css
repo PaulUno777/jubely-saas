@@ -29,6 +29,15 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-reward: var(--reward);
+  --color-reward-surface: var(--reward-surface);
+  --color-reward-foreground: var(--reward-foreground);
+  --color-human: var(--human);
+  --color-human-surface: var(--human-surface);
+  --color-human-foreground: var(--human-foreground);
+  --color-growth: var(--growth);
+  --color-growth-surface: var(--growth-surface);
+  --color-growth-foreground: var(--growth-foreground);
 
   /* Sidebar tokens */
   --color-sidebar: var(--sidebar);
@@ -65,10 +74,31 @@ a {
   text-decoration: none;
 }
 
-:root,
-.dark {
-  --jubely-font-body: var(--font-dm-sans), system-ui, sans-serif;
-  --jubely-font-display: var(--font-instrument-serif), Georgia, serif;
-  --jubely-font-mono: var(--font-dm-mono), ui-monospace, monospace;
+@layer utilities {
+  .surface-human {
+    background-color: var(--human-surface);
+    color: var(--human-foreground);
+  }
+
+  .surface-reward {
+    background-color: var(--reward-surface);
+    color: var(--reward-foreground);
+  }
+
+  .text-reward {
+    color: var(--reward);
+  }
+
+  .text-human {
+    color: var(--human);
+  }
+
+  .border-reward {
+    border-color: color-mix(in srgb, var(--reward) 35%, transparent);
+  }
+
+  .border-human {
+    border-color: color-mix(in srgb, var(--human) 35%, transparent);
+  }
 }
 
