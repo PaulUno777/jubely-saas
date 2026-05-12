@@ -12,6 +12,7 @@
 backend/.gocache/
 backend/.gopath/
 backend/bin/
+backend/.uploads/
 .DS_Store
 .vscode
 

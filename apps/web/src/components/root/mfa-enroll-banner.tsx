@@ -4,11 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Button } from "@jubely/ui";
 import { ShieldAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { authedJson } from "@/lib/http";
 
 type MfaList = { items: { enabled_at?: string | null }[] };
 
 export function MfaEnrollBanner(props: { accessToken: string }) {
+  const t = useTranslations("security.mfaBanner");
   const q = useQuery({
     queryKey: ["me", "mfa", "banner"],
     enabled: Boolean(props.accessToken),
@@ -23,11 +25,11 @@ export function MfaEnrollBanner(props: { accessToken: string }) {
       <div className="flex items-center gap-2">
         <ShieldAlert className="size-4 text-primary" />
         <span>
-          <span className="font-medium">Sécurisez votre compte</span> — activez l&apos;authentification à deux facteurs (TOTP ou passkey).
+          <span className="font-medium">{t("title")}</span> — {t("body")}
         </span>
       </div>
       <Button size="sm" variant="secondary" asChild>
-        <Link href="/account/security">Activer 2FA</Link>
+        <Link href="/account/security">{t("action")}</Link>
       </Button>
     </div>
   );

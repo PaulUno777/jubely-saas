@@ -21,6 +21,7 @@ import {
 } from "@jubely/ui";
 import type { Tenant } from "@jubely/api-schemas";
 import { Eye, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -40,6 +41,8 @@ function filterTenants(list: Tenant[], tab: Tab): Tenant[] {
 }
 
 export default function RootTenantsPage() {
+  const t = useTranslations("admin.tenants");
+  const tErrors = useTranslations("errors");
   const { session } = useSession();
   const token = session?.accessToken;
   const qc = useQueryClient();
@@ -60,10 +63,12 @@ export default function RootTenantsPage() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin", "tenants"] });
-      toast.success("Tenant mis à jour");
+      toast.success(t("toastUpdated"));
     },
     onError: (e) => {
-      if (!(e instanceof Error && e.message === "Unauthorized")) toast.error(e instanceof Error ? e.message : "Erreur");
+      if (!(e instanceof Error && e.message === "Unauthorized")) {
+        toast.error(e instanceof Error ? e.message : tErrors("generic"));
+      }
     },
   });
 
@@ -71,11 +76,11 @@ export default function RootTenantsPage() {
     <>
       <Header fixed>
         <div className="flex flex-1 items-center justify-between">
-          <h1 className="text-base font-semibold">Tenants</h1>
+          <h1 className="text-base font-semibold">{t("title")}</h1>
           <div className="flex items-center gap-2">
             <Button size="sm" className="gap-1.5" onClick={() => setWizardOpen(true)}>
               <Plus size={14} />
-              Nouveau tenant
+              {t("newTenant")}
             </Button>
           </div>
         </div>
@@ -85,14 +90,14 @@ export default function RootTenantsPage() {
         <Card>
           <CardHeader className="space-y-3">
             <div>
-              <CardTitle>Tous les tenants</CardTitle>
-              <CardDescription>Liste en temps réel (`GET /v1/superadmin/tenants`).</CardDescription>
+              <CardTitle>{t("listTitle")}</CardTitle>
+              <CardDescription>{t("listDescription")}</CardDescription>
             </div>
             <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
               <TabsList>
-                <TabsTrigger value="active">Actifs</TabsTrigger>
-                <TabsTrigger value="trial">Trial</TabsTrigger>
-                <TabsTrigger value="all">Tous</TabsTrigger>
+                <TabsTrigger value="active">{t("tabs.active")}</TabsTrigger>
+                <TabsTrigger value="trial">{t("tabs.trial")}</TabsTrigger>
+                <TabsTrigger value="all">{t("tabs.all")}</TabsTrigger>
               </TabsList>
             </Tabs>
           </CardHeader>
@@ -100,60 +105,62 @@ export default function RootTenantsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Enseigne</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("table.store")}</TableHead>
+                  <TableHead>{t("table.plan")}</TableHead>
+                  <TableHead>{t("table.status")}</TableHead>
+                  <TableHead className="text-right">{t("table.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {q.isLoading ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-sm text-muted-foreground">
-                      Chargement…
+                      {t("loading")}
                     </TableCell>
                   </TableRow>
                 ) : q.error ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-sm text-destructive">
-                      Échec chargement tenants
+                      {t("loadError")}
                     </TableCell>
                   </TableRow>
                 ) : rows.length ? (
-                  rows.map((t) => (
-                    <TableRow key={t.tenant_id}>
+                  rows.map((tenant) => (
+                    <TableRow key={tenant.tenant_id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <TenantLogo tenant={t} size="sm" />
+                          <TenantLogo tenant={tenant} size="sm" />
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">{t.name}</p>
-                            <p className="truncate text-xs font-mono text-muted-foreground">{t.slug}</p>
+                            <p className="truncate text-sm font-medium">{tenant.name}</p>
+                            <p className="truncate text-xs font-mono text-muted-foreground">{tenant.slug}</p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
-                          {t.plan}
+                          {tenant.plan}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={t.active ? "active" : "suspended"}>{t.active ? "Actif" : "Suspendu"}</Badge>
+                        <Badge variant={tenant.active ? "active" : "suspended"}>
+                          {tenant.active ? t("statusActive") : t("statusSuspended")}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button size="sm" variant="outline" className="gap-1" asChild>
-                            <Link href={`/root/tenants/${t.tenant_id}`}>
+                            <Link href={`/root/tenants/${tenant.tenant_id}`}>
                               <Eye size={14} />
-                              Voir
+                              {t("view")}
                             </Link>
                           </Button>
                           <Button
                             size="sm"
                             variant="secondary"
                             disabled={patchMut.isPending}
-                            onClick={() => patchMut.mutate({ tenantId: t.tenant_id, active: !t.active })}
+                            onClick={() => patchMut.mutate({ tenantId: tenant.tenant_id, active: !tenant.active })}
                           >
-                            {t.active ? "Suspendre" : "Réactiver"}
+                            {tenant.active ? t("suspend") : t("reactivate")}
                           </Button>
                         </div>
                       </TableCell>
@@ -162,7 +169,7 @@ export default function RootTenantsPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={4} className="text-sm text-muted-foreground">
-                      Aucun tenant dans ce filtre.
+                      {t("empty")}
                     </TableCell>
                   </TableRow>
                 )}

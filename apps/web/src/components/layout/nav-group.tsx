@@ -16,17 +16,19 @@ import {
   useSidebar,
 } from "@jubely/ui";
 import { ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { NavCollapsible, NavGroup, NavLink } from "./types";
 
 export function NavGroup({ title, items }: NavGroup) {
+  const t = useTranslations("navigation");
   const { state } = useSidebar();
   const pathname = usePathname();
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>{title}</SidebarGroupLabel>
+      <SidebarGroupLabel>{t(title)}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
           const key = item.title;
@@ -55,17 +57,20 @@ export function NavGroup({ title, items }: NavGroup) {
 }
 
 function isActive(pathname: string, url: string) {
-  return pathname === url || (url !== "/" && pathname.startsWith(url + "/"));
+  return pathname === url || (url !== "/" && pathname.startsWith(`${url}/`));
 }
 
 function NavMenuLink({ item, pathname }: { item: NavLink; pathname: string }) {
+  const t = useTranslations("navigation");
+  const label = t(item.title);
   const active = isActive(pathname, item.url);
+
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
+      <SidebarMenuButton asChild isActive={active} tooltip={label}>
         <Link href={item.url}>
           {item.icon ? <item.icon className="size-4" /> : null}
-          <span>{item.title}</span>
+          <span>{label}</span>
         </Link>
       </SidebarMenuButton>
       {item.badge !== undefined ? <SidebarMenuBadge>{item.badge}</SidebarMenuBadge> : null}
@@ -74,14 +79,17 @@ function NavMenuLink({ item, pathname }: { item: NavLink; pathname: string }) {
 }
 
 function NavMenuCollapsible({ item, pathname }: { item: NavCollapsible; pathname: string }) {
+  const t = useTranslations("navigation");
+  const label = t(item.title);
   const active = item.items.some((it) => isActive(pathname, it.url));
+
   return (
     <Collapsible defaultOpen={active} className="group/collapsible">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton isActive={active} tooltip={item.title}>
+          <SidebarMenuButton isActive={active} tooltip={label}>
             {item.icon ? <item.icon className="size-4" /> : null}
-            <span>{item.title}</span>
+            <span>{label}</span>
             <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
           </SidebarMenuButton>
         </CollapsibleTrigger>
@@ -89,13 +97,14 @@ function NavMenuCollapsible({ item, pathname }: { item: NavCollapsible; pathname
         <CollapsibleContent>
           <SidebarMenuSub>
             {item.items.map((sub) => {
+              const subLabel = t(sub.title);
               const subActive = isActive(pathname, sub.url);
               return (
                 <SidebarMenuSubItem key={sub.url}>
                   <SidebarMenuSubButton asChild isActive={subActive}>
                     <Link href={sub.url}>
                       {sub.icon ? <sub.icon className="size-4" /> : null}
-                      <span>{sub.title}</span>
+                      <span>{subLabel}</span>
                     </Link>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
@@ -107,4 +116,3 @@ function NavMenuCollapsible({ item, pathname }: { item: NavCollapsible; pathname
     </Collapsible>
   );
 }
-

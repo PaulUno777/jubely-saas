@@ -16,6 +16,7 @@ import {
   useSidebar,
 } from "@jubely/ui";
 import { BadgeCheck, ChevronsUpDown, LogOut, Settings } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { clearSession } from "@/lib/session";
 
@@ -26,6 +27,7 @@ type NavUserProps = {
 };
 
 export function NavUser({ name, email, role }: NavUserProps) {
+  const t = useTranslations("navigation.userMenu");
   const { isMobile } = useSidebar();
   const initials = name
     .split(" ")
@@ -77,15 +79,15 @@ export function NavUser({ name, email, role }: NavUserProps) {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link href="/settings">
+                <Link href="/account/security">
                   <BadgeCheck className="mr-2 size-4" />
-                  Compte
+                  {t("account")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/settings">
+                <Link href="/account/security">
                   <Settings className="mr-2 size-4" />
-                  Paramètres
+                  {t("settings")}
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
@@ -98,7 +100,7 @@ export function NavUser({ name, email, role }: NavUserProps) {
               }}
             >
               <LogOut className="mr-2 size-4" />
-              Déconnexion
+              {t("logout")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -106,4 +108,3 @@ export function NavUser({ name, email, role }: NavUserProps) {
     </SidebarMenu>
   );
 }
-
