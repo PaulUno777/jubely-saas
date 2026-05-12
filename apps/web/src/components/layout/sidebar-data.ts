@@ -1,15 +1,21 @@
 import {
+  Activity,
   Building2,
   Gift,
   ImageIcon,
   LayoutDashboard,
+  Layers,
   Megaphone,
+  Network,
   QrCode,
   Receipt,
+  ScrollText,
   Settings,
   Shield,
   SlidersHorizontal,
   Users,
+  Wallet,
+  BarChart3,
 } from "lucide-react";
 import type { NavGroup } from "./types";
 
@@ -49,15 +55,35 @@ export function navGroupsForRole(role: SidebarRole | string | undefined): NavGro
   if (role === "superadmin") {
     return [
       {
-        title: "groups.system",
+        title: "groups.dashboard",
         items: [
           { title: "items.globalOverview", url: "/root", icon: LayoutDashboard },
-          { title: "items.tenants", url: "/root/tenants", icon: Building2 },
+          { title: "items.revenueMrr", url: "/root", icon: BarChart3 },
         ],
       },
       {
-        title: "groups.operations",
-        items: [{ title: "items.security", url: "/account/security", icon: Shield }],
+        title: "groups.tenantManagement",
+        items: [
+          { title: "items.tenants", url: "/root/tenants", icon: Building2, badge: 24 },
+          { title: "items.users", url: "/root/tenants", icon: Users },
+          { title: "items.subscriptions", url: "/root/tenants", icon: Wallet, badge: 3 },
+        ],
+      },
+      {
+        title: "groups.configuration",
+        items: [
+          { title: "items.rolesPermissions", url: "/account/security", icon: Shield },
+          { title: "items.plansPricing", url: "/root", icon: Layers },
+          { title: "items.apiIntegrations", url: "/root", icon: Network },
+        ],
+      },
+      {
+        title: "groups.system",
+        items: [
+          { title: "items.systemHealth", url: "/root", icon: Activity },
+          { title: "items.auditLogs", url: "/root", icon: ScrollText },
+          { title: "items.security", url: "/account/security", icon: Shield },
+        ],
       },
     ];
   }
