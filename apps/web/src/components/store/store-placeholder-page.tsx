@@ -11,9 +11,9 @@ export function StorePlaceholderPage({ title, subtitle }: StorePlaceholderPagePr
     <>
       <StorePageHeader title={title} />
       <Main>
-        <section className="surface-human rounded-2xl border border-human/30 px-5 py-6">
-          <h2 className="font-display text-2xl font-normal tracking-tight">{title}</h2>
-          <p className="mt-2 text-sm text-human-foreground/80">{subtitle}</p>
+        <section className="rounded-2xl border border-border bg-card px-5 py-6">
+          <h2 className="font-display text-2xl font-normal tracking-tight text-foreground">{title}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
         </section>
       </Main>
     </>

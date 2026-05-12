@@ -231,12 +231,61 @@
 }
 
 .dark[data-profile="merchant"] {
-  --background: var(--brand-c5);
-  --card: color-mix(in srgb, var(--brand-c0) 4%, var(--brand-c4));
-  --muted: color-mix(in srgb, var(--brand-c0) 6%, var(--brand-c4));
-  --sidebar: var(--brand-c4);
-  --sidebar-foreground: var(--brand-c0);
-  --sidebar-accent: color-mix(in srgb, var(--brand-c0) 10%, var(--brand-c4));
-  --sidebar-accent-foreground: var(--brand-c0);
-  --sidebar-border: color-mix(in srgb, var(--brand-c0) 10%, transparent);
+  --jubely-bg: #18130e;
+  --jubely-surface: var(--brand-n8);
+  --jubely-text: var(--brand-n0);
+  --jubely-text-muted: var(--brand-n5);
+  --jubely-primary: var(--brand-e2);
+  --jubely-primary-strong: var(--brand-e1);
+  --jubely-accent: color-mix(in srgb, var(--brand-n0) 8%, var(--brand-n8));
+  --jubely-accent-2: var(--brand-e1);
+  --jubely-border: color-mix(in srgb, var(--brand-n0) 10%, transparent);
+
+  --reward: var(--brand-g1);
+  --reward-surface: color-mix(in srgb, var(--brand-g2) 18%, var(--brand-n8));
+  --reward-foreground: var(--brand-g0);
+  --human: var(--brand-t1);
+  --human-surface: color-mix(in srgb, var(--brand-t2) 14%, var(--brand-n8));
+  --human-foreground: var(--brand-t0);
+  --growth: var(--brand-e1);
+  --growth-surface: color-mix(in srgb, var(--brand-e2) 14%, var(--brand-n8));
+  --growth-foreground: var(--brand-e0);
+
+  --background: #18130e;
+  --foreground: var(--brand-n0);
+  --card: var(--brand-n8);
+  --card-foreground: var(--brand-n0);
+  --popover: var(--brand-n8);
+  --popover-foreground: var(--brand-n0);
+  --primary: var(--brand-e2);
+  --primary-foreground: #ffffff;
+  --secondary: color-mix(in srgb, var(--brand-n0) 7%, var(--brand-n8));
+  --secondary-foreground: var(--brand-n0);
+  --muted: #2d261d;
+  --muted-foreground: var(--brand-n5);
+  --accent: color-mix(in srgb, var(--brand-n2) 16%, var(--brand-n8));
+  --accent-foreground: var(--brand-n0);
+  --destructive: #e07070;
+  --destructive-foreground: var(--brand-n0);
+  --border: color-mix(in srgb, var(--brand-n0) 10%, transparent);
+  --input: color-mix(in srgb, var(--brand-n0) 8%, var(--brand-n8));
+  --ring: var(--brand-e2);
+
+  --sidebar: #211a14;
+  --sidebar-foreground: var(--brand-n0);
+  --sidebar-primary: var(--brand-e2);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--brand-n7);
+  --sidebar-accent-foreground: var(--brand-n0);
+  --sidebar-border: color-mix(in srgb, var(--brand-n0) 8%, transparent);
+  --sidebar-ring: var(--brand-e2);
+
+  --status-active: var(--brand-e1);
+  --status-active-bg: color-mix(in srgb, var(--brand-e2) 18%, transparent);
+  --status-late: var(--brand-g1);
+  --status-late-bg: color-mix(in srgb, var(--brand-g2) 18%, transparent);
+  --status-suspended: #e07070;
+  --status-suspended-bg: color-mix(in srgb, #e07070 18%, transparent);
+  --status-trial: #90d0cc;
+  --status-trial-bg: color-mix(in srgb, var(--brand-tl2) 18%, transparent);
 }

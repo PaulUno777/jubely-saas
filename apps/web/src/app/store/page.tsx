@@ -30,7 +30,7 @@ export default function StoreHome() {
               <CardDescription>{t("panels.pointsChartHint")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-48 rounded-xl border border-dashed border-border bg-growth-surface/40" />
+              <div className="h-48 rounded-xl border border-dashed border-border bg-growth-surface/30" />
             </CardContent>
           </Card>
           <Card className="border-border bg-card">
@@ -39,7 +39,7 @@ export default function StoreHome() {
               <CardDescription>{t("panels.tiersHint")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-48 rounded-xl border border-dashed border-border bg-muted/40" />
+              <div className="h-48 rounded-xl border border-dashed border-border bg-secondary/40" />
             </CardContent>
           </Card>
         </div>
