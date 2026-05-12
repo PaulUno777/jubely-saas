@@ -3,6 +3,7 @@ const admin = {
     title: "Portail SuperAdmin",
     productionBadge: "Production",
     searchPlaceholder: "Rechercher un tenant…",
+    notifications: "Notifications",
     newTenant: "Nouveau tenant",
     tenantsCta: "Tenants",
     rootTag: "Root",
@@ -16,6 +17,10 @@ const admin = {
       alerts: "Alertes système",
       totalTenants: "Tenants total",
     },
+    sidebarFooter: {
+      tenants: "Tenants",
+      alerts: "Alertes",
+    },
     dashboard: {
       mrrTotal: "MRR total",
       mrrLive: "Live",
@@ -28,6 +33,8 @@ const admin = {
       currentMrr: "MRR actuel",
       growth30d: "Croissance 30j",
       projectedArr: "ARR projeté",
+      planTenantCount: "{count} tenants",
+      trialCountDetail: "+{count} en trial",
       planSplit: "Répartition par plan",
       activeStores: "Enseignes actives",
       alertsTitle: "Alertes système",

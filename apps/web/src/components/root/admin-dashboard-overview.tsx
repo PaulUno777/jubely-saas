@@ -48,7 +48,7 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
       return {
         ...kpi,
         value: String(stats.tenants_active),
-        detail: trialCount > 0 ? `+${trialCount} trial` : kpi.detail,
+        detail: trialCount > 0 ? t("trialCountDetail", { count: trialCount }) : kpi.detail,
       } satisfies AdminKpiSample;
     }
     if (kpi.labelKey === "systemAlerts") {
@@ -135,7 +135,7 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
               <div key={plan.plan} className="flex items-center justify-between rounded-xl border border-border bg-background/40 px-3 py-3">
                 <div>
                   <p className="text-sm font-medium text-foreground">{plan.plan}</p>
-                  <p className="text-xs text-muted-foreground">{plan.count} tenants</p>
+                  <p className="text-xs text-muted-foreground">{t("planTenantCount", { count: plan.count })}</p>
                 </div>
                 <p className="font-mono text-sm font-semibold text-foreground">{plan.revenue}</p>
               </div>
