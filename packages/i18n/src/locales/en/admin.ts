@@ -80,6 +80,53 @@ const admin = {
     statusSuspended: "Suspended",
     toastUpdated: "Tenant updated",
   },
+  tenantDetail: {
+    sessionRequired: "Session required.",
+    back: "Back",
+    titleFallback: "Tenant detail",
+    loading: "Loading…",
+    notFound: "Tenant not found.",
+    infoTitle: "Details",
+    infoDescription: "Identity, plan, and conflict policy (Phase 4).",
+    fields: {
+      name: "Name",
+      plan: "Plan",
+      conflictPolicy: "Conflict policy",
+      active: "Active tenant",
+    },
+    plans: {
+      starter: "Starter",
+      growth: "Growth",
+      business: "Business",
+    },
+    save: "Save",
+    adminsTitle: "Administrators",
+    adminsDescription: "Merchant admin accounts attached to this tenant.",
+    addAdmin: "Add admin",
+    table: {
+      email: "Email",
+      role: "Role",
+      created: "Created",
+    },
+    usersLoading: "Loading…",
+    usersEmpty: "No users yet.",
+    dialog: {
+      title: "Add administrator",
+      description: "Creates a merchant admin with a temporary password.",
+      email: "Email",
+      generatePassword: "Generate password",
+      tempPassword: "Temporary password",
+      cancel: "Cancel",
+      create: "Create",
+    },
+    toasts: {
+      saved: "Tenant saved",
+      logoUpdated: "Logo updated",
+      logoRemoved: "Logo removed",
+      fileMissing: "File missing",
+      adminCreated: "Admin created. Temporary password: {password}",
+    },
+  },
 } as const;
 
 export default admin;

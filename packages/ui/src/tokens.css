@@ -106,8 +106,8 @@
   --muted: var(--brand-n1);
   --sidebar: var(--brand-n1);
   --sidebar-foreground: var(--brand-n8);
-  --sidebar-accent: var(--brand-n8);
-  --sidebar-accent-foreground: var(--brand-n0);
+  --sidebar-accent: color-mix(in srgb, var(--brand-g2) 14%, var(--brand-n1));
+  --sidebar-accent-foreground: var(--brand-n8);
   --sidebar-primary: var(--brand-e2);
   --sidebar-border: color-mix(in srgb, var(--brand-n8) 10%, transparent);
 }
@@ -275,8 +275,8 @@
   --sidebar-foreground: var(--brand-n0);
   --sidebar-primary: var(--brand-e2);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--brand-n7);
-  --sidebar-accent-foreground: var(--brand-n0);
+  --sidebar-accent: color-mix(in srgb, #f0d070 12%, #211a14);
+  --sidebar-accent-foreground: #f7f1e8;
   --sidebar-border: color-mix(in srgb, var(--brand-n0) 8%, transparent);
   --sidebar-ring: var(--brand-e2);
 

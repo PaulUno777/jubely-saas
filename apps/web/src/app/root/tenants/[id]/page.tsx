@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@jubely/ui";
 import { ArrowLeft, Loader2, UserPlus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -53,6 +54,8 @@ function TenantInfoFields({
   tenantId: string;
   accessToken: string;
 }) {
+  const t = useTranslations("admin.tenantDetail");
+  const tErrors = useTranslations("errors");
   const qc = useQueryClient();
   const [name, setName] = useState(() => tenant.name);
   const [plan, setPlan] = useState(() => String(tenant.plan).toLowerCase());
@@ -76,10 +79,10 @@ function TenantInfoFields({
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin", "tenant", tenantId] });
       void qc.invalidateQueries({ queryKey: ["admin", "tenants"] });
-      toast.success("Tenant enregistré");
+      toast.success(t("toasts.saved"));
     },
     onError: (e) => {
-      if (!(e instanceof Error && e.message === "Unauthorized")) toast.error(e instanceof Error ? e.message : "Erreur");
+      if (!(e instanceof Error && e.message === "Unauthorized")) toast.error(e instanceof Error ? e.message : tErrors("generic"));
     },
   });
 
@@ -91,7 +94,7 @@ function TenantInfoFields({
 
   const logoMut = useMutation({
     mutationFn: async () => {
-      if (!logoFile) throw new Error("Fichier manquant");
+      if (!logoFile) throw new Error(t("toasts.fileMissing"));
       const { url } = await adminUploadTenantLogo({ accessToken, file: logoFile });
       return adminPatchTenant({
         accessToken,
@@ -103,10 +106,10 @@ function TenantInfoFields({
       setLogoFile(null);
       void qc.invalidateQueries({ queryKey: ["admin", "tenant", tenantId] });
       void qc.invalidateQueries({ queryKey: ["admin", "tenants"] });
-      toast.success("Logo mis à jour");
+      toast.success(t("toasts.logoUpdated"));
     },
     onError: (e) => {
-      if (!(e instanceof Error && e.message === "Unauthorized")) toast.error(e instanceof Error ? e.message : "Erreur");
+      if (!(e instanceof Error && e.message === "Unauthorized")) toast.error(e instanceof Error ? e.message : tErrors("generic"));
     },
   });
 
@@ -124,10 +127,10 @@ function TenantInfoFields({
       setLogoFile(null);
       void qc.invalidateQueries({ queryKey: ["admin", "tenant", tenantId] });
       void qc.invalidateQueries({ queryKey: ["admin", "tenants"] });
-      toast.success("Logo retiré");
+      toast.success(t("toasts.logoRemoved"));
     },
     onError: (e) => {
-      if (!(e instanceof Error && e.message === "Unauthorized")) toast.error(e instanceof Error ? e.message : "Erreur");
+      if (!(e instanceof Error && e.message === "Unauthorized")) toast.error(e instanceof Error ? e.message : tErrors("generic"));
     },
   });
 
@@ -142,35 +145,35 @@ function TenantInfoFields({
           </div>
         </div>
         <div>
-          <CardTitle className="text-base">Informations</CardTitle>
-          <CardDescription>Identité, plan et politique de conflit (Phase 4).</CardDescription>
+          <CardTitle className="text-base">{t("infoTitle")}</CardTitle>
+          <CardDescription>{t("infoDescription")}</CardDescription>
         </div>
       </CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2 md:col-span-2">
-          <Label>Nom</Label>
+          <Label>{t("fields.name")}</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label>Plan</Label>
+          <Label>{t("fields.plan")}</Label>
           <Select value={plan} onValueChange={setPlan}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="starter">Starter</SelectItem>
-              <SelectItem value="growth">Growth</SelectItem>
-              <SelectItem value="business">Business</SelectItem>
+              <SelectItem value="starter">{t("plans.starter")}</SelectItem>
+              <SelectItem value="growth">{t("plans.growth")}</SelectItem>
+              <SelectItem value="business">{t("plans.business")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Conflict policy</Label>
+          <Label>{t("fields.conflictPolicy")}</Label>
           <Input value={conflict} onChange={(e) => setConflict(e.target.value)} placeholder="HIGHEST_WINS" />
         </div>
         <div className="flex items-center gap-2 md:col-span-2">
           <input id="t-active" type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
-          <Label htmlFor="t-active">Tenant actif</Label>
+          <Label htmlFor="t-active">{t("fields.active")}</Label>
         </div>
         <div className="md:col-span-2 rounded-xl border border-border bg-muted/20 p-4">
           <TenantLogoUpload
@@ -187,7 +190,7 @@ function TenantInfoFields({
         <div className="md:col-span-2">
           <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !name.trim()}>
             {saveMut.isPending ? <Loader2 className="animate-spin" size={16} /> : null}
-            Enregistrer
+            {t("save")}
           </Button>
         </div>
       </CardContent>
@@ -196,6 +199,8 @@ function TenantInfoFields({
 }
 
 export default function TenantDetailPage() {
+  const t = useTranslations("admin.tenantDetail");
+  const tErrors = useTranslations("errors");
   const params = useParams();
   const id = String(params.id ?? "");
   const { session } = useSession();
@@ -231,79 +236,79 @@ export default function TenantDetailPage() {
     },
     onSuccess: (out) => {
       void qc.invalidateQueries({ queryKey: ["admin", "tenant", id, "users"] });
-      toast.success(`Admin créé. Mot de passe temporaire : ${out.temp_password}`);
+      toast.success(t("toasts.adminCreated", { password: out.temp_password }));
       setAddOpen(false);
       setNewEmail("");
       setNewPwd("");
       setGenPwd(true);
     },
     onError: (e) => {
-      if (!(e instanceof Error && e.message === "Unauthorized")) toast.error(e instanceof Error ? e.message : "Erreur");
+      if (!(e instanceof Error && e.message === "Unauthorized")) toast.error(e instanceof Error ? e.message : tErrors("generic"));
     },
   });
 
-  if (!token) return <div className="p-6">Session requise.</div>;
+  if (!token) return <div className="p-6">{t("sessionRequired")}</div>;
 
-  const t = tenantQ.data;
-  const formKey = t ? `${t.tenant_id}-${String(t.updated_at ?? tenantQ.dataUpdatedAt)}` : "loading";
+  const tenant = tenantQ.data;
+  const formKey = tenant ? `${tenant.tenant_id}-${String(tenant.updated_at ?? tenantQ.dataUpdatedAt)}` : "loading";
 
   return (
     <>
       <Header fixed>
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/root/tenants" aria-label="Retour">
+            <Link href="/root/tenants" aria-label={t("back")}>
               <ArrowLeft size={18} />
             </Link>
           </Button>
-          {t ? (
+          {tenant ? (
             <>
-              <TenantLogo tenant={t} size="sm" />
+              <TenantLogo tenant={tenant} size="sm" />
               <div className="min-w-0">
-                <h1 className="truncate text-base font-semibold">{t.name}</h1>
-                <p className="truncate font-mono text-xs text-muted-foreground">{t.slug}</p>
+                <h1 className="truncate text-base font-semibold">{tenant.name}</h1>
+                <p className="truncate font-mono text-xs text-muted-foreground">{tenant.slug}</p>
               </div>
             </>
           ) : (
-            <h1 className="text-base font-semibold">Détail tenant</h1>
+            <h1 className="text-base font-semibold">{t("titleFallback")}</h1>
           )}
         </div>
       </Header>
 
       <Main className="space-y-4">
         {tenantQ.isLoading ? (
-          <p className="text-sm text-muted-foreground">Chargement…</p>
-        ) : tenantQ.error || !t ? (
-          <p className="text-sm text-destructive">Tenant introuvable.</p>
+          <p className="text-sm text-muted-foreground">{t("loading")}</p>
+        ) : tenantQ.error || !tenant ? (
+          <p className="text-sm text-destructive">{t("notFound")}</p>
         ) : (
           <>
-            <TenantInfoFields key={formKey} tenant={t} tenantId={id} accessToken={token} />
+            <TenantInfoFields key={formKey} tenant={tenant} tenantId={id} accessToken={token} />
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <div>
-                  <CardTitle>Administrateurs</CardTitle>
-                  <CardDescription>Comptes merchant_admin rattachés à ce tenant.</CardDescription>
+                  <CardTitle>{t("adminsTitle")}</CardTitle>
+                  <CardDescription>{t("adminsDescription")}</CardDescription>
                 </div>
                 <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
                   <UserPlus size={14} />
-                  Ajouter un admin
+                  {t("addAdmin")}
                 </Button>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Rôle</TableHead>
-                      <TableHead>Créé</TableHead>
+                      <TableHead>{t("table.email")}</TableHead>
+                      <TableHead>{t("table.role")}</TableHead>
+                      <TableHead>{t("table.created")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {usersQ.isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-muted-foreground text-sm">
-                          Chargement…
+                        <TableCell colSpan={3} className="text-sm text-muted-foreground">
+                          {t("usersLoading")}
                         </TableCell>
                       </TableRow>
                     ) : usersQ.data?.length ? (
@@ -318,8 +323,8 @@ export default function TenantDetailPage() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-muted-foreground text-sm">
-                          Aucun utilisateur.
+                        <TableCell colSpan={3} className="text-sm text-muted-foreground">
+                          {t("usersEmpty")}
                         </TableCell>
                       </TableRow>
                     )}
@@ -334,35 +339,35 @@ export default function TenantDetailPage() {
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ajouter un administrateur</DialogTitle>
-            <DialogDescription>Crée un merchant_admin avec mot de passe temporaire.</DialogDescription>
+            <DialogTitle>{t("dialog.title")}</DialogTitle>
+            <DialogDescription>{t("dialog.description")}</DialogDescription>
           </DialogHeader>
           <DialogBody className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="adm-email">Email</Label>
+              <Label htmlFor="adm-email">{t("dialog.email")}</Label>
               <Input id="adm-email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
             </div>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={genPwd} onChange={(e) => setGenPwd(e.target.checked)} />
-              Générer le mot de passe
+              {t("dialog.generatePassword")}
             </label>
             {!genPwd ? (
               <div className="space-y-1.5">
-                <Label>Mot de passe temporaire</Label>
+                <Label>{t("dialog.tempPassword")}</Label>
                 <Input type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} />
               </div>
             ) : null}
           </DialogBody>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>
-              Annuler
+              {t("dialog.cancel")}
             </Button>
             <Button
               disabled={!newEmail.includes("@") || addAdminMut.isPending || (!genPwd && newPwd.trim().length < 8)}
               onClick={() => addAdminMut.mutate()}
             >
               {addAdminMut.isPending ? <Loader2 className="animate-spin" size={16} /> : null}
-              Créer
+              {t("dialog.create")}
             </Button>
           </DialogFooter>
         </DialogContent>
