@@ -102,6 +102,16 @@
   --status-trial-bg: color-mix(in srgb, var(--brand-tl2) 14%, transparent);
 }
 
+:root[data-profile="merchant"] {
+  --muted: var(--brand-n1);
+  --sidebar: var(--brand-n1);
+  --sidebar-foreground: var(--brand-n8);
+  --sidebar-accent: var(--brand-n8);
+  --sidebar-accent-foreground: var(--brand-n0);
+  --sidebar-primary: var(--brand-e2);
+  --sidebar-border: color-mix(in srgb, var(--brand-n8) 10%, transparent);
+}
+
 :root[data-profile="agent"] {
   --muted: var(--brand-n1);
   --sidebar: var(--brand-n1);
@@ -174,4 +184,15 @@
   --muted: color-mix(in srgb, var(--brand-t2) 12%, var(--brand-c4));
   --accent: color-mix(in srgb, var(--brand-t2) 18%, var(--brand-c4));
   --accent-foreground: var(--brand-t1);
+}
+
+.dark[data-profile="merchant"] {
+  --background: var(--brand-c5);
+  --card: color-mix(in srgb, var(--brand-c0) 4%, var(--brand-c4));
+  --muted: color-mix(in srgb, var(--brand-c0) 6%, var(--brand-c4));
+  --sidebar: var(--brand-c4);
+  --sidebar-foreground: var(--brand-c0);
+  --sidebar-accent: color-mix(in srgb, var(--brand-c0) 10%, var(--brand-c4));
+  --sidebar-accent-foreground: var(--brand-c0);
+  --sidebar-border: color-mix(in srgb, var(--brand-c0) 10%, transparent);
 }

@@ -14,6 +14,20 @@ type storeCreateInvitationBody struct {
 	Role  string `json:"role"` // optional; defaults to staff for store admins
 }
 
+func (s *Server) StoreGetTenant(c *gin.Context) {
+	claims, ok := Claims(c)
+	if !ok || claims.TenantID == nil {
+		respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+		return
+	}
+	t, err := s.Tenants.FindByID(c.Request.Context(), *claims.TenantID)
+	if err != nil {
+		respondMapped(c, mapTenantError(err))
+		return
+	}
+	respondOK(c, tenantToGin(t))
+}
+
 func (s *Server) StoreListUsers(c *gin.Context) {
 	claims, ok := Claims(c)
 	if !ok || claims.TenantID == nil {

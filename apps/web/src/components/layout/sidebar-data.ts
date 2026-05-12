@@ -1,4 +1,16 @@
-import { Building2, ImageIcon, LayoutDashboard, Shield, Users } from "lucide-react";
+import {
+  Building2,
+  Gift,
+  ImageIcon,
+  LayoutDashboard,
+  Megaphone,
+  QrCode,
+  Receipt,
+  Settings,
+  Shield,
+  SlidersHorizontal,
+  Users,
+} from "lucide-react";
 import type { NavGroup } from "./types";
 
 export type SidebarRole = "superadmin" | "merchant_admin" | "staff" | "customer";
@@ -7,16 +19,29 @@ export function navGroupsForRole(role: SidebarRole | string | undefined): NavGro
   if (role === "merchant_admin") {
     return [
       {
-        title: "groups.store",
+        title: "groups.dashboard",
         items: [
-          { title: "items.dashboard", url: "/store", icon: LayoutDashboard },
-          { title: "items.branding", url: "/store/branding", icon: ImageIcon },
-          { title: "items.agents", url: "/store/agents", icon: Users },
+          { title: "items.overview", url: "/store", icon: LayoutDashboard },
+          { title: "items.customers", url: "/store/customers", icon: Users },
+          { title: "items.transactions", url: "/store/transactions", icon: Receipt },
         ],
       },
       {
-        title: "groups.account",
-        items: [{ title: "items.security", url: "/account/security", icon: Shield }],
+        title: "groups.configuration",
+        items: [
+          { title: "items.teamAgents", url: "/store/agents", icon: Users },
+          { title: "items.pointsRules", url: "/store/points-rules", icon: SlidersHorizontal },
+          { title: "items.rewards", url: "/store/rewards", icon: Gift },
+          { title: "items.enrollmentQr", url: "/store/enrollment-qr", icon: QrCode },
+          { title: "items.branding", url: "/store/branding", icon: ImageIcon },
+        ],
+      },
+      {
+        title: "groups.marketing",
+        items: [
+          { title: "items.campaigns", url: "/store/campaigns", icon: Megaphone },
+          { title: "items.settings", url: "/store/settings", icon: Settings },
+        ],
       },
     ];
   }

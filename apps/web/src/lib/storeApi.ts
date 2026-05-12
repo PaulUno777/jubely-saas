@@ -4,9 +4,20 @@ import {
   listStoreUsersSuccessEnvelopeSchema,
   parseJsonUnknown,
   parseSuccessData,
+  singleTenantSuccessEnvelopeSchema,
   throwFailedApiResponse,
 } from "@jubely/api-schemas";
 import { joinUrl, jsonHeaders } from "./http";
+
+export async function storeGetTenant(input: { accessToken: string }) {
+  const res = await fetch(joinUrl("/v1/store/tenant"), {
+    headers: jsonHeaders({ authorization: `Bearer ${input.accessToken}` }),
+  });
+  const text = await res.text();
+  const json = parseJsonUnknown(text);
+  if (!res.ok) throwFailedApiResponse(json, res.status, text);
+  return parseSuccessData(json, singleTenantSuccessEnvelopeSchema, res.status, text);
+}
 
 export async function storeListUsers(input: { accessToken: string; offset?: number; limit?: number }) {
   const url = new URL(joinUrl("/v1/store/users"));

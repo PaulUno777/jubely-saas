@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LanguageSelector } from "@/components/preferences/language-selector";
 import { ThemeSelector } from "@/components/preferences/theme-selector";
-import { detectProfile } from "@/lib/profile";
+import { detectProfile, preferencesProfile } from "@/lib/profile";
 
 type HeaderProps = React.HTMLAttributes<HTMLElement> & {
   fixed?: boolean;
@@ -14,6 +14,7 @@ type HeaderProps = React.HTMLAttributes<HTMLElement> & {
 export function Header({ className, fixed, children, ...props }: HeaderProps) {
   const pathname = usePathname();
   const profile = detectProfile(pathname);
+  const preferenceProfile = preferencesProfile(profile);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -21,6 +22,8 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const showPreferences = profile === "admin" || profile === "agent" || profile === "merchant";
 
   return (
     <header
@@ -35,10 +38,10 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
       <SidebarTrigger variant="outline" />
       <Separator orientation="vertical" className="h-6" />
       {children}
-      {profile === "admin" || profile === "agent" ? (
+      {showPreferences ? (
         <div className="ml-auto flex items-center gap-2">
-          <LanguageSelector profile={profile} />
-          <ThemeSelector profile={profile} />
+          <LanguageSelector profile={preferenceProfile} />
+          <ThemeSelector profile={preferenceProfile} />
         </div>
       ) : null}
     </header>

@@ -1,4 +1,4 @@
-export type AppProfile = "admin" | "agent" | "customer";
+export type AppProfile = "admin" | "agent" | "customer" | "merchant";
 
 export type ProfileThemeConfig = {
   defaultTheme: "light" | "dark";
@@ -17,6 +17,11 @@ export const profileThemeConfig: Record<AppProfile, ProfileThemeConfig> = {
     enableSystem: true,
     storageKey: "jubely-theme-agent",
   },
+  merchant: {
+    defaultTheme: "light",
+    enableSystem: true,
+    storageKey: "jubely-theme-merchant",
+  },
   customer: {
     defaultTheme: "light",
     enableSystem: true,
@@ -32,7 +37,8 @@ export const publicThemeConfig: ProfileThemeConfig = {
 
 export function detectProfile(pathname: string): AppProfile | null {
   if (pathname.startsWith("/root")) return "admin";
-  if (pathname.startsWith("/store") || pathname.startsWith("/agent")) return "agent";
+  if (pathname.startsWith("/store")) return "merchant";
+  if (pathname.startsWith("/agent")) return "agent";
   if (pathname.startsWith("/customer")) return "customer";
   return null;
 }
@@ -40,4 +46,9 @@ export function detectProfile(pathname: string): AppProfile | null {
 export function themeConfigForPath(pathname: string): ProfileThemeConfig {
   const profile = detectProfile(pathname);
   return profile ? profileThemeConfig[profile] : publicThemeConfig;
+}
+
+export function preferencesProfile(profile: AppProfile | null): AppProfile {
+  if (profile === "merchant") return "agent";
+  return profile ?? "agent";
 }
