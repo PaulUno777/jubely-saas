@@ -2,6 +2,7 @@
 
 import { Button, cn } from "@jubely/ui";
 import { Camera, Loader2, Trash2, Upload } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { LOGO_ACCEPT, validateTenantLogoFile } from "@/lib/tenantLogo";
 import { TenantLogo } from "./tenant-logo";
@@ -31,6 +32,7 @@ export function TenantLogoUpload({
   disabled = false,
   className,
 }: TenantLogoUploadProps) {
+  const t = useTranslations("admin.tenantDetail.logo");
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -57,14 +59,14 @@ export function TenantLogoUpload({
       }
       const validation = validateTenantLogoFile(next);
       if (validation) {
-        setError(validation);
+        setError(t(`validation.${validation}`));
         onFileChange(null);
         return;
       }
       setError(null);
       onFileChange(next);
     },
-    [onFileChange],
+    [onFileChange, t],
   );
 
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,7 +98,7 @@ export function TenantLogoUpload({
           dragOver && "ring-2 ring-primary ring-offset-2 ring-offset-background",
           (disabled || busy) && "cursor-not-allowed opacity-60",
         )}
-        aria-label="Changer le logo"
+        aria-label={t("changeAria")}
       >
         <TenantLogo
           tenant={{ name, logo_url: displayUrl ?? undefined }}
@@ -105,7 +107,7 @@ export function TenantLogoUpload({
         />
         <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-2xl bg-background/75 opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
           <Camera className="h-6 w-6 text-foreground" aria-hidden />
-          <span className="text-xs font-medium text-foreground">Modifier</span>
+          <span className="text-xs font-medium text-foreground">{t("changeOverlay")}</span>
         </span>
         {busy ? (
           <span className="absolute inset-0 flex items-center justify-center rounded-2xl bg-background/80">
@@ -126,42 +128,42 @@ export function TenantLogoUpload({
 
       <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left">
         <div>
-          <p className="text-sm font-medium">Logo de l&apos;enseigne</p>
-          <p className="text-xs text-muted-foreground">
-            PNG, JPEG, WebP ou SVG · max 2 Mo. Glissez une image ou cliquez sur l&apos;aperçu.
-          </p>
+          <p className="text-sm font-medium">{t("title")}</p>
+          <p className="text-xs text-muted-foreground">{t("hint")}</p>
         </div>
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
         {hasPending ? (
           <p className="text-xs text-muted-foreground">
-            Nouveau fichier : <span className="font-mono">{file?.name}</span>
-            {file ? ` (${Math.round(file.size / 1024)} Ko)` : null}
+            {t("pendingFile", {
+              name: file?.name ?? "",
+              size: file ? `${Math.round(file.size / 1024)} KB` : "0 KB",
+            })}
           </p>
         ) : currentUrl ? (
-          <p className="text-xs text-muted-foreground">Logo enregistré sur le tenant.</p>
+          <p className="text-xs text-muted-foreground">{t("saved")}</p>
         ) : (
-          <p className="text-xs text-muted-foreground">Aucun logo — les initiales s&apos;affichent à la place.</p>
+          <p className="text-xs text-muted-foreground">{t("fallback")}</p>
         )}
         <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
           <Button type="button" variant="outline" size="sm" className="gap-1.5" disabled={disabled || busy} onClick={() => inputRef.current?.click()}>
             <Upload size={14} aria-hidden />
-            {hasPending ? "Changer" : "Importer"}
+            {hasPending ? t("change") : t("import")}
           </Button>
           {hasPending && onSave ? (
             <Button type="button" size="sm" disabled={disabled || busy} onClick={onSave}>
               {saving ? <Loader2 className="animate-spin" size={14} aria-hidden /> : null}
-              Enregistrer le logo
+              {t("save")}
             </Button>
           ) : null}
           {hasPending ? (
             <Button type="button" variant="ghost" size="sm" disabled={disabled || busy} onClick={() => pickFile(null)}>
-              Annuler
+              {t("cancel")}
             </Button>
           ) : null}
           {canRemove ? (
             <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-destructive hover:text-destructive" disabled={disabled || busy} onClick={onRemove}>
               {removing ? <Loader2 className="animate-spin" size={14} aria-hidden /> : <Trash2 size={14} aria-hidden />}
-              Retirer
+              {t("remove")}
             </Button>
           ) : null}
         </div>

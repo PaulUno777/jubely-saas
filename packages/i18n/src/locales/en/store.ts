@@ -10,6 +10,7 @@ const store = {
     title: "Dashboard",
     subtitle: "Overview of your loyalty program.",
     searchPlaceholder: "Search customer",
+    notifications: "Notifications",
     newTransaction: "New transaction",
     kpis: {
       activeCustomers: "Active customers",

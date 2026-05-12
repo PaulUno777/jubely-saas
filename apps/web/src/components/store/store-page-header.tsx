@@ -28,7 +28,7 @@ export function StorePageHeader({ title, actionLabel, onAction }: StorePageHeade
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input className="h-9 bg-background/80 pl-9" placeholder={t("searchPlaceholder")} aria-label={t("searchPlaceholder")} />
           </div>
-          <Button type="button" variant="outline" size="icon" className="shrink-0" aria-label="Notifications">
+          <Button type="button" variant="outline" size="icon" className="shrink-0" aria-label={t("notifications")}>
             <Bell className="size-4" />
           </Button>
           {actionLabel ? (

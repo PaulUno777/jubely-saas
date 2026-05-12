@@ -25,9 +25,11 @@ export function tenantInitials(name: string): string {
   return (parts[0]?.slice(0, 2) ?? "?").toUpperCase();
 }
 
-export function validateTenantLogoFile(file: File): string | null {
-  if (!file.type.startsWith("image/")) return "Choisissez une image (PNG, JPEG, WebP ou SVG).";
-  if (file.size > MAX_LOGO_BYTES) return "Image trop lourde (max 2 Mo).";
+export type TenantLogoValidationCode = "invalidType" | "tooLarge";
+
+export function validateTenantLogoFile(file: File): TenantLogoValidationCode | null {
+  if (!file.type.startsWith("image/")) return "invalidType";
+  if (file.size > MAX_LOGO_BYTES) return "tooLarge";
   return null;
 }
 

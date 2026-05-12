@@ -126,6 +126,24 @@ const admin = {
       fileMissing: "Fichier manquant",
       adminCreated: "Admin créé. Mot de passe temporaire : {password}",
     },
+    logo: {
+      changeAria: "Changer le logo",
+      changeOverlay: "Modifier",
+      title: "Logo de l'enseigne",
+      hint: "PNG, JPEG, WebP ou SVG · max 2 Mo. Glissez une image ou cliquez sur l'aperçu.",
+      pendingFile: "Nouveau fichier : {name} ({size})",
+      saved: "Logo enregistré sur le tenant.",
+      fallback: "Aucun logo — les initiales s'affichent à la place.",
+      change: "Changer",
+      import: "Importer",
+      save: "Enregistrer le logo",
+      cancel: "Annuler",
+      remove: "Retirer",
+      validation: {
+        invalidType: "Choisissez une image (PNG, JPEG, WebP ou SVG).",
+        tooLarge: "Image trop lourde (max 2 Mo).",
+      },
+    },
   },
 } as const;
 

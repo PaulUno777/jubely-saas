@@ -10,6 +10,7 @@ const store = {
     title: "Tableau de bord",
     subtitle: "Vue d'ensemble de votre programme fidélité.",
     searchPlaceholder: "Rechercher client",
+    notifications: "Notifications",
     newTransaction: "Nouvelle transaction",
     kpis: {
       activeCustomers: "Clients actifs",

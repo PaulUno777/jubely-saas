@@ -126,6 +126,24 @@ const admin = {
       fileMissing: "File missing",
       adminCreated: "Admin created. Temporary password: {password}",
     },
+    logo: {
+      changeAria: "Change logo",
+      changeOverlay: "Edit",
+      title: "Store logo",
+      hint: "PNG, JPEG, WebP, or SVG · max 2 MB. Drag an image or click the preview.",
+      pendingFile: "New file: {name} ({size})",
+      saved: "Logo saved on the tenant.",
+      fallback: "No logo — initials are shown instead.",
+      change: "Change",
+      import: "Upload",
+      save: "Save logo",
+      cancel: "Cancel",
+      remove: "Remove",
+      validation: {
+        invalidType: "Choose an image (PNG, JPEG, WebP, or SVG).",
+        tooLarge: "Image is too large (max 2 MB).",
+      },
+    },
   },
 } as const;
 
