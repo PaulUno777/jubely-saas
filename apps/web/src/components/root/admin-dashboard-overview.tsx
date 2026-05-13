@@ -48,7 +48,7 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
       return {
         ...kpi,
         value: String(stats.tenants_active),
-        detail: trialCount > 0 ? t("trialCountDetail", { count: trialCount }) : kpi.detail,
+        detail: trialCount > 0 ? t("trialCountDetail", { count: String(trialCount) }) : kpi.detail,
       } satisfies AdminKpiSample;
     }
     if (kpi.labelKey === "systemAlerts") {
@@ -101,7 +101,7 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
                   <div
                     className={cn(
                       "w-full rounded-t-lg transition-colors",
-                      month.current ? "bg-[var(--status-active)]" : "bg-muted hover:bg-[color-mix(in_srgb,var(--status-active)_35%,var(--muted))]",
+                      month.current ? "bg-(--status-active)" : "bg-muted hover:bg-[color-mix(in_srgb,var(--status-active)_35%,var(--muted))]",
                     )}
                     style={{ height: `${(month.value / maxMrr) * 100}%` }}
                   />
@@ -112,15 +112,15 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-xl border border-border bg-background/40 px-4 py-3">
                 <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{t("currentMrr")}</p>
-                <p className="mt-1 font-mono text-lg font-semibold text-[var(--status-active)]">{adminDashboardSample.mrrSummary.current}</p>
+                <p className="mt-1 font-mono text-lg font-semibold text-(--status-active)">{adminDashboardSample.mrrSummary.current}</p>
               </div>
               <div className="rounded-xl border border-border bg-background/40 px-4 py-3">
                 <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{t("growth30d")}</p>
-                <p className="mt-1 font-mono text-lg font-semibold text-[var(--status-late)]">{adminDashboardSample.mrrSummary.growth30d}</p>
+                <p className="mt-1 font-mono text-lg font-semibold text-(--status-late)">{adminDashboardSample.mrrSummary.growth30d}</p>
               </div>
               <div className="rounded-xl border border-border bg-background/40 px-4 py-3">
                 <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{t("projectedArr")}</p>
-                <p className="mt-1 font-mono text-lg font-semibold text-[var(--status-trial)]">{adminDashboardSample.mrrSummary.projectedArr}</p>
+                <p className="mt-1 font-mono text-lg font-semibold text-(--status-trial)">{adminDashboardSample.mrrSummary.projectedArr}</p>
               </div>
             </div>
           </CardContent>
@@ -135,7 +135,7 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
               <div key={plan.plan} className="flex items-center justify-between rounded-xl border border-border bg-background/40 px-3 py-3">
                 <div>
                   <p className="text-sm font-medium text-foreground">{plan.plan}</p>
-                  <p className="text-xs text-muted-foreground">{t("planTenantCount", { count: plan.count })}</p>
+                  <p className="text-xs text-muted-foreground">{t("planTenantCount", { count: String(plan.count) })}</p>
                 </div>
                 <p className="font-mono text-sm font-semibold text-foreground">{plan.revenue}</p>
               </div>
@@ -179,7 +179,7 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
                     </TableCell>
                     <TableCell>{tenant.plan}</TableCell>
                     <TableCell className="font-mono text-sm">{tenant.customers}</TableCell>
-                    <TableCell className={cn("font-mono text-sm", tenant.status === "late" && "text-[var(--status-suspended)]")}>{tenant.mrr}</TableCell>
+                    <TableCell className={cn("font-mono text-sm", tenant.status === "late" && "text-(--status-suspended)")}>{tenant.mrr}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={statusClass[tenant.status]}>
                         {t(`status.${tenant.status}`)}
@@ -285,10 +285,10 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
                 <div
                   className={cn(
                     "h-full rounded-full",
-                    plan.tone === "emerald" && "bg-[var(--status-active)]",
-                    plan.tone === "gold" && "bg-[var(--status-late)]",
-                    plan.tone === "teal" && "bg-[var(--status-trial)]",
-                    plan.tone === "danger" && "bg-[var(--status-suspended)]",
+                    plan.tone === "emerald" && "bg-(--status-active)",
+                    plan.tone === "gold" && "bg-(--status-late)",
+                    plan.tone === "teal" && "bg-(--status-trial)",
+                    plan.tone === "danger" && "bg-(--status-suspended)",
                   )}
                   style={{ width: `${plan.progress}%` }}
                 />
