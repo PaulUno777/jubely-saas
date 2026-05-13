@@ -57,7 +57,11 @@ export function NavGroup({ title, items }: NavGroup) {
 }
 
 function isActive(pathname: string, url: string) {
-  return pathname === url || (url !== "/" && pathname.startsWith(`${url}/`));
+  if (url === "/store") return pathname === "/store";
+  if (url === "/root") return pathname === "/root";
+  if (url === "/agent") return pathname === "/agent";
+  if (url === "/customer") return pathname === "/customer";
+  return pathname === url || pathname.startsWith(`${url}/`);
 }
 
 function NavMenuLink({ item, pathname }: { item: NavLink; pathname: string }) {

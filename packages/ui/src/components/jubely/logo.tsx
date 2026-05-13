@@ -2,12 +2,13 @@ import { cn } from "../../cn";
 
 type JubelyLogoProps = {
   className?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   iconOnly?: boolean;
   logoSrc?: string;
 };
 
 const sizeMap = {
+  xs: { icon: 24, text: "text-base" },
   sm: { icon: 28, text: "text-lg" },
   md: { icon: 36, text: "text-2xl" },
   lg: { icon: 48, text: "text-3xl" },
@@ -31,7 +32,7 @@ export function JubelyLogo({
         className="block shrink-0 rounded-xl object-contain"
       />
       {!iconOnly ? (
-        <span className={cn("-ms-1.5 font-medium leading-none tracking-tight", s.text)}>
+        <span className={cn("-ms-1.5 font-medium leading-none tracking-tight text-inherit", s.text)}>
           <span className="font-semibold" style={{ fontFamily: "var(--jubely-font-body)" }}>
             Jubel
           </span>
