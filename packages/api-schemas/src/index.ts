@@ -3,4 +3,5 @@ export * from "./auth";
 export * from "./admin";
 export * from "./staff";
 export * from "./pwa";
+export * from "./store";
 export * from "./parse";

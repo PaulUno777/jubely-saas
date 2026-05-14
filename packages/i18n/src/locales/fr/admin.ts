@@ -1,3 +1,5 @@
+import { comingSoonPagesFr, sampleDashboardFr } from "./adminDashboard.fr";
+
 const admin = {
   root: {
     title: "Portail SuperAdmin",
@@ -105,6 +107,7 @@ const admin = {
       starter: "Starter",
       growth: "Growth",
       business: "Business",
+      trial: "Essai",
     },
     save: "Enregistrer",
     adminsTitle: "Administrateurs",
@@ -152,6 +155,8 @@ const admin = {
       },
     },
   },
+  comingSoonPages: comingSoonPagesFr,
+  sampleDashboard: sampleDashboardFr,
 } as const;
 
 export default admin;

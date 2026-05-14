@@ -36,9 +36,10 @@ type Server struct {
 	ChangePasswordUC     *usecase.ChangePassword
 	QRCodec              ports.QRCodec
 
-	Tenants     *postgres.TenantRepository
-	Users       *postgres.UserRepository
-	Invitations *postgres.InvitationRepository
+	Tenants      *postgres.TenantRepository
+	Users        *postgres.UserRepository
+	Invitations  *postgres.InvitationRepository
+	StoreMetrics *postgres.StoreLoyaltyMetrics
 
 	// CORSAllowAll enables permissive CORS for local dev.
 	CORSAllowAll bool

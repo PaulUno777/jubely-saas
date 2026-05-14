@@ -61,6 +61,7 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 
 		store := v1.Group("/store")
 		store.Use(AuthMiddleware(signer), RequireMerchantAdmin())
+		store.GET("/metrics", s.StoreGetMetrics)
 		store.GET("/tenant", s.StoreGetTenant)
 		store.GET("/users", s.StoreListUsers)
 		store.POST("/invitations", s.StoreCreateInvitation)

@@ -49,6 +49,7 @@ func main() {
 	hasher := security.BcryptHasher{}
 
 	tenantRepo := &postgres.TenantRepository{Pool: pool}
+	storeLoyaltyMetrics := &postgres.StoreLoyaltyMetrics{Pool: pool}
 	userRepo := &postgres.UserRepository{Pool: pool}
 	invRepo := &postgres.InvitationRepository{Pool: pool}
 	refreshRepo := &postgres.RefreshTokenRepository{Pool: pool}
@@ -319,6 +320,7 @@ func main() {
 		CORSAllowAll:         cfg.CORSAllowAll,
 		AssetUploadDir:       cfg.AssetUploadDir,
 		UploadTenantLogoUC:   uploadTenantLogo,
+		StoreMetrics:         storeLoyaltyMetrics,
 	}
 
 	engine := httpserver.NewRouter(signer, srv)

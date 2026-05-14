@@ -21,7 +21,17 @@ import type { NavGroup } from "./types";
 
 export type SidebarRole = "superadmin" | "merchant_admin" | "staff" | "customer";
 
-export function navGroupsForRole(role: SidebarRole | string | undefined): NavGroup[] {
+/** Optional live counts for superadmin sidebar badges (from `GET /v1/superadmin/stats`). */
+export type SuperadminNavStats = {
+  tenantsTotal: number;
+  alertsCount: number;
+};
+
+export type NavGroupsOptions = {
+  superadminStats?: SuperadminNavStats | null;
+};
+
+export function navGroupsForRole(role: SidebarRole | string | undefined, opts?: NavGroupsOptions): NavGroup[] {
   if (role === "merchant_admin") {
     return [
       {
@@ -53,35 +63,39 @@ export function navGroupsForRole(role: SidebarRole | string | undefined): NavGro
   }
 
   if (role === "superadmin") {
+    const st = opts?.superadminStats;
+    const tenantsBadge = st ? st.tenantsTotal : undefined;
+    const alertsBadge = st ? st.alertsCount : undefined;
+
     return [
       {
         title: "groups.dashboard",
         items: [
           { title: "items.globalOverview", url: "/root", icon: LayoutDashboard },
-          { title: "items.revenueMrr", url: "/root", icon: BarChart3 },
+          { title: "items.revenueMrr", url: "/root/revenue", icon: BarChart3 },
         ],
       },
       {
         title: "groups.tenantManagement",
         items: [
-          { title: "items.tenants", url: "/root/tenants", icon: Building2, badge: 24 },
-          { title: "items.users", url: "/root/tenants", icon: Users },
-          { title: "items.subscriptions", url: "/root/tenants", icon: Wallet, badge: 3 },
+          { title: "items.tenants", url: "/root/tenants", icon: Building2, badge: tenantsBadge },
+          { title: "items.users", url: "/root/users", icon: Users },
+          { title: "items.subscriptions", url: "/root/subscriptions", icon: Wallet, badge: alertsBadge },
         ],
       },
       {
         title: "groups.configuration",
         items: [
           { title: "items.rolesPermissions", url: "/account/security", icon: Shield },
-          { title: "items.plansPricing", url: "/root", icon: Layers },
-          { title: "items.apiIntegrations", url: "/root", icon: Network },
+          { title: "items.plansPricing", url: "/root/plans", icon: Layers },
+          { title: "items.apiIntegrations", url: "/root/integrations", icon: Network },
         ],
       },
       {
         title: "groups.system",
         items: [
-          { title: "items.systemHealth", url: "/root", icon: Activity },
-          { title: "items.auditLogs", url: "/root", icon: ScrollText },
+          { title: "items.systemHealth", url: "/root/system", icon: Activity },
+          { title: "items.auditLogs", url: "/root/audit", icon: ScrollText },
           { title: "items.security", url: "/account/security", icon: Shield },
         ],
       },

@@ -4,7 +4,7 @@ const store = {
     planLabel: "Plan {plan}",
     planUnknown: "Plan —",
     pointsDistributed: "Points distributed",
-    transactionsMonth: "Transactions this month",
+    transactionsMonth: "Point events (this month)",
   },
   home: {
     title: "Dashboard",
@@ -15,7 +15,7 @@ const store = {
     kpis: {
       activeCustomers: "Active customers",
       pointsDistributed: "Points distributed",
-      averageBasket: "Average basket",
+      pointEventsMonth: "Point events (this month)",
       rewardsClaimed: "Rewards claimed",
     },
     panels: {

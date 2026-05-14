@@ -14,6 +14,23 @@ type storeCreateInvitationBody struct {
 	Role  string `json:"role"` // optional; defaults to staff for store admins
 }
 
+func (s *Server) StoreGetMetrics(c *gin.Context) {
+	claims, ok := Claims(c)
+	if !ok || claims.TenantID == nil {
+		respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+		return
+	}
+	points, events, err := s.StoreMetrics.TenantSummary(c.Request.Context(), *claims.TenantID)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
+		return
+	}
+	respondOK(c, gin.H{
+		"points_distributed":       points,
+		"point_events_this_month": events,
+	})
+}
+
 func (s *Server) StoreGetTenant(c *gin.Context) {
 	claims, ok := Claims(c)
 	if !ok || claims.TenantID == nil {
