@@ -8,11 +8,24 @@ export default function AgentHome() {
   return (
     <div className="flex flex-col gap-4">
       <section className="rounded-2xl border border-border bg-growth-surface px-5 py-6">
-        <h1 className="font-display text-3xl font-normal tracking-tight text-growth-foreground">{t("title")}</h1>
+        <h1 className="font-display text-3xl font-normal tracking-tight text-growth-foreground">
+          {t("title")}
+        </h1>
       </section>
-      <a className="text-sm font-medium text-primary underline underline-offset-4" href="/agent/customers">
-        {t("createCustomer")}
-      </a>
+      <div className="flex flex-col gap-2">
+        <a
+          className="text-sm font-medium text-primary underline underline-offset-4"
+          href="/agent/customers"
+        >
+          {t("createCustomer")}
+        </a>
+        <a
+          className="text-sm font-medium text-primary underline underline-offset-4"
+          href="/agent/purchase"
+        >
+          {t("recordPurchase")}
+        </a>
+      </div>
     </div>
   );
 }

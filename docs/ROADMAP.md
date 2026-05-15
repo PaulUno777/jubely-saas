@@ -83,10 +83,10 @@ Living tracker aligned with [context/NEW_PLANING.md](../context/NEW_PLANING.md) 
 
 See [phase3-validation.md](./phase3-validation.md).
 
-- [ ] Join via QR / `/join/:slug` + OTP
-- [ ] Agent creates customer
-- [ ] Agent records purchase → points awarded
-- [ ] Store metrics increment
+- [ ] Join via QR / `/join/:slug` + OTP (manual — see [phase3-validation.md](./phase3-validation.md))
+- [ ] Agent creates customer (manual)
+- [x] Agent purchase UI → `POST /v1/staff/purchases` (automated: `tsc`, `lint`, `go test`)
+- [ ] Store metrics increment after purchase (manual)
 
 ---
 
