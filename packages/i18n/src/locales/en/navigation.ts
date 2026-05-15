@@ -30,6 +30,7 @@ const navigation = {
     teamAgents: "Team & agents",
     home: "Home",
     customers: "Customers",
+    recordPurchase: "Record purchase",
     transactions: "Transactions",
     pointsRules: "Points rules",
     rewards: "Rewards",
