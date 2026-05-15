@@ -1,5 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+/** Must match `AUTH_SESSION_COOKIE` in `server/auth-cookies.ts` (not imported: that module is server-only). */
+const SESSION_COOKIE = "jubely_session";
+
 type Role = "superadmin" | "merchant_admin" | "staff" | "customer";
 
 function base64UrlDecode(input: string): string {
@@ -37,7 +40,7 @@ function requiredRoleForPath(pathname: string): Role | null {
   return null;
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (pathname.startsWith("/login")) return NextResponse.next();
   if (pathname.startsWith("/_next") || pathname.startsWith("/favicon")) return NextResponse.next();
@@ -50,7 +53,7 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/account");
   if (!isProtected) return NextResponse.next();
 
-  const token = req.cookies.get("jubely_session")?.value;
+  const token = req.cookies.get(SESSION_COOKIE)?.value;
   if (!token) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
@@ -83,4 +86,3 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: ["/root/:path*", "/store/:path*", "/agent/:path*", "/customer/:path*", "/account/:path*"],
 };
-

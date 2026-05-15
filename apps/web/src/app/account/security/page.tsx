@@ -16,7 +16,7 @@ import {
 } from "@jubely/ui";
 import { useMemo, useState } from "react";
 import { useSession } from "@/hooks/useSession";
-import { API_BASE_URL } from "@/lib/env";
+import { authedFetch, authedJson } from "@/lib/http";
 
 type Factor = {
   id: string;
@@ -27,31 +27,8 @@ type Factor = {
   created_at?: string;
 };
 
-function joinUrl(path: string) {
-  return `${API_BASE_URL.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
-}
-
-async function authed<T>(
-  accessToken: string,
-  path: string,
-  init?: RequestInit,
-): Promise<T> {
-  const res = await fetch(joinUrl(path), {
-    ...init,
-    headers: {
-      "content-type": "application/json",
-      ...(init?.headers ?? {}),
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-  const json = (await res.json()) as unknown;
-  if (!res.ok) throw new Error("Erreur");
-  return ((json as { data?: unknown })?.data ?? json) as T;
-}
-
 export default function SecurityPage() {
   const { session } = useSession();
-  const accessToken = session?.accessToken ?? null;
 
   const isAdminPortal =
     session?.role === "superadmin" || session?.role === "merchant_admin";
@@ -61,26 +38,22 @@ export default function SecurityPage() {
 
   const factorsQuery = useQuery({
     queryKey: ["mfaFactors"],
-    enabled: !!accessToken && isAdminPortal,
+    enabled: Boolean(session && isAdminPortal),
     queryFn: async () => {
-      const out = await authed<{ items: Factor[] }>(
-        accessToken!,
-        "/v1/me/mfa",
-        { method: "GET" },
-      );
+      const out = await authedJson<{ items: Factor[] }>("/v1/me/mfa", { method: "GET" });
       return out.items;
     },
   });
 
   const setupTotpMut = useMutation({
     mutationFn: async () => {
-      return authed<{
+      return authedJson<{
         factor_id: string;
         otpauth_url: string;
         secret_b32: string;
-      }>(accessToken!, "/v1/me/mfa/totp/setup", {
+      }>("/v1/me/mfa/totp/setup", {
         method: "POST",
-        body: JSON.stringify({}),
+        json: {},
       });
     },
     onSuccess: (d) => {
@@ -93,9 +66,9 @@ export default function SecurityPage() {
 
   const confirmTotpMut = useMutation({
     mutationFn: async () => {
-      return authed(accessToken!, "/v1/me/mfa/totp/confirm", {
+      return authedJson<unknown>("/v1/me/mfa/totp/confirm", {
         method: "POST",
-        body: JSON.stringify({ factor_id: totpFactorId, code: totpCode }),
+        json: { factor_id: totpFactorId, code: totpCode },
       });
     },
     onSuccess: async () => {
@@ -110,17 +83,17 @@ export default function SecurityPage() {
 
   const registerPasskeyMut = useMutation({
     mutationFn: async () => {
-      const begin = await authed<{
+      const begin = await authedJson<{
         challenge_id: string;
         options: Parameters<typeof startRegistration>[0];
-      }>(accessToken!, "/v1/me/mfa/passkey/register/begin", {
+      }>("/v1/me/mfa/passkey/register/begin", {
         method: "POST",
-        body: JSON.stringify({}),
+        json: {},
       });
       const att = await startRegistration(begin.options);
-      await authed(accessToken!, "/v1/me/mfa/passkey/register/finish", {
+      await authedJson<unknown>("/v1/me/mfa/passkey/register/finish", {
         method: "POST",
-        body: JSON.stringify({ challenge_id: begin.challenge_id, ...att }),
+        json: { challenge_id: begin.challenge_id, ...att },
       });
     },
     onSuccess: async () => {
@@ -132,9 +105,8 @@ export default function SecurityPage() {
 
   const deleteFactorMut = useMutation({
     mutationFn: async (id: string) => {
-      return authed(accessToken!, `/v1/me/mfa/factors/${id}`, {
-        method: "DELETE",
-      });
+      const res = await authedFetch(`/v1/me/mfa/factors/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Échec suppression");
     },
     onSuccess: async () => {
       toast.success("Facteur supprimé");
@@ -148,7 +120,6 @@ export default function SecurityPage() {
   if (!session) return <div className="p-6">Session requise.</div>;
   if (!isAdminPortal)
     return <div className="p-6">Accès réservé aux portails admin.</div>;
-  if (!accessToken) return <div className="p-6">Session invalide.</div>;
 
   return (
     <div className="p-6 space-y-6">

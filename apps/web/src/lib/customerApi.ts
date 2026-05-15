@@ -8,12 +8,14 @@ export async function enrollByStoreQr(values: ClientEnrollForm) {
     phone_e164: values.phone.trim(),
     name: values.name.trim(),
     email: values.email.trim() || undefined,
+    phone_verify_token: values.phoneVerifyToken?.trim() || undefined,
   });
 
   const res = await fetch(joinUrl("/v1/pwa/enrollments/scan"), {
     method: "POST",
     headers: jsonHeaders(),
     body: JSON.stringify(body),
+    credentials: "include",
   });
   const text = await res.text();
   const json = parseJsonUnknown(text);

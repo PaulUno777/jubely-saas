@@ -98,7 +98,7 @@ func (s *stubTenantRepoForUsers) Update(ctx context.Context, t *domain.Tenant) e
 func (s *stubTenantRepoForUsers) ListAll(ctx context.Context, offset, limit int) ([]domain.Tenant, error) {
 	return nil, nil
 }
-func (s *stubTenantRepoForUsers) CountAll(ctx context.Context) (int64, error) { return 0, nil }
+func (s *stubTenantRepoForUsers) CountAll(ctx context.Context) (int64, error)    { return 0, nil }
 func (s *stubTenantRepoForUsers) CountActive(ctx context.Context) (int64, error) { return 0, nil }
 func (s *stubTenantRepoForUsers) CountActiveByPlan(ctx context.Context, plan string) (int64, error) {
 	_ = plan

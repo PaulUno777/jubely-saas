@@ -62,6 +62,12 @@ func (s *Server) AuthLogin(c *gin.Context) {
 			"role":                 out.Role.String(),
 			"email":                out.Email,
 			"must_change_password": out.MustChangePassword,
+			"mfa": gin.H{
+				"required":          true,
+				"methods":           out.Methods,
+				"enrolled_factors":  out.MFAEnrolledCount,
+				"setup_recommended": false,
+			},
 		})
 		return
 	}
@@ -74,6 +80,12 @@ func (s *Server) AuthLogin(c *gin.Context) {
 		"role":                 out.Role.String(),
 		"email":                out.Email,
 		"must_change_password": out.MustChangePassword,
+		"mfa": gin.H{
+			"required":          false,
+			"methods":           []string{},
+			"enrolled_factors":  out.MFAEnrolledCount,
+			"setup_recommended": out.MFAEnrolledCount == 0,
+		},
 	})
 }
 
@@ -110,6 +122,12 @@ func (s *Server) AuthMFATOTPVerify(c *gin.Context) {
 		"role":                 out.Role.String(),
 		"email":                out.Email,
 		"must_change_password": out.MustChangePassword,
+		"mfa": gin.H{
+			"required":          false,
+			"methods":           []string{},
+			"enrolled_factors":  1,
+			"setup_recommended": false,
+		},
 	})
 }
 

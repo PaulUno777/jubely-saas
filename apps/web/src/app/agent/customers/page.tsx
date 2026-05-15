@@ -20,11 +20,11 @@ export default function AgentCreateCustomerPage() {
   });
 
   const mut = useMutation({
-    mutationFn: (values: CreateCustomerForm) => staffCreateCustomer({ accessToken: session!.accessToken, values }),
+    mutationFn: (values: CreateCustomerForm) => staffCreateCustomer({ values }),
     onSuccess: (out) => setQr(out.customer_qr ?? null),
   });
 
-  if (!session?.accessToken) {
+  if (!session) {
     return (
       <div className="rounded-xl border border-border bg-card p-6">
         <p className="text-sm text-muted-foreground">Vous devez vous connecter.</p>

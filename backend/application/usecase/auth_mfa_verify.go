@@ -79,12 +79,23 @@ func (uc *VerifyLoginTOTP) Execute(ctx context.Context, in VerifyLoginTOTPInput)
 		return nil, fmt.Errorf("%w", domain.ErrUnauthorized)
 	}
 
+	mfaEnrolled := 0
+	if uc.Factors != nil {
+		n, err := uc.Factors.CountEnabledByUser(ctx, user.ID)
+		if err != nil {
+			return nil, err
+		}
+		mfaEnrolled = int(n)
+	}
+
 	access, err := uc.Signer.SignAccessToken(ctx, ports.TokenClaims{
 		UserID:             user.ID,
 		TenantID:           user.TenantID,
 		Role:               user.Role,
 		Email:              user.Email,
 		MustChangePassword: user.MustChangePassword,
+		MFAEnrolledCount:   mfaEnrolled,
+		Permissions:        domain.DefaultPermissionsForRole(user.Role),
 	})
 	if err != nil {
 		return nil, err
@@ -118,6 +129,7 @@ func (uc *VerifyLoginTOTP) Execute(ctx context.Context, in VerifyLoginTOTPInput)
 
 type FinishLoginPasskey struct {
 	Users         ports.UserRepository
+	Factors       ports.MFAFactorRepository
 	RefreshTokens ports.RefreshTokenRepository
 	Signer        ports.TokenSigner
 	MFASigner     *authtoken.JWTSigner
@@ -164,12 +176,24 @@ func (uc *FinishLoginPasskey) Execute(ctx context.Context, in FinishLoginPasskey
 	if err != nil {
 		return nil, err
 	}
+
+	mfaEnrolled := 0
+	if uc.Factors != nil {
+		n, err := uc.Factors.CountEnabledByUser(ctx, user.ID)
+		if err != nil {
+			return nil, err
+		}
+		mfaEnrolled = int(n)
+	}
+
 	access, err := uc.Signer.SignAccessToken(ctx, ports.TokenClaims{
 		UserID:             user.ID,
 		TenantID:           user.TenantID,
 		Role:               user.Role,
 		Email:              user.Email,
 		MustChangePassword: user.MustChangePassword,
+		MFAEnrolledCount:   mfaEnrolled,
+		Permissions:        domain.DefaultPermissionsForRole(user.Role),
 	})
 	if err != nil {
 		return nil, err

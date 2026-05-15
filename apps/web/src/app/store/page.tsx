@@ -13,7 +13,6 @@ export default function StoreHome() {
   const t = useTranslations("store.home");
   const locale = useLocale();
   const { session } = useSession();
-  const token = session?.accessToken;
   const metricsQuery = useStoreMetrics();
   const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
 
@@ -26,7 +25,7 @@ export default function StoreHome() {
     <>
       <StorePageHeader title={t("title")} actionLabel={t("newTransaction")} />
       <Main className="space-y-6">
-        {token ? <MfaEnrollBanner accessToken={token} /> : null}
+        {session ? <MfaEnrollBanner /> : null}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard label={t("kpis.activeCustomers")} value="—" trend="neutral" />
           <StatCard label={t("kpis.pointsDistributed")} value={pointsValue} trend="neutral" />

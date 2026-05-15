@@ -42,7 +42,6 @@ function slugifyName(name: string): string {
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  accessToken: string;
   onFinished?: () => void;
 };
 
@@ -76,7 +75,7 @@ function resetWizardState(setters: {
   setters.setCopied(false);
 }
 
-export function CreateTenantWizard({ open, onOpenChange, accessToken, onFinished }: Props) {
+export function CreateTenantWizard({ open, onOpenChange, onFinished }: Props) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [slugManual, setSlugManual] = useState(false);
@@ -121,14 +120,13 @@ export function CreateTenantWizard({ open, onOpenChange, accessToken, onFinished
     mutationFn: async () => {
       if (!slugOk) throw new Error("Slug invalide (3–40 caractères, a-z 0-9 tirets).");
       const tenant = await adminCreateTenant({
-        accessToken,
         body: { name: name.trim(), slug: slugValue.trim(), plan, self_serve: false },
       });
       const prevSettings =
         typeof tenant.settings === "object" && tenant.settings !== null && !Array.isArray(tenant.settings)
           ? (tenant.settings as Record<string, unknown>)
           : {};
-      const uploadedLogoUrl = logoFile ? (await adminUploadTenantLogo({ accessToken, file: logoFile })).url : "";
+      const uploadedLogoUrl = logoFile ? (await adminUploadTenantLogo({ file: logoFile })).url : "";
       const nextSettings = {
         ...prevSettings,
         ...(city.trim() ? { city: city.trim() } : {}),
@@ -137,13 +135,11 @@ export function CreateTenantWizard({ open, onOpenChange, accessToken, onFinished
       };
       if (Object.keys(nextSettings).length > 0) {
         await adminPatchTenant({
-          accessToken,
           tenantId: tenant.tenant_id,
           body: { settings: nextSettings },
         });
       }
       const createdUser = await adminCreateTenantUser({
-        accessToken,
         tenantId: tenant.tenant_id,
         email: adminEmail.trim(),
         role: "merchant_admin",

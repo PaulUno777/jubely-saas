@@ -31,12 +31,10 @@ export function AppSidebar() {
   const t = useTranslations("navigation.roles");
   const isMerchant = session?.role === "merchant_admin";
   const isSuperadmin = session?.role === "superadmin";
-  const token = session?.accessToken;
-
   const statsQuery = useQuery({
     queryKey: ["superadminStats", "sidebar"],
-    enabled: Boolean(isSuperadmin && token),
-    queryFn: () => adminSuperadminStats(token!),
+    enabled: Boolean(isSuperadmin && session),
+    queryFn: () => adminSuperadminStats(),
     staleTime: 60_000,
   });
 

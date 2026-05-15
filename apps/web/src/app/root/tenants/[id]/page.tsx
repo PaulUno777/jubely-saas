@@ -48,11 +48,9 @@ import { tenantLogoUrl } from "@/lib/tenantLogo";
 function TenantInfoFields({
   tenant,
   tenantId,
-  accessToken,
 }: {
   tenant: Tenant;
   tenantId: string;
-  accessToken: string;
 }) {
   const t = useTranslations("admin.tenantDetail");
   const tErrors = useTranslations("errors");
@@ -66,7 +64,6 @@ function TenantInfoFields({
   const saveMut = useMutation({
     mutationFn: async () => {
       return adminPatchTenant({
-        accessToken,
         tenantId,
         body: {
           name: name.trim(),
@@ -95,9 +92,8 @@ function TenantInfoFields({
   const logoMut = useMutation({
     mutationFn: async () => {
       if (!logoFile) throw new Error(t("toasts.fileMissing"));
-      const { url } = await adminUploadTenantLogo({ accessToken, file: logoFile });
+      const { url } = await adminUploadTenantLogo({ file: logoFile });
       return adminPatchTenant({
-        accessToken,
         tenantId,
         body: { settings: { ...settingsRecord, logo_url: url } },
       });
@@ -118,7 +114,6 @@ function TenantInfoFields({
       const next = { ...settingsRecord };
       delete next.logo_url;
       return adminPatchTenant({
-        accessToken,
         tenantId,
         body: { settings: next },
       });
@@ -204,19 +199,18 @@ export default function TenantDetailPage() {
   const params = useParams();
   const id = String(params.id ?? "");
   const { session } = useSession();
-  const token = session?.accessToken;
   const qc = useQueryClient();
 
   const tenantQ = useQuery({
     queryKey: ["admin", "tenant", id],
-    enabled: Boolean(token && id),
-    queryFn: () => adminGetTenant({ accessToken: token!, tenantId: id }),
+    enabled: Boolean(session && id),
+    queryFn: () => adminGetTenant({ tenantId: id }),
   });
 
   const usersQ = useQuery({
     queryKey: ["admin", "tenant", id, "users"],
-    enabled: Boolean(token && id),
-    queryFn: () => adminListTenantUsers({ accessToken: token!, tenantId: id, limit: 100, offset: 0 }),
+    enabled: Boolean(session && id),
+    queryFn: () => adminListTenantUsers({ tenantId: id, limit: 100, offset: 0 }),
   });
 
   const [addOpen, setAddOpen] = useState(false);
@@ -227,7 +221,6 @@ export default function TenantDetailPage() {
   const addAdminMut = useMutation({
     mutationFn: async () => {
       return adminCreateTenantUser({
-        accessToken: token!,
         tenantId: id,
         email: newEmail.trim(),
         role: "merchant_admin",
@@ -247,7 +240,7 @@ export default function TenantDetailPage() {
     },
   });
 
-  if (!token) return <div className="p-6">{t("sessionRequired")}</div>;
+  if (!session) return <div className="p-6">{t("sessionRequired")}</div>;
 
   const tenant = tenantQ.data;
   const formKey = tenant ? `${tenant.tenant_id}-${String(tenant.updated_at ?? tenantQ.dataUpdatedAt)}` : "loading";
@@ -282,7 +275,7 @@ export default function TenantDetailPage() {
           <p className="text-sm text-destructive">{t("notFound")}</p>
         ) : (
           <>
-            <TenantInfoFields key={formKey} tenant={tenant} tenantId={id} accessToken={token} />
+            <TenantInfoFields key={formKey} tenant={tenant} tenantId={id} />
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0">

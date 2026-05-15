@@ -9,8 +9,8 @@ export function useStoreTenant() {
 
   return useQuery({
     queryKey: ["store", "tenant", session?.tenantId],
-    enabled: Boolean(session?.accessToken && session?.role === "merchant_admin"),
-    queryFn: () => storeGetTenant({ accessToken: session!.accessToken }),
+    enabled: Boolean(session && session?.role === "merchant_admin"),
+    queryFn: () => storeGetTenant(),
     staleTime: 60_000,
   });
 }

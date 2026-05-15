@@ -42,6 +42,8 @@ type LoginOutput struct {
 	Role               domain.Role
 	Email              string
 	MustChangePassword bool
+	// MFAEnrolledCount is enabled MFA factors for this user (TOTP + passkeys).
+	MFAEnrolledCount int
 }
 
 func (uc *Login) Execute(ctx context.Context, in LoginInput) (*LoginOutput, error) {
@@ -68,34 +70,38 @@ func (uc *Login) Execute(ctx context.Context, in LoginInput) (*LoginOutput, erro
 		return nil, fmt.Errorf("%w", domain.ErrUnauthorized)
 	}
 
-	if uc.Factors != nil && uc.MFASigner != nil {
-		n, err := uc.Factors.CountEnabledByUser(ctx, user.ID)
+	mfaCount := 0
+	if uc.Factors != nil {
+		if n, err := uc.Factors.CountEnabledByUser(ctx, user.ID); err != nil {
+			return nil, err
+		} else {
+			mfaCount = int(n)
+		}
+	}
+
+	if uc.Factors != nil && uc.MFASigner != nil && mfaCount > 0 {
+		ttl := uc.MFAChallengeTTL
+		if ttl <= 0 {
+			ttl = 5 * time.Minute
+		}
+		tok, err := uc.MFASigner.SignMFAChallengeToken(ctx, authtoken.MFAChallengeClaims{
+			UserID:  user.ID,
+			Methods: []string{"totp", "passkey"},
+		}, ttl)
 		if err != nil {
 			return nil, err
 		}
-		if n > 0 {
-			ttl := uc.MFAChallengeTTL
-			if ttl <= 0 {
-				ttl = 5 * time.Minute
-			}
-			tok, err := uc.MFASigner.SignMFAChallengeToken(ctx, authtoken.MFAChallengeClaims{
-				UserID:  user.ID,
-				Methods: []string{"totp", "passkey"},
-			}, ttl)
-			if err != nil {
-				return nil, err
-			}
-			return &LoginOutput{
-				Step:               "mfa_required",
-				ChallengeToken:     tok,
-				Methods:            []string{"totp", "passkey"},
-				UserID:             user.ID,
-				TenantID:           user.TenantID,
-				Role:               user.Role,
-				Email:              user.Email,
-				MustChangePassword: user.MustChangePassword,
-			}, nil
-		}
+		return &LoginOutput{
+			Step:               "mfa_required",
+			ChallengeToken:     tok,
+			Methods:            []string{"totp", "passkey"},
+			UserID:             user.ID,
+			TenantID:           user.TenantID,
+			Role:               user.Role,
+			Email:              user.Email,
+			MustChangePassword: user.MustChangePassword,
+			MFAEnrolledCount:   mfaCount,
+		}, nil
 	}
 
 	tok, err := uc.Signer.SignAccessToken(ctx, ports.TokenClaims{
@@ -104,6 +110,8 @@ func (uc *Login) Execute(ctx context.Context, in LoginInput) (*LoginOutput, erro
 		Role:               user.Role,
 		Email:              user.Email,
 		MustChangePassword: user.MustChangePassword,
+		MFAEnrolledCount:   mfaCount,
+		Permissions:        domain.DefaultPermissionsForRole(user.Role),
 	})
 	if err != nil {
 		return nil, err
@@ -137,5 +145,6 @@ func (uc *Login) Execute(ctx context.Context, in LoginInput) (*LoginOutput, erro
 		Role:               user.Role,
 		Email:              user.Email,
 		MustChangePassword: user.MustChangePassword,
+		MFAEnrolledCount:   mfaCount,
 	}, nil
 }

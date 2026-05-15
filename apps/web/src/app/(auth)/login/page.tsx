@@ -27,8 +27,8 @@ import {
 } from "@jubely/ui";
 import { LanguageSelector } from "@/components/preferences/language-selector";
 import { ThemeSelector } from "@/components/preferences/theme-selector";
-import { API_BASE_URL } from "@/lib/env";
-import { decodeSessionFromJWT, saveSession } from "@/lib/session";
+import { acceptLanguage, joinUrl } from "@/lib/http";
+import { applyAuthSession, type MfaSummary, type Role } from "@/lib/session";
 import { startAuthentication } from "@simplewebauthn/browser";
 
 type MFAMethod = "totp" | "passkey";
@@ -37,14 +37,29 @@ type LoginMFARequired = {
   challenge_token: string;
   methods: MFAMethod[];
   must_change_password?: boolean;
+  user_id?: string;
+  tenant_id?: string | null;
+  role?: string;
+  email?: string;
+  mfa?: MfaSummary;
 };
-type LoginOK = {
+type LoginOKBff = {
   step: "ok";
-  access_token: string;
-  refresh_token?: string;
+  user_id: string;
+  tenant_id?: string | null;
+  role: string;
+  email?: string;
   must_change_password?: boolean;
+  mfa?: MfaSummary;
 };
-type LoginResponse = LoginMFARequired | LoginOK;
+type LoginResponse = LoginMFARequired | LoginOKBff;
+
+function routeAfterLogin(role: Role) {
+  if (role === "superadmin") return "/root";
+  if (role === "merchant_admin") return "/store";
+  if (role === "staff") return "/agent";
+  return "/customer";
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -75,14 +90,35 @@ export default function LoginPage() {
     defaultValues: { email: "", password: "", tenantSlug: "" },
   });
 
-  function joinUrl(path: string) {
-    return `${API_BASE_URL.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+  async function postAuthBff(path: string, body: unknown): Promise<unknown> {
+    const res = await fetch(path, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        "accept-language": acceptLanguage(),
+      },
+      body: JSON.stringify(body),
+    });
+    const json = (await res.json()) as unknown;
+    if (!res.ok) {
+      const msg =
+        typeof (json as { error?: { message?: unknown } })?.error?.message === "string"
+          ? ((json as { error: { message: string } }).error.message as string)
+          : tErrors("generic");
+      throw new Error(msg);
+    }
+    return (json as { data?: unknown })?.data ?? json;
   }
 
-  async function postJson(path: string, body: unknown): Promise<unknown> {
+  async function postUpstreamJson(path: string, body: unknown): Promise<unknown> {
     const res = await fetch(joinUrl(path), {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        "accept-language": acceptLanguage(),
+      },
       body: JSON.stringify(body),
     });
     const json = (await res.json()) as unknown;
@@ -99,7 +135,7 @@ export default function LoginPage() {
   const loginMut = useMutation({
     mutationFn: async (values: AgentLoginForm) => {
       const parsed = agentLoginFormSchema.parse(values);
-      return postJson("/v1/auth/login", {
+      return postAuthBff("/api/auth/login", {
         email: parsed.email.trim(),
         password: parsed.password,
         tenant_slug: parsed.tenantSlug?.trim() ?? "",
@@ -124,21 +160,28 @@ export default function LoginPage() {
         return;
       }
 
-      const access = String((resp as LoginOK)?.access_token ?? "");
-      if (!access) {
+      if (resp?.step !== "ok") {
         toast.error(tErrors("invalidLogin"));
         return;
       }
-      saveSession(access);
-      if ((resp as LoginOK)?.must_change_password) {
+      const ok = resp as LoginOKBff;
+      if (!ok.user_id || !ok.role) {
+        toast.error(tErrors("invalidLogin"));
+        return;
+      }
+      applyAuthSession({
+        user_id: ok.user_id,
+        tenant_id: ok.tenant_id ?? null,
+        role: ok.role,
+        email: ok.email,
+        must_change_password: ok.must_change_password,
+        mfa: ok.mfa,
+      });
+      if (ok.must_change_password) {
         router.push("/account/password");
         return;
       }
-      const sess = decodeSessionFromJWT(access);
-      if (sess?.role === "superadmin") router.push("/root");
-      else if (sess?.role === "merchant_admin") router.push("/store");
-      else if (sess?.role === "staff") router.push("/agent");
-      else router.push("/customer");
+      router.push(routeAfterLogin(ok.role as Role));
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : tErrors("generic")),
   });
@@ -292,22 +335,25 @@ export default function LoginPage() {
                 disabled={otp.length !== 6}
                 onClick={async () => {
                   try {
-                    const data = await postJson("/v1/auth/mfa/totp/verify", {
+                    const data = await postAuthBff("/api/auth/mfa/totp/verify", {
                       challenge_token: flow.challengeToken,
                       code: otp,
                     });
-                    const access = String((data as { access_token?: unknown })?.access_token ?? "");
-                    if (!access) throw new Error(tErrors("invalidLogin"));
-                    saveSession(access);
-                    if ((data as { must_change_password?: unknown })?.must_change_password) {
+                    const ok = data as LoginOKBff;
+                    if (!ok?.user_id || !ok.role) throw new Error(tErrors("invalidLogin"));
+                    applyAuthSession({
+                      user_id: ok.user_id,
+                      tenant_id: ok.tenant_id ?? null,
+                      role: ok.role,
+                      email: ok.email,
+                      must_change_password: ok.must_change_password,
+                      mfa: ok.mfa,
+                    });
+                    if (ok.must_change_password) {
                       router.push("/account/password");
                       return;
                     }
-                    const sess = decodeSessionFromJWT(access);
-                    if (sess?.role === "superadmin") router.push("/root");
-                    else if (sess?.role === "merchant_admin") router.push("/store");
-                    else if (sess?.role === "staff") router.push("/agent");
-                    else router.push("/customer");
+                    router.push(routeAfterLogin(ok.role as Role));
                   } catch (e) {
                     toast.error(e instanceof Error ? e.message : tErrors("generic"));
                   }
@@ -346,27 +392,30 @@ export default function LoginPage() {
                 className="flex-1"
                 onClick={async () => {
                   try {
-                    const begin = (await postJson("/v1/auth/mfa/passkey/begin", {
+                    const begin = (await postUpstreamJson("/v1/auth/mfa/passkey/begin", {
                       challenge_token: flow.challengeToken,
                     })) as { challenge_id: string; options: Parameters<typeof startAuthentication>[0] };
                     const assertion = await startAuthentication(begin.options);
-                    const finish = await postJson("/v1/auth/mfa/passkey/finish", {
+                    const finish = await postAuthBff("/api/auth/mfa/passkey/finish", {
                       challenge_token: flow.challengeToken,
                       challenge_id: begin.challenge_id,
                       ...assertion,
                     });
-                    const access = String((finish as { access_token?: unknown })?.access_token ?? "");
-                    if (!access) throw new Error(tErrors("invalidLogin"));
-                    saveSession(access);
-                    if ((finish as { must_change_password?: unknown })?.must_change_password) {
+                    const ok = finish as LoginOKBff;
+                    if (!ok?.user_id || !ok.role) throw new Error(tErrors("invalidLogin"));
+                    applyAuthSession({
+                      user_id: ok.user_id,
+                      tenant_id: ok.tenant_id ?? null,
+                      role: ok.role,
+                      email: ok.email,
+                      must_change_password: ok.must_change_password,
+                      mfa: ok.mfa,
+                    });
+                    if (ok.must_change_password) {
                       router.push("/account/password");
                       return;
                     }
-                    const sess = decodeSessionFromJWT(access);
-                    if (sess?.role === "superadmin") router.push("/root");
-                    else if (sess?.role === "merchant_admin") router.push("/store");
-                    else if (sess?.role === "staff") router.push("/agent");
-                    else router.push("/customer");
+                    router.push(routeAfterLogin(ok.role as Role));
                   } catch (e) {
                     toast.error(e instanceof Error ? e.message : tErrors("generic"));
                   }

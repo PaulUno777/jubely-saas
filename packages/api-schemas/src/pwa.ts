@@ -7,6 +7,7 @@ export const clientEnrollFormSchema = z
     phone: z.string().min(1, { message: "required" }),
     name: z.string().min(1, { message: "required" }),
     email: z.string(),
+    phoneVerifyToken: z.string().optional(),
   })
   .refine(
     (d) => {
@@ -23,9 +24,13 @@ export const enrollByStoreQrWireSchema = z.object({
   phone_e164: z.string(),
   name: z.string(),
   email: z.string().optional(),
+  phone_verify_token: z.string().optional(),
 });
 
 export const enrollResponseDataSchema = z.object({
+  tenant_id: z.string().optional(),
+  customer_id: z.string().optional(),
+  enrollment_id: z.string().optional(),
   customer_qr: z.string().min(1),
 });
 

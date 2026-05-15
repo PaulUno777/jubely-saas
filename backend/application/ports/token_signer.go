@@ -13,6 +13,10 @@ type TokenClaims struct {
 	Role               domain.Role
 	Email              string
 	MustChangePassword bool
+	// MFAEnrolledCount is the number of enabled MFA factors for the user (embedded in access JWT for BFF /me).
+	MFAEnrolledCount int
+	// Permissions are optional in JWT; when nil/empty, middleware uses DefaultPermissionsForRole(Role).
+	Permissions []string
 }
 
 type TokenSigner interface {

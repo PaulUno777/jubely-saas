@@ -42,3 +42,39 @@ func (s *Server) StaffCreateCustomer(c *gin.Context) {
 		"customer_qr":   out.CustomerQR,
 	})
 }
+
+type staffPurchaseBody struct {
+	PhoneE164  string `json:"phone_e164"`
+	AmountFcfa int64  `json:"amount_fcfa"`
+}
+
+func (s *Server) StaffRecordPurchase(c *gin.Context) {
+	claims, ok := Claims(c)
+	if !ok || claims.TenantID == nil {
+		respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+		return
+	}
+	var body staffPurchaseBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
+		return
+	}
+	if s.StaffRecordPurchaseUC == nil {
+		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
+		return
+	}
+	out, err := s.StaffRecordPurchaseUC.Execute(c.Request.Context(), usecase.StaffRecordPurchaseInput{
+		TenantID:   *claims.TenantID,
+		PhoneE164:  body.PhoneE164,
+		AmountFcfa: body.AmountFcfa,
+	})
+	if err != nil {
+		respondMapped(c, mapCustomerError(err))
+		return
+	}
+	respondCreated(c, gin.H{
+		"points_awarded": out.PointsAwarded,
+		"delta":          out.Delta,
+		"enrollment_id":  out.EnrollmentID.String(),
+	})
+}

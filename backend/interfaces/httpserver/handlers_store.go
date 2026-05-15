@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
@@ -26,7 +27,7 @@ func (s *Server) StoreGetMetrics(c *gin.Context) {
 		return
 	}
 	respondOK(c, gin.H{
-		"points_distributed":       points,
+		"points_distributed":      points,
 		"point_events_this_month": events,
 	})
 }
@@ -43,6 +44,58 @@ func (s *Server) StoreGetTenant(c *gin.Context) {
 		return
 	}
 	respondOK(c, tenantToGin(t))
+}
+
+type storePatchTenantBody struct {
+	Name           *string          `json:"name"`
+	ConflictPolicy *string          `json:"conflict_policy"`
+	Settings       *json.RawMessage `json:"settings"`
+}
+
+func (s *Server) StorePatchTenant(c *gin.Context) {
+	claims, ok := Claims(c)
+	if !ok || claims.TenantID == nil {
+		respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+		return
+	}
+	var body storePatchTenantBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
+		return
+	}
+	if body.Name == nil && body.ConflictPolicy == nil && body.Settings == nil {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "no_fields"})
+		return
+	}
+	out, err := s.UpdateTenantUC.Execute(c.Request.Context(), usecase.UpdateTenantInput{
+		TenantID:       *claims.TenantID,
+		Name:           body.Name,
+		ConflictPolicy: body.ConflictPolicy,
+		Settings:       body.Settings,
+	})
+	if err != nil {
+		respondMapped(c, mapTenantError(err))
+		return
+	}
+	respondOK(c, tenantToGin(out.Tenant))
+}
+
+func (s *Server) StoreGetStoreQR(c *gin.Context) {
+	claims, ok := Claims(c)
+	if !ok || claims.TenantID == nil {
+		respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+		return
+	}
+	if _, err := s.Tenants.FindByID(c.Request.Context(), *claims.TenantID); err != nil {
+		respondMapped(c, mapTenantError(err))
+		return
+	}
+	token, err := s.QRCodec.SignStoreQR(c.Request.Context(), *claims.TenantID)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
+		return
+	}
+	respondOK(c, gin.H{"store_qr": token})
 }
 
 func (s *Server) StoreListUsers(c *gin.Context) {

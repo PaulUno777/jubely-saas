@@ -3,21 +3,18 @@
 import { parseJsonUnknown, throwFailedApiResponse } from "@jubely/api-schemas";
 import { toast } from "sonner";
 import { API_BASE_URL } from "./env";
-import { clearSession } from "./session";
+import { clearSession, tryRefreshAccessToken } from "./session";
 
-export function joinUrl(path: string) {
-  // If caller already built an absolute URL, don't re-prefix it.
+export function joinUrl(path: string): string {
   if (/^https?:\/\//i.test(path)) return path;
-
-  const base = API_BASE_URL.replace(/\/$/, "");
   const p = path.startsWith("/") ? path : `/${path}`;
-
-  // If NEXT_PUBLIC_API_BASE_URL is already versioned (ex: `http://host:8080/v1`)
-  // and `path` also starts with `/v1/...`, avoid `.../v1/v1/...` 404s.
+  if (typeof window !== "undefined" && p.startsWith("/v1/")) {
+    return `/api${p}`;
+  }
+  const base = API_BASE_URL.replace(/\/$/, "");
   if (base.endsWith("/v1") && p.startsWith("/v1/")) {
     return `${base.replace(/\/v1$/, "")}${p}`;
   }
-
   return `${base}${p}`;
 }
 
@@ -34,19 +31,23 @@ export function jsonHeaders(extra: Record<string, string> = {}): HeadersInit {
   };
 }
 
-/** Authenticated fetch with global handling: 401 → clear session + redirect; 403 / 5xx → toast. */
-export async function authedFetch(path: string, accessToken: string, init: RequestInit = {}): Promise<Response> {
+/** Authenticated fetch via same-origin proxy; sends HttpOnly session cookie. */
+export async function authedFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers ?? {});
   if (!headers.has("accept-language")) headers.set("accept-language", acceptLanguage());
-  if (!headers.has("authorization")) headers.set("authorization", `Bearer ${accessToken}`);
-  // Only set JSON content-type when we know the body is JSON.
-  // For `FormData`, the browser must set the multipart boundary itself.
   if (init.body != null && typeof init.body === "string" && !headers.has("content-type")) {
     headers.set("content-type", "application/json");
   }
 
   const url = joinUrl(path);
-  const res = await fetch(url, { ...init, headers });
+  let res = await fetch(url, { ...init, headers, credentials: "include" });
+
+  if (res.status === 401) {
+    const refreshed = await tryRefreshAccessToken();
+    if (refreshed) {
+      res = await fetch(url, { ...init, headers, credentials: "include" });
+    }
+  }
 
   if (res.status === 401) {
     clearSession();
@@ -62,10 +63,10 @@ export async function authedFetch(path: string, accessToken: string, init: Reque
   return res;
 }
 
-export async function authedJson<T>(path: string, accessToken: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
+export async function authedJson<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
   const { json, ...rest } = init;
   const body = json !== undefined ? JSON.stringify(json) : rest.body;
-  const res = await authedFetch(path, accessToken, { ...rest, body });
+  const res = await authedFetch(path, { ...rest, body });
   const text = await res.text();
   const parsed = parseJsonUnknown(text);
   if (!res.ok) throwFailedApiResponse(parsed, res.status, text);

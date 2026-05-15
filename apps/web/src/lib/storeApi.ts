@@ -4,25 +4,36 @@ import {
   listStoreUsersSuccessEnvelopeSchema,
   parseJsonUnknown,
   parseSuccessData,
+  patchStoreTenantWireSchema,
   singleTenantSuccessEnvelopeSchema,
   storeMetricsSuccessEnvelopeSchema,
+  storeQrSuccessEnvelopeSchema,
   throwFailedApiResponse,
 } from "@jubely/api-schemas";
-import { joinUrl, jsonHeaders } from "./http";
+import { authedFetch, joinUrl, jsonHeaders } from "./http";
 
-export async function storeGetMetrics(input: { accessToken: string }) {
-  const res = await fetch(joinUrl("/v1/store/metrics"), {
-    headers: jsonHeaders({ authorization: `Bearer ${input.accessToken}` }),
-  });
+export async function storeGetMetrics() {
+  const res = await authedFetch("/v1/store/metrics", { method: "GET" });
   const text = await res.text();
   const json = parseJsonUnknown(text);
   if (!res.ok) throwFailedApiResponse(json, res.status, text);
   return parseSuccessData(json, storeMetricsSuccessEnvelopeSchema, res.status, text);
 }
 
-export async function storeGetTenant(input: { accessToken: string }) {
-  const res = await fetch(joinUrl("/v1/store/tenant"), {
-    headers: jsonHeaders({ authorization: `Bearer ${input.accessToken}` }),
+export async function storeGetTenant() {
+  const res = await authedFetch("/v1/store/tenant", { method: "GET" });
+  const text = await res.text();
+  const json = parseJsonUnknown(text);
+  if (!res.ok) throwFailedApiResponse(json, res.status, text);
+  return parseSuccessData(json, singleTenantSuccessEnvelopeSchema, res.status, text);
+}
+
+export async function storePatchTenant(input: { body: { name?: string; conflict_policy?: string; settings?: unknown } }) {
+  const body = patchStoreTenantWireSchema.parse(input.body);
+  const res = await authedFetch("/v1/store/tenant", {
+    method: "PATCH",
+    headers: jsonHeaders(),
+    body: JSON.stringify(body),
   });
   const text = await res.text();
   const json = parseJsonUnknown(text);
@@ -30,25 +41,31 @@ export async function storeGetTenant(input: { accessToken: string }) {
   return parseSuccessData(json, singleTenantSuccessEnvelopeSchema, res.status, text);
 }
 
-export async function storeListUsers(input: { accessToken: string; offset?: number; limit?: number }) {
+export async function storeGetStoreQR() {
+  const res = await authedFetch("/v1/store/qr", { method: "GET" });
+  const text = await res.text();
+  const json = parseJsonUnknown(text);
+  if (!res.ok) throwFailedApiResponse(json, res.status, text);
+  return parseSuccessData(json, storeQrSuccessEnvelopeSchema, res.status, text);
+}
+
+export async function storeListUsers(input: { offset?: number; limit?: number } = {}) {
   const url = new URL(joinUrl("/v1/store/users"));
   if (input.offset !== undefined) url.searchParams.set("offset", String(input.offset));
   if (input.limit !== undefined) url.searchParams.set("limit", String(input.limit));
 
-  const res = await fetch(url.toString(), {
-    headers: jsonHeaders({ authorization: `Bearer ${input.accessToken}` }),
-  });
+  const res = await authedFetch(url.toString(), { method: "GET" });
   const text = await res.text();
   const json = parseJsonUnknown(text);
   if (!res.ok) throwFailedApiResponse(json, res.status, text);
   return parseSuccessData(json, listStoreUsersSuccessEnvelopeSchema, res.status, text);
 }
 
-export async function storeCreateInvitation(input: { accessToken: string; email: string; role?: string }) {
+export async function storeCreateInvitation(input: { email: string; role?: string }) {
   const body = createInvitationWireSchema.parse({ email: input.email, role: input.role });
-  const res = await fetch(joinUrl("/v1/store/invitations"), {
+  const res = await authedFetch("/v1/store/invitations", {
     method: "POST",
-    headers: jsonHeaders({ authorization: `Bearer ${input.accessToken}` }),
+    headers: jsonHeaders(),
     body: JSON.stringify(body),
   });
   const text = await res.text();
@@ -56,4 +73,3 @@ export async function storeCreateInvitation(input: { accessToken: string; email:
   if (!res.ok) throwFailedApiResponse(json, res.status, text);
   return parseSuccessData(json, createInvitationSuccessEnvelopeSchema, res.status, text);
 }
-

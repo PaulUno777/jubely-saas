@@ -9,10 +9,11 @@ import (
 )
 
 type pwaEnrollByStoreQRBody struct {
-	StoreQR   string  `json:"store_qr"`
-	PhoneE164 string  `json:"phone_e164"`
-	Name      string  `json:"name"`
-	Email     *string `json:"email"`
+	StoreQR          string  `json:"store_qr"`
+	PhoneE164        string  `json:"phone_e164"`
+	Name             string  `json:"name"`
+	Email            *string `json:"email"`
+	PhoneVerifyToken string  `json:"phone_verify_token"`
 }
 
 func (s *Server) PWAEnrollByStoreQR(c *gin.Context) {
@@ -22,10 +23,11 @@ func (s *Server) PWAEnrollByStoreQR(c *gin.Context) {
 		return
 	}
 	out, err := s.EnrollByStoreQRUC.Execute(c.Request.Context(), usecase.EnrollByStoreQRInput{
-		StoreQR:   body.StoreQR,
-		PhoneE164: body.PhoneE164,
-		Name:      body.Name,
-		Email:     body.Email,
+		StoreQR:          body.StoreQR,
+		PhoneE164:        body.PhoneE164,
+		Name:             body.Name,
+		Email:            body.Email,
+		PhoneVerifyToken: body.PhoneVerifyToken,
 	})
 	if err != nil {
 		respondMapped(c, mapCustomerError(err))

@@ -19,4 +19,5 @@ const (
 	CodeCustomerPhoneTaken        = "error.customer.phone_taken"
 	CodeCustomerEnrollmentActive  = "error.customer.enrollment_active"
 	CodeInternal                  = "error.internal"
+	CodeRateLimit                 = "error.rate_limit"
 )

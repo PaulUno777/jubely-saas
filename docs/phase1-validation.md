@@ -2,6 +2,8 @@
 
 Use this checklist after API and web are running with a fresh or known database.
 
+**Roadmap:** see [ROADMAP.md](./ROADMAP.md) for phase status and what remains. **Phase 3:** [phase3-validation.md](./phase3-validation.md).
+
 ## Prerequisites
 
 1. **Database** migrated (API runs goose on startup).
@@ -28,3 +30,7 @@ PLAYWRIGHT_BASE_URL=http://127.0.0.1:3003 pnpm test:e2e
 ```
 
 The smoke test only asserts the **login** page loads (no credentials required).
+
+## Automated backend checks
+
+Run `cd backend && go test ./...` for JWT permission claims, `RequirePermission` middleware, staff purchase tenant isolation, enrollment phone proof, and public OTP verify.

@@ -15,18 +15,17 @@ import { adminListTenants, adminSuperadminStats } from "@/lib/adminApi";
 export default function RootHome() {
   const t = useTranslations("admin.root");
   const { session } = useSession();
-  const token = session?.accessToken;
 
   const statsQuery = useQuery({
     queryKey: ["superadminStats"],
-    enabled: Boolean(token),
-    queryFn: () => adminSuperadminStats(token!),
+    enabled: Boolean(session),
+    queryFn: () => adminSuperadminStats(),
   });
 
   const tenantsQuery = useQuery({
     queryKey: ["admin", "tenants", "overview"],
-    enabled: Boolean(token),
-    queryFn: () => adminListTenants({ accessToken: token!, limit: 8, offset: 0 }),
+    enabled: Boolean(session),
+    queryFn: () => adminListTenants({ limit: 8, offset: 0 }),
   });
 
   return (
@@ -55,7 +54,7 @@ export default function RootHome() {
       </Header>
 
       <Main className="space-y-6">
-        {token ? <MfaEnrollBanner accessToken={token} /> : null}
+        {session ? <MfaEnrollBanner /> : null}
         <AdminDashboardOverview stats={statsQuery.data} tenants={tenantsQuery.data} />
       </Main>
     </>

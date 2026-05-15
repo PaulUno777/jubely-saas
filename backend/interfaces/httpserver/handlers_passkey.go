@@ -141,5 +141,11 @@ func (s *Server) AuthPasskeyFinish(c *gin.Context) {
 		"role":                 out.Role.String(),
 		"email":                out.Email,
 		"must_change_password": out.MustChangePassword,
+		"mfa": gin.H{
+			"required":          false,
+			"methods":           []string{},
+			"enrolled_factors":  1,
+			"setup_recommended": false,
+		},
 	})
 }

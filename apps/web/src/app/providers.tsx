@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ProfileThemeProvider } from "@/components/preferences/profile-theme-provider";
 import { captureInstallPrompt } from "@/lib/pwaInstall";
+import { bootstrapAuthFromServer } from "@/lib/session";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -17,6 +18,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     captureInstallPrompt();
+  }, []);
+
+  useEffect(() => {
+    void bootstrapAuthFromServer();
   }, []);
 
   return (

@@ -29,6 +29,36 @@ export const createCustomerResponseDataSchema = z.object({
   customer_qr: z.string().min(1),
 });
 
-export const createCustomerSuccessEnvelopeSchema = successEnvelopeSchema(createCustomerResponseDataSchema);
+export const createCustomerSuccessEnvelopeSchema = successEnvelopeSchema(
+  createCustomerResponseDataSchema,
+);
 
-export type CreateCustomerResponseData = z.infer<typeof createCustomerResponseDataSchema>;
+export type CreateCustomerResponseData = z.infer<
+  typeof createCustomerResponseDataSchema
+>;
+
+export const recordPurchaseFormSchema = z.object({
+  phone: z.string().min(1, { message: "required" }),
+  amount_fcfa: z.coerce.number().int().positive({ message: "invalid_amount" }),
+});
+
+export type RecordPurchaseForm = z.infer<typeof recordPurchaseFormSchema>;
+
+export const recordPurchaseWireSchema = z.object({
+  phone_e164: z.string(),
+  amount_fcfa: z.number().int().positive(),
+});
+
+export const recordPurchaseResponseDataSchema = z.object({
+  points_awarded: z.number().int(),
+  delta: z.number().int(),
+  enrollment_id: z.string().min(1),
+});
+
+export const recordPurchaseSuccessEnvelopeSchema = successEnvelopeSchema(
+  recordPurchaseResponseDataSchema,
+);
+
+export type RecordPurchaseResponseData = z.infer<
+  typeof recordPurchaseResponseDataSchema
+>;

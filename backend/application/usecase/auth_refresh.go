@@ -16,6 +16,7 @@ import (
 type RefreshAuth struct {
 	Users         ports.UserRepository
 	RefreshTokens ports.RefreshTokenRepository
+	Factors       ports.MFAFactorRepository
 	Signer        ports.TokenSigner
 	Clock         ports.Clock
 	TTL           time.Duration
@@ -84,12 +85,23 @@ func (uc *RefreshAuth) Execute(ctx context.Context, in RefreshAuthInput) (*Refre
 		return nil, err
 	}
 
+	mfaEnrolled := 0
+	if uc.Factors != nil {
+		n, err := uc.Factors.CountEnabledByUser(ctx, user.ID)
+		if err != nil {
+			return nil, err
+		}
+		mfaEnrolled = int(n)
+	}
+
 	access, err := uc.Signer.SignAccessToken(ctx, ports.TokenClaims{
 		UserID:             user.ID,
 		TenantID:           user.TenantID,
 		Role:               user.Role,
 		Email:              user.Email,
 		MustChangePassword: user.MustChangePassword,
+		MFAEnrolledCount:   mfaEnrolled,
+		Permissions:        domain.DefaultPermissionsForRole(user.Role),
 	})
 	if err != nil {
 		return nil, err

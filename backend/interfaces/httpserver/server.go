@@ -9,32 +9,34 @@ import (
 )
 
 type Server struct {
-	BootstrapUC          *usecase.BootstrapSuperadmin
-	LoginUC              *usecase.Login
-	RefreshUC            *usecase.RefreshAuth
-	LogoutUC             *usecase.Logout
-	StoreSignupUC        *usecase.StoreSignup
-	CreateTenantUC       *usecase.CreateTenant
-	ListTenantsUC        *usecase.ListTenants
-	UpdateTenantUC       *usecase.UpdateTenant
-	ListTenantUsersUC    *usecase.ListTenantUsers
-	CreateInvitationUC   *usecase.CreateMerchantInvitation
-	AcceptInvitationUC   *usecase.AcceptMerchantInvitation
-	CreateTenantUserUC   *usecase.CreateTenantUser
-	SuperadminStatsUC    *usecase.SuperadminStats
-	CreateCustomerUC     *usecase.CreateCustomerByStaff
-	EnrollByStoreQRUC    *usecase.EnrollByStoreQR
-	SetupTOTPUC          *usecase.SetupTOTP
-	ConfirmTOTPUC        *usecase.ConfirmTOTP
-	BeginPasskeyRegUC    *usecase.BeginPasskeyRegistration
-	FinishPasskeyRegUC   *usecase.FinishPasskeyRegistration
-	BeginPasskeyAuthUC   *usecase.BeginPasskeyAuthentication
-	FinishPasskeyAuthUC  *usecase.FinishPasskeyAuthentication
-	VerifyTOTPLoginUC    *usecase.VerifyLoginTOTP
-	FinishPasskeyLoginUC *usecase.FinishLoginPasskey
-	MFASigner            *authtoken.JWTSigner
-	ChangePasswordUC     *usecase.ChangePassword
-	QRCodec              ports.QRCodec
+	BootstrapUC           *usecase.BootstrapSuperadmin
+	LoginUC               *usecase.Login
+	RefreshUC             *usecase.RefreshAuth
+	LogoutUC              *usecase.Logout
+	StoreSignupUC         *usecase.StoreSignup
+	CreateTenantUC        *usecase.CreateTenant
+	ListTenantsUC         *usecase.ListTenants
+	UpdateTenantUC        *usecase.UpdateTenant
+	ListTenantUsersUC     *usecase.ListTenantUsers
+	CreateInvitationUC    *usecase.CreateMerchantInvitation
+	AcceptInvitationUC    *usecase.AcceptMerchantInvitation
+	CreateTenantUserUC    *usecase.CreateTenantUser
+	SuperadminStatsUC     *usecase.SuperadminStats
+	CreateCustomerUC      *usecase.CreateCustomerByStaff
+	EnrollByStoreQRUC     *usecase.EnrollByStoreQR
+	StaffRecordPurchaseUC *usecase.StaffRecordPurchase
+	PublicCustomerOTP     *usecase.PublicCustomerOTP
+	SetupTOTPUC           *usecase.SetupTOTP
+	ConfirmTOTPUC         *usecase.ConfirmTOTP
+	BeginPasskeyRegUC     *usecase.BeginPasskeyRegistration
+	FinishPasskeyRegUC    *usecase.FinishPasskeyRegistration
+	BeginPasskeyAuthUC    *usecase.BeginPasskeyAuthentication
+	FinishPasskeyAuthUC   *usecase.FinishPasskeyAuthentication
+	VerifyTOTPLoginUC     *usecase.VerifyLoginTOTP
+	FinishPasskeyLoginUC  *usecase.FinishLoginPasskey
+	MFASigner             *authtoken.JWTSigner
+	ChangePasswordUC      *usecase.ChangePassword
+	QRCodec               ports.QRCodec
 
 	Tenants      *postgres.TenantRepository
 	Users        *postgres.UserRepository

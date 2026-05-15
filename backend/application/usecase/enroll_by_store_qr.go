@@ -14,19 +14,22 @@ import (
 // EnrollByStoreQR enrolls an existing or new global customer identity into a tenant by scanning the store QR.
 // MVP flow: PWA scans store QR, then submits phone + name (and optional email).
 type EnrollByStoreQR struct {
-	Tx          ports.TxManager
-	Clock       ports.Clock
-	Tenants     ports.TenantRepository
-	Customers   ports.CustomerIdentityRepository
-	Enrollments ports.LoyaltyEnrollmentRepository
-	QRCodec     ports.QRCodec
+	Tx                       ports.TxManager
+	Clock                    ports.Clock
+	Tenants                  ports.TenantRepository
+	Customers                ports.CustomerIdentityRepository
+	Enrollments              ports.LoyaltyEnrollmentRepository
+	QRCodec                  ports.QRCodec
+	PhoneProofParser         ports.PhoneEnrollmentProofParser
+	RequirePhoneVerification bool
 }
 
 type EnrollByStoreQRInput struct {
-	StoreQR   string
-	PhoneE164 string
-	Name      string
-	Email     *string
+	StoreQR          string
+	PhoneE164        string
+	Name             string
+	Email            *string
+	PhoneVerifyToken string
 }
 
 type EnrollByStoreQROutput struct {
@@ -42,6 +45,21 @@ func (uc *EnrollByStoreQR) Execute(ctx context.Context, in EnrollByStoreQRInput)
 	name := strings.TrimSpace(in.Name)
 	if storeQR == "" || phone == "" || name == "" || !isE164PhoneEnroll(phone) {
 		return nil, fmt.Errorf("%w", domain.ErrInvalid)
+	}
+
+	if uc.RequirePhoneVerification {
+		if strings.TrimSpace(in.PhoneVerifyToken) == "" {
+			return nil, fmt.Errorf("%w", domain.ErrUnauthorized)
+		}
+	}
+	if tok := strings.TrimSpace(in.PhoneVerifyToken); tok != "" {
+		if uc.PhoneProofParser == nil {
+			return nil, fmt.Errorf("%w", domain.ErrInvalid)
+		}
+		proved, err := uc.PhoneProofParser.ParsePhoneEnrollmentProof(ctx, tok)
+		if err != nil || proved != phone {
+			return nil, fmt.Errorf("%w", domain.ErrUnauthorized)
+		}
 	}
 
 	var email *string

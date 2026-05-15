@@ -14,6 +14,7 @@ import (
 	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/authtoken"
+	"github.com/PaulUno777/jubely-saas/backend/infrastructure/memory"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/objectstorage"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/persistence/postgres"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/qr"
@@ -115,6 +116,7 @@ func main() {
 	refreshAuth := &usecase.RefreshAuth{
 		Users:         userRepo,
 		RefreshTokens: refreshRepo,
+		Factors:       mfaRepo,
 		Signer:        signer,
 		Clock:         clock,
 		TTL:           cfg.RefreshTokenTTL,
@@ -184,6 +186,7 @@ func main() {
 
 	finishPasskeyLogin := &usecase.FinishLoginPasskey{
 		Users:         userRepo,
+		Factors:       mfaRepo,
 		RefreshTokens: refreshRepo,
 		Signer:        signer,
 		MFASigner:     signer,
@@ -230,12 +233,29 @@ func main() {
 		QRCodec:     qrCodec,
 	}
 	enrollByStoreQR := &usecase.EnrollByStoreQR{
-		Tx:          txManager,
+		Tx:                       txManager,
+		Clock:                    clock,
+		Tenants:                  tenantRepo,
+		Customers:                customerRepo,
+		Enrollments:              enrollmentRepo,
+		QRCodec:                  qrCodec,
+		PhoneProofParser:         signer,
+		RequirePhoneVerification: cfg.PublicEnrollRequirePhoneVerify,
+	}
+
+	phoneOTPStore := memory.NewPhoneOTPStore()
+	publicCustomerOTP := &usecase.PublicCustomerOTP{
+		Store:       phoneOTPStore,
+		ProofSigner: signer,
 		Clock:       clock,
+	}
+
+	pointEvents := &postgres.PointEventRepository{Pool: pool}
+	staffRecordPurchase := &usecase.StaffRecordPurchase{
 		Tenants:     tenantRepo,
 		Customers:   customerRepo,
 		Enrollments: enrollmentRepo,
-		QRCodec:     qrCodec,
+		Points:      pointEvents,
 	}
 
 	storeSignup := &usecase.StoreSignup{
@@ -288,39 +308,41 @@ func main() {
 	}
 
 	srv := &httpserver.Server{
-		BootstrapUC:          bootstrap,
-		LoginUC:              login,
-		RefreshUC:            refreshAuth,
-		LogoutUC:             logout,
-		SetupTOTPUC:          setupTOTP,
-		ConfirmTOTPUC:        confirmTOTP,
-		BeginPasskeyRegUC:    beginPKReg,
-		FinishPasskeyRegUC:   finishPKReg,
-		BeginPasskeyAuthUC:   beginPKAuth,
-		FinishPasskeyAuthUC:  finishPKAuth,
-		VerifyTOTPLoginUC:    verifyTOTPLogin,
-		FinishPasskeyLoginUC: finishPasskeyLogin,
-		MFASigner:            signer,
-		ChangePasswordUC:     changePassword,
-		StoreSignupUC:        storeSignup,
-		CreateTenantUC:       createTenant,
-		ListTenantsUC:        listTenants,
-		UpdateTenantUC:       updateTenant,
-		ListTenantUsersUC:    listTenantUsers,
-		CreateInvitationUC:   createInvitation,
-		AcceptInvitationUC:   acceptInvitation,
-		CreateTenantUserUC:   createTenantUser,
-		SuperadminStatsUC:    superadminStats,
-		CreateCustomerUC:     createCustomer,
-		EnrollByStoreQRUC:    enrollByStoreQR,
-		QRCodec:              qrCodec,
-		Tenants:              tenantRepo,
-		Users:                userRepo,
-		Invitations:          invRepo,
-		CORSAllowAll:         cfg.CORSAllowAll,
-		AssetUploadDir:       cfg.AssetUploadDir,
-		UploadTenantLogoUC:   uploadTenantLogo,
-		StoreMetrics:         storeLoyaltyMetrics,
+		BootstrapUC:           bootstrap,
+		LoginUC:               login,
+		RefreshUC:             refreshAuth,
+		LogoutUC:              logout,
+		SetupTOTPUC:           setupTOTP,
+		ConfirmTOTPUC:         confirmTOTP,
+		BeginPasskeyRegUC:     beginPKReg,
+		FinishPasskeyRegUC:    finishPKReg,
+		BeginPasskeyAuthUC:    beginPKAuth,
+		FinishPasskeyAuthUC:   finishPKAuth,
+		VerifyTOTPLoginUC:     verifyTOTPLogin,
+		FinishPasskeyLoginUC:  finishPasskeyLogin,
+		MFASigner:             signer,
+		ChangePasswordUC:      changePassword,
+		StoreSignupUC:         storeSignup,
+		CreateTenantUC:        createTenant,
+		ListTenantsUC:         listTenants,
+		UpdateTenantUC:        updateTenant,
+		ListTenantUsersUC:     listTenantUsers,
+		CreateInvitationUC:    createInvitation,
+		AcceptInvitationUC:    acceptInvitation,
+		CreateTenantUserUC:    createTenantUser,
+		SuperadminStatsUC:     superadminStats,
+		CreateCustomerUC:      createCustomer,
+		EnrollByStoreQRUC:     enrollByStoreQR,
+		StaffRecordPurchaseUC: staffRecordPurchase,
+		PublicCustomerOTP:     publicCustomerOTP,
+		QRCodec:               qrCodec,
+		Tenants:               tenantRepo,
+		Users:                 userRepo,
+		Invitations:           invRepo,
+		CORSAllowAll:          cfg.CORSAllowAll,
+		AssetUploadDir:        cfg.AssetUploadDir,
+		UploadTenantLogoUC:    uploadTenantLogo,
+		StoreMetrics:          storeLoyaltyMetrics,
 	}
 
 	engine := httpserver.NewRouter(signer, srv)

@@ -111,6 +111,33 @@ func RequireMerchantAdmin() gin.HandlerFunc {
 	}
 }
 
+func RequirePermission(want string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		raw, ok := c.Get(ginKeyAuthClaims)
+		if !ok {
+			respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+			c.Abort()
+			return
+		}
+		claims, ok := raw.(ports.TokenClaims)
+		if !ok {
+			respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+			c.Abort()
+			return
+		}
+		perms := claims.Permissions
+		if len(perms) == 0 {
+			perms = domain.DefaultPermissionsForRole(claims.Role)
+		}
+		if !domain.HasPermission(perms, want) {
+			respondError(c, http.StatusForbidden, i18n.CodeAuthForbidden, nil)
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
 func RequireAdminPortal() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		raw, ok := c.Get(ginKeyAuthClaims)

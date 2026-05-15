@@ -73,6 +73,10 @@ func mapCustomerError(err error) MappedError {
 	switch {
 	case errors.Is(err, domain.ErrInvalid):
 		return MappedError{http.StatusBadRequest, i18n.CodeValidationInvalid, map[string]any{"reason": "invalid_input"}}
+	case errors.Is(err, domain.ErrNotFound):
+		return MappedError{http.StatusNotFound, i18n.CodeValidationInvalid, map[string]any{"reason": "not_found"}}
+	case errors.Is(err, domain.ErrUnauthorized):
+		return MappedError{http.StatusUnauthorized, i18n.CodeAuthInvalidCredentials, map[string]any{"reason": "invalid_otp_or_proof"}}
 	case errors.Is(err, domain.ErrPhoneTaken):
 		return MappedError{http.StatusConflict, i18n.CodeCustomerPhoneTaken, map[string]any{"reason": "phone_taken"}}
 	case errors.Is(err, domain.ErrConflict):

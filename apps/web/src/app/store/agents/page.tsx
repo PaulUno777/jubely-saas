@@ -34,6 +34,8 @@ import {
 } from "@jubely/ui";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { ApiResponseError } from "@jubely/api-schemas";
 import { Main } from "@/components/layout/main";
 import { StorePageHeader } from "@/components/store/store-page-header";
 import { useSession } from "@/hooks/useSession";
@@ -50,8 +52,8 @@ export default function StoreAgentsPage() {
 
   const q = useQuery({
     queryKey: ["store", "users"],
-    enabled: Boolean(session?.accessToken),
-    queryFn: () => storeListUsers({ accessToken: session!.accessToken, limit: 50, offset: 0 }),
+    enabled: Boolean(session),
+    queryFn: () => storeListUsers({ limit: 50, offset: 0 }),
   });
 
   const form = useForm<z.infer<typeof inviteSchema>>({
@@ -61,11 +63,15 @@ export default function StoreAgentsPage() {
 
   const mut = useMutation({
     mutationFn: async (values: z.infer<typeof inviteSchema>) => {
-      return storeCreateInvitation({ accessToken: session!.accessToken, email: values.email, role: "staff" });
+      return storeCreateInvitation({ email: values.email, role: "staff" });
     },
     onSuccess: () => {
+      toast.success(t("inviteSuccess"));
       form.reset();
       q.refetch();
+    },
+    onError: (e) => {
+      toast.error(e instanceof ApiResponseError ? e.message : t("inviteError"));
     },
   });
 
@@ -140,7 +146,7 @@ export default function StoreAgentsPage() {
                 ) : q.error ? (
                   <TableRow>
                     <TableCell colSpan={2} className="text-sm text-destructive">
-                      {t("loadError")}
+                      {q.error instanceof ApiResponseError ? q.error.message : t("loadErrorDetail")}
                     </TableCell>
                   </TableRow>
                 ) : q.data?.length ? (

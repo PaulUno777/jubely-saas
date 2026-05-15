@@ -9,8 +9,8 @@ export function useStoreMetrics() {
 
   return useQuery({
     queryKey: ["store", "metrics", session?.tenantId],
-    enabled: Boolean(session?.accessToken && session?.role === "merchant_admin"),
-    queryFn: () => storeGetMetrics({ accessToken: session!.accessToken }),
+    enabled: Boolean(session && session?.role === "merchant_admin"),
+    queryFn: () => storeGetMetrics(),
     staleTime: 60_000,
   });
 }

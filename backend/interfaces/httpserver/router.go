@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/authtoken"
 	"github.com/gin-gonic/gin"
 )
@@ -18,11 +19,14 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 	v1 := r.Group("/v1")
 	{
 		public := v1.Group("/public")
-		public.POST("/store/signup", s.PublicStoreSignup)
+		public.GET("/tenant/:slug", GinRateLimit(rateLimitPublicTenant), s.PublicGetTenantBySlug)
+		public.POST("/otp/send", GinRateLimit(rateLimitPublicOTPSend), s.PublicOTPSend)
+		public.POST("/otp/verify", GinRateLimit(rateLimitPublicOTPVerify), s.PublicOTPVerify)
+		public.POST("/store/signup", GinRateLimit(rateLimitPublicSignup), s.PublicStoreSignup)
 		public.GET("/files/*filepath", s.PublicServeUpload)
 
-		v1.POST("/bootstrap/superadmin", s.BootstrapSuperadmin)
-		v1.POST("/auth/login", s.AuthLogin)
+		v1.POST("/bootstrap/superadmin", GinRateLimit(rateLimitBootstrap), s.BootstrapSuperadmin)
+		v1.POST("/auth/login", GinRateLimit(rateLimitLogin), s.AuthLogin)
 		v1.POST("/auth/mfa/totp/verify", s.AuthMFATOTPVerify)
 		v1.POST("/auth/refresh", s.AuthRefresh)
 		v1.POST("/auth/logout", s.AuthLogout)
@@ -63,15 +67,18 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		store.Use(AuthMiddleware(signer), RequireMerchantAdmin())
 		store.GET("/metrics", s.StoreGetMetrics)
 		store.GET("/tenant", s.StoreGetTenant)
+		store.PATCH("/tenant", s.StorePatchTenant)
+		store.GET("/qr", s.StoreGetStoreQR)
 		store.GET("/users", s.StoreListUsers)
 		store.POST("/invitations", s.StoreCreateInvitation)
 
 		staff := v1.Group("/staff")
 		staff.Use(AuthMiddleware(signer), RequireStaffOrMerchantAdmin())
-		staff.POST("/customers", s.StaffCreateCustomer)
+		staff.POST("/customers", RequirePermission(domain.PermEnrollCustomer), s.StaffCreateCustomer)
+		staff.POST("/purchases", RequirePermission(domain.PermRecordTransaction), s.StaffRecordPurchase)
 
 		pwa := v1.Group("/pwa")
-		pwa.POST("/enrollments/scan", s.PWAEnrollByStoreQR)
+		pwa.POST("/enrollments/scan", GinRateLimit(rateLimitPWAEnroll), s.PWAEnrollByStoreQR)
 
 		me := v1.Group("/me")
 		me.Use(AuthMiddleware(signer))

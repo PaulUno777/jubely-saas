@@ -130,6 +130,8 @@ func (uc *StoreSignup) Execute(ctx context.Context, in StoreSignupInput) (*Store
 			Role:               u.Role,
 			Email:              u.Email,
 			MustChangePassword: u.MustChangePassword,
+			MFAEnrolledCount:   0,
+			Permissions:        domain.DefaultPermissionsForRole(u.Role),
 		})
 		if err != nil {
 			return err
