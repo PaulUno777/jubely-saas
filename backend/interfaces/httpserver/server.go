@@ -24,7 +24,10 @@ type Server struct {
 	SuperadminStatsUC     *usecase.SuperadminStats
 	CreateCustomerUC      *usecase.CreateCustomerByStaff
 	EnrollByStoreQRUC     *usecase.EnrollByStoreQR
+	GetPWAWalletUC        *usecase.GetPWAWallet
 	StaffRecordPurchaseUC *usecase.StaffRecordPurchase
+	ListStoreCustomersUC  *usecase.ListStoreCustomers
+	ListStorePointEventsUC *usecase.ListStorePointEvents
 	PublicCustomerOTP     *usecase.PublicCustomerOTP
 	SetupTOTPUC           *usecase.SetupTOTP
 	ConfirmTOTPUC         *usecase.ConfirmTOTP
@@ -42,6 +45,7 @@ type Server struct {
 	Users        *postgres.UserRepository
 	Invitations  *postgres.InvitationRepository
 	StoreMetrics *postgres.StoreLoyaltyMetrics
+	StoreCatalog *postgres.StoreCatalog
 
 	// CORSAllowAll enables permissive CORS for local dev.
 	CORSAllowAll bool

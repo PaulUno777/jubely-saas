@@ -1,6 +1,8 @@
 import {
   createInvitationSuccessEnvelopeSchema,
   createInvitationWireSchema,
+  listStoreCustomersSuccessEnvelopeSchema,
+  listStorePointEventsSuccessEnvelopeSchema,
   listStoreUsersSuccessEnvelopeSchema,
   parseJsonUnknown,
   parseSuccessData,
@@ -10,7 +12,7 @@ import {
   storeQrSuccessEnvelopeSchema,
   throwFailedApiResponse,
 } from "@jubely/api-schemas";
-import { authedFetch, joinUrl, jsonHeaders } from "./http";
+import { authedFetch, joinUrlWithQuery, jsonHeaders } from "./http";
 
 export async function storeGetMetrics() {
   const res = await authedFetch("/v1/store/metrics", { method: "GET" });
@@ -50,15 +52,36 @@ export async function storeGetStoreQR() {
 }
 
 export async function storeListUsers(input: { offset?: number; limit?: number } = {}) {
-  const url = new URL(joinUrl("/v1/store/users"));
-  if (input.offset !== undefined) url.searchParams.set("offset", String(input.offset));
-  if (input.limit !== undefined) url.searchParams.set("limit", String(input.limit));
-
-  const res = await authedFetch(url.toString(), { method: "GET" });
+  const res = await authedFetch(
+    joinUrlWithQuery("/v1/store/users", { offset: input.offset, limit: input.limit }),
+    { method: "GET" },
+  );
   const text = await res.text();
   const json = parseJsonUnknown(text);
   if (!res.ok) throwFailedApiResponse(json, res.status, text);
   return parseSuccessData(json, listStoreUsersSuccessEnvelopeSchema, res.status, text);
+}
+
+export async function storeListCustomers(input: { offset?: number; limit?: number } = {}) {
+  const res = await authedFetch(
+    joinUrlWithQuery("/v1/store/customers", { offset: input.offset, limit: input.limit }),
+    { method: "GET" },
+  );
+  const text = await res.text();
+  const json = parseJsonUnknown(text);
+  if (!res.ok) throwFailedApiResponse(json, res.status, text);
+  return parseSuccessData(json, listStoreCustomersSuccessEnvelopeSchema, res.status, text);
+}
+
+export async function storeListPointEvents(input: { offset?: number; limit?: number } = {}) {
+  const res = await authedFetch(
+    joinUrlWithQuery("/v1/store/transactions", { offset: input.offset, limit: input.limit }),
+    { method: "GET" },
+  );
+  const text = await res.text();
+  const json = parseJsonUnknown(text);
+  if (!res.ok) throwFailedApiResponse(json, res.status, text);
+  return parseSuccessData(json, listStorePointEventsSuccessEnvelopeSchema, res.status, text);
 }
 
 export async function storeCreateInvitation(input: { email: string; role?: string }) {

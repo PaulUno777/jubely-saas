@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
@@ -38,5 +39,53 @@ func (s *Server) PWAEnrollByStoreQR(c *gin.Context) {
 		"customer_id":   out.CustomerID.String(),
 		"enrollment_id": out.EnrollmentID.String(),
 		"customer_qr":   out.CustomerQR,
+	})
+}
+
+func customerQRFromRequest(c *gin.Context) string {
+	if q := strings.TrimSpace(c.Query("customer_qr")); q != "" {
+		return q
+	}
+	auth := strings.TrimSpace(c.GetHeader("Authorization"))
+	if strings.HasPrefix(strings.ToLower(auth), "bearer ") {
+		return strings.TrimSpace(auth[7:])
+	}
+	return ""
+}
+
+func (s *Server) PWAGetWallet(c *gin.Context) {
+	qr := customerQRFromRequest(c)
+	if qr == "" {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "missing_customer_qr"})
+		return
+	}
+	if s.GetPWAWalletUC == nil {
+		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
+		return
+	}
+	out, err := s.GetPWAWalletUC.Execute(c.Request.Context(), usecase.GetPWAWalletInput{CustomerQR: qr})
+	if err != nil {
+		respondMapped(c, mapCustomerError(err))
+		return
+	}
+	events := make([]gin.H, 0, len(out.RecentEvents))
+	for _, e := range out.RecentEvents {
+		events = append(events, gin.H{
+			"event_id":   e.EventID.String(),
+			"event_type": e.EventType,
+			"delta":      e.Delta,
+			"payload":    e.Payload,
+			"created_at": e.CreatedAt,
+		})
+	}
+	respondOK(c, gin.H{
+		"tenant_id":      out.TenantID.String(),
+		"tenant_name":    out.TenantName,
+		"tenant_slug":    out.TenantSlug,
+		"customer_id":    out.CustomerID.String(),
+		"enrollment_id":  out.EnrollmentID.String(),
+		"tier":           out.Tier,
+		"points_balance": out.PointsBalance,
+		"recent_events":  events,
 	})
 }

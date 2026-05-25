@@ -5,8 +5,8 @@ import { agentLoginFormSchema, type AgentLoginForm } from "@jubely/api-schemas";
 import { useMutation } from "@tanstack/react-query";
 import { Key, Loader2, LogIn, Smartphone } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
@@ -63,6 +63,7 @@ function routeAfterLogin(role: Role) {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const tLogin = useTranslations("auth.login");
   const tForm = useTranslations("common.form");
   const tErrors = useTranslations("errors");
@@ -89,6 +90,11 @@ export default function LoginPage() {
     resolver: zodResolver(agentLoginFormSchema),
     defaultValues: { email: "", password: "", tenantSlug: "" },
   });
+
+  useEffect(() => {
+    const slug = searchParams.get("slug")?.trim();
+    if (slug) form.setValue("tenantSlug", slug);
+  }, [form, searchParams]);
 
   async function postAuthBff(path: string, body: unknown): Promise<unknown> {
     const res = await fetch(path, {

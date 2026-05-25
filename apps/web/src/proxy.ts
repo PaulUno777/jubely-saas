@@ -35,7 +35,6 @@ function requiredRoleForPath(pathname: string): Role | null {
   if (pathname.startsWith("/root")) return "superadmin";
   if (pathname.startsWith("/store")) return "merchant_admin";
   if (pathname.startsWith("/agent")) return "staff";
-  if (pathname.startsWith("/customer")) return "customer";
   if (pathname.startsWith("/account")) return null; // checked below (superadmin | merchant_admin only)
   return null;
 }
@@ -49,7 +48,6 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/root") ||
     pathname.startsWith("/store") ||
     pathname.startsWith("/agent") ||
-    pathname.startsWith("/customer") ||
     pathname.startsWith("/account");
   if (!isProtected) return NextResponse.next();
 
@@ -84,5 +82,5 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/root/:path*", "/store/:path*", "/agent/:path*", "/customer/:path*", "/account/:path*"],
+  matcher: ["/root/:path*", "/store/:path*", "/agent/:path*", "/account/:path*"],
 };

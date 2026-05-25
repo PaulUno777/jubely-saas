@@ -2,6 +2,8 @@
 
 Base URL is configured per environment (e.g. `http://localhost:8082/v1`). Responses use JSON envelopes: success `{ "data": ..., "meta": ... }`, errors `{ "error": { "code", "message", "details?" }, "meta": ... }`.
 
+**Web app (Next.js BFF):** the browser calls `http://localhost:3000/api/v1/...` (proxy to Go) and `http://localhost:3000/api/auth/*` (HttpOnly cookies). Staff/merchant JWTs are not stored in `localStorage`.
+
 ## Public (no auth)
 
 | Method | Path                         | Description                                                                                      |
@@ -19,11 +21,12 @@ Base URL is configured per environment (e.g. `http://localhost:8082/v1`). Respon
 | GET    | `/invitations/:token`        | Invitation preview                                                                               |
 | POST   | `/invitations/:token/accept` | Accept invitation                                                                                |
 
-## PWA / enrollment (no auth)
+## PWA / enrollment (customer QR auth, no JWT)
 
 | Method | Path                    | Description                                                                                                   |
 | ------ | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
 | POST   | `/pwa/enrollments/scan` | Enroll customer via signed `store_qr` + phone + name; optional `phone_verify_token` from `/public/otp/verify` |
+| GET    | `/pwa/wallet`           | Wallet for one enrollment: balance + recent point events. Query `customer_qr` or `Authorization: Bearer <customer_qr>` |
 
 ## Authenticated — superadmin (`Authorization: Bearer`, role `superadmin`)
 
@@ -52,8 +55,10 @@ Group `/v1/store`.
 | PATCH  | `/store/tenant`      | Update `name`, `conflict_policy`, `settings` (not plan/active) |
 | GET    | `/store/metrics`     | Points distributed + point events this month                   |
 | GET    | `/store/qr`          | Signed store QR (same semantics as superadmin route)           |
-| GET    | `/store/users`       | List store users                                               |
-| POST   | `/store/invitations` | Invite staff / roles                                           |
+| GET    | `/store/users`        | List store users                                               |
+| GET    | `/store/customers`    | Paginated enrolled customers + point balances                  |
+| GET    | `/store/transactions` | Paginated point events (ledger) for the store                    |
+| POST   | `/store/invitations`  | Invite staff / roles                                           |
 
 ## Authenticated — staff or merchant admin
 

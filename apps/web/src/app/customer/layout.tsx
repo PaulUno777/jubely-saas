@@ -5,7 +5,7 @@ import { ProfileChrome } from "@/components/preferences/profile-chrome";
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-xl px-5 py-10">
+    <div className="mx-auto max-w-xl px-5 py-10" suppressHydrationWarning>
       <ProfileChrome profile="customer" />
       <InstallBanner />
       {children}

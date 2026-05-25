@@ -70,6 +70,8 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		store.PATCH("/tenant", s.StorePatchTenant)
 		store.GET("/qr", s.StoreGetStoreQR)
 		store.GET("/users", s.StoreListUsers)
+		store.GET("/customers", s.StoreListCustomers)
+		store.GET("/transactions", s.StoreListPointEvents)
 		store.POST("/invitations", s.StoreCreateInvitation)
 
 		staff := v1.Group("/staff")
@@ -79,6 +81,7 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 
 		pwa := v1.Group("/pwa")
 		pwa.POST("/enrollments/scan", GinRateLimit(rateLimitPWAEnroll), s.PWAEnrollByStoreQR)
+		pwa.GET("/wallet", GinRateLimit(rateLimitPWAEnroll), s.PWAGetWallet)
 
 		me := v1.Group("/me")
 		me.Use(AuthMiddleware(signer))

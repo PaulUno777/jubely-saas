@@ -21,3 +21,36 @@ export const storeQrDataSchema = z.object({
 });
 
 export const storeQrSuccessEnvelopeSchema = successEnvelopeSchema(storeQrDataSchema);
+
+export const storeCustomerSchema = z.object({
+  enrollment_id: z.string(),
+  customer_id: z.string(),
+  name: z.string(),
+  phone: z.string(),
+  email: z.string().optional(),
+  tier: z.string(),
+  points_balance: z.number(),
+  enrolled_at: z.union([z.string(), z.date(), z.number()]),
+});
+
+export const listStoreCustomersSuccessEnvelopeSchema = successEnvelopeSchema(
+  z.array(storeCustomerSchema),
+);
+
+export type StoreCustomer = z.infer<typeof storeCustomerSchema>;
+
+export const storePointEventSchema = z.object({
+  event_id: z.string(),
+  event_type: z.string(),
+  delta: z.number(),
+  payload: z.unknown().optional(),
+  created_at: z.union([z.string(), z.date(), z.number()]),
+  customer_name: z.string().optional(),
+  customer_phone: z.string().optional(),
+});
+
+export const listStorePointEventsSuccessEnvelopeSchema = successEnvelopeSchema(
+  z.array(storePointEventSchema),
+);
+
+export type StorePointEvent = z.infer<typeof storePointEventSchema>;

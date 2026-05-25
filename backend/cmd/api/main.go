@@ -51,6 +51,9 @@ func main() {
 
 	tenantRepo := &postgres.TenantRepository{Pool: pool}
 	storeLoyaltyMetrics := &postgres.StoreLoyaltyMetrics{Pool: pool}
+	storeCatalog := &postgres.StoreCatalog{Pool: pool}
+	listStoreCustomers := &usecase.ListStoreCustomers{Catalog: storeCatalog}
+	listStorePointEvents := &usecase.ListStorePointEvents{Catalog: storeCatalog}
 	userRepo := &postgres.UserRepository{Pool: pool}
 	invRepo := &postgres.InvitationRepository{Pool: pool}
 	refreshRepo := &postgres.RefreshTokenRepository{Pool: pool}
@@ -232,6 +235,12 @@ func main() {
 		Enrollments: enrollmentRepo,
 		QRCodec:     qrCodec,
 	}
+	getPWAWallet := &usecase.GetPWAWallet{
+		QRCodec:     qrCodec,
+		Tenants:     tenantRepo,
+		Enrollments: enrollmentRepo,
+		Catalog:     storeCatalog,
+	}
 	enrollByStoreQR := &usecase.EnrollByStoreQR{
 		Tx:                       txManager,
 		Clock:                    clock,
@@ -333,7 +342,10 @@ func main() {
 		SuperadminStatsUC:     superadminStats,
 		CreateCustomerUC:      createCustomer,
 		EnrollByStoreQRUC:     enrollByStoreQR,
-		StaffRecordPurchaseUC: staffRecordPurchase,
+		GetPWAWalletUC:        getPWAWallet,
+		StaffRecordPurchaseUC:  staffRecordPurchase,
+		ListStoreCustomersUC:   listStoreCustomers,
+		ListStorePointEventsUC: listStorePointEvents,
 		PublicCustomerOTP:     publicCustomerOTP,
 		QRCodec:               qrCodec,
 		Tenants:               tenantRepo,
@@ -343,6 +355,7 @@ func main() {
 		AssetUploadDir:        cfg.AssetUploadDir,
 		UploadTenantLogoUC:    uploadTenantLogo,
 		StoreMetrics:          storeLoyaltyMetrics,
+		StoreCatalog:          storeCatalog,
 	}
 
 	engine := httpserver.NewRouter(signer, srv)

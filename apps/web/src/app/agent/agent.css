@@ -1,0 +1,236 @@
+/* Agent portal design tokens — scoped to [data-portal="agent"] */
+
+[data-portal="agent"] {
+  --a-cream:    #f6f4ef;
+  --a-cream-2:  #efece5;
+  --a-cream-3:  #e3ddd0;
+  --a-ink:      #1a1814;
+  --a-ink-mut:  #6b6457;
+  --a-ink-soft: #908871;
+  --a-card:     #29261b;
+  --a-gold:     #b8924a;
+  --a-gold-2:   #d4ae6c;
+  --a-gold-3:   #8a6e38;
+  --a-gold-bg:  rgba(184, 146, 74, 0.14);
+  --a-green:    #2d7a4d;
+  --a-green-2:  #5fa97a;
+  --a-mint:     #dceadf;
+  --a-red-bg:   #f3d8cb;
+  --a-red:      #a23e1a;
+  --a-line:     rgba(26, 24, 20, 0.08);
+  --a-line-d:   rgba(255, 255, 255, 0.08);
+
+  background: var(--a-cream);
+  color: var(--a-ink);
+}
+
+/* Animations */
+@keyframes a-scan-line {
+  0%   { transform: translateY(0);     opacity: 0.95; }
+  50%  {                               opacity: 1;    }
+  100% { transform: translateY(220px); opacity: 0.4;  }
+}
+
+@keyframes a-pulse-dot {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50%       { opacity: 1;  transform: scale(1.1); }
+}
+
+@keyframes a-pop-in {
+  0%   { opacity: 0; transform: scale(0.6); }
+  60%  { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Tab bar */
+[data-portal="agent"] .a-tabbar {
+  height: 78px;
+  background: rgba(246, 244, 239, 0.92);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-top: 0.5px solid rgba(26, 24, 20, 0.08);
+  display: grid;
+  grid-template-columns: 1fr 1fr 88px 1fr 1fr;
+  align-items: start;
+  padding: 8px 12px 0;
+  flex-shrink: 0;
+}
+
+[data-portal="agent"] .a-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-top: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--a-ink-mut);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+}
+
+[data-portal="agent"] .a-tab[data-active="true"] {
+  color: var(--a-ink);
+}
+
+[data-portal="agent"] .a-tab-fab {
+  width: 64px;
+  height: 64px;
+  margin: -14px auto 0;
+  background: var(--a-card);
+  color: var(--a-gold-2);
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 0 0 4px var(--a-cream),
+    0 12px 24px rgba(26, 24, 20, 0.28),
+    0 4px 8px rgba(26, 24, 20, 0.16);
+  cursor: pointer;
+  transition: transform 0.12s ease;
+  text-decoration: none;
+  border: 0;
+}
+
+[data-portal="agent"] .a-tab-fab:active {
+  transform: scale(0.96);
+}
+
+/* Cards */
+[data-portal="agent"] .a-card-dark {
+  background: var(--a-card);
+  border-radius: 24px;
+  padding: 20px;
+  color: var(--a-cream);
+}
+
+[data-portal="agent"] .a-card-cream {
+  background: var(--a-cream-2);
+  border-radius: 20px;
+  padding: 16px;
+  border: 1px solid var(--a-line);
+}
+
+/* Screen top bar */
+[data-portal="agent"] .a-scr-top {
+  padding: 16px 20px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+[data-portal="agent"] .a-scr-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--a-cream-2);
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-portal="agent"] .a-scr-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* Numpad */
+[data-portal="agent"] .a-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+[data-portal="agent"] .a-keypad button {
+  height: 64px;
+  border-radius: 16px;
+  background: var(--a-cream-2);
+  border: 0;
+  font-size: 22px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--a-ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+[data-portal="agent"] .a-keypad button:active {
+  background: var(--a-cream-3);
+}
+
+/* Activity feed row */
+[data-portal="agent"] .a-activity-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 0.5px solid var(--a-line);
+}
+
+[data-portal="agent"] .a-activity-row:last-child {
+  border-bottom: none;
+}
+
+/* Client list row */
+[data-portal="agent"] .a-row-client {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 0.5px solid var(--a-line);
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+[data-portal="agent"] .a-row-client:active {
+  opacity: 0.7;
+}
+
+/* Scanner viewfinder corners */
+[data-portal="agent"] .a-vf-corner {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--a-gold-2);
+}
+
+[data-portal="agent"] .a-vf-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--a-gold-2), transparent);
+  border-radius: 99px;
+  animation: a-scan-line 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Tier progress bar fill */
+[data-portal="agent"] .a-tier-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--a-gold-3), var(--a-gold-2));
+  border-radius: 99px;
+}
+
+/* Pulse dot for live indicator */
+[data-portal="agent"] .a-pulse-dot {
+  animation: a-pulse-dot 1.8s ease-in-out infinite;
+}
+
+/* Success pop-in animation */
+[data-portal="agent"] .a-pop-in {
+  animation: a-pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}

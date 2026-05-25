@@ -14,9 +14,10 @@ Living tracker aligned with [context/NEW_PLANING.md](../context/NEW_PLANING.md) 
 |----------|------|--------|
 | 1 | Land HttpOnly auth BFF + `proxy.ts` + Phase 3 backend APIs | `feat/auth-bff-httpOnly` (PR open) |
 | 2 | Agent purchase UI (`POST /v1/staff/purchases`) | `feat/phase3-agent-purchase` |
-| 3 | Manual Phase 3 validation (enroll → purchase → metrics) | [phase3-validation.md](./phase3-validation.md) |
-| 📋 | Store customers / transactions list (read-only) when list APIs exist | TBD |
-| 📋 | Customer wallet balance + history (`GET /customer/me/...`) | TBD |
+| 3 | Manual Phase 3 validation (enroll → purchase → metrics) | [phase3-validation.md](./phase3-validation.md) · `pnpm dev:seed` |
+| ✅ | Staff invite accept page `/invite/[token]` | local |
+| ✅ | Store customers / transactions list (read-only) | local |
+| ✅ | Customer wallet balance + history (`GET /v1/pwa/wallet?customer_qr=`) | local |
 
 ---
 
@@ -31,7 +32,7 @@ Living tracker aligned with [context/NEW_PLANING.md](../context/NEW_PLANING.md) 
 | Tenant CRUD + merchant users | ✅ | `/v1/superadmin/tenants` |
 | Web login + role routing | ✅ | `/login`, `proxy.ts` |
 | Superadmin UI (tenants, wizard, detail) | ✅ | `/root/*` |
-| CI lint/test | 🚧 | See root `package.json` |
+| CI lint/test | 🚧 | `pnpm test:backend` · `pnpm test:web` |
 | Fly.io / Vercel deploy | 📋 | |
 
 ### Phase 1 manual checks
@@ -50,9 +51,12 @@ Living tracker aligned with [context/NEW_PLANING.md](../context/NEW_PLANING.md) 
 | `GET/PATCH /v1/store/tenant` | ✅ | Settings + branding |
 | `GET /v1/store/qr` | ✅ | Enrollment QR page |
 | `GET /v1/store/users` + invitations | ✅ | Agents page |
+| `GET/POST /v1/invitations/:token` | ✅ | `/invite/[token]` |
 | `GET /v1/store/metrics` | ✅ | Dashboard KPIs |
-| Store customers list UI | 📋 | Placeholder `/store/customers` |
-| Store transactions list UI | 📋 | Placeholder `/store/transactions` |
+| `GET /v1/store/customers` | ✅ | `/store/customers` |
+| `GET /v1/store/transactions` | ✅ | `/store/transactions` (point events) |
+| Store customers list UI | ✅ | `/store/customers` |
+| Store transactions list UI | ✅ | `/store/transactions` |
 | Rewards / rules CRUD | ⏸ | Phase 4 |
 | Custom roles UI | ⏸ | Permissions in JWT only |
 | `GET /public/tenant/:slug` | ✅ | Join page |
@@ -61,6 +65,7 @@ Living tracker aligned with [context/NEW_PLANING.md](../context/NEW_PLANING.md) 
 
 - [x] Merchant admin: settings, branding, QR
 - [x] Create staff invitation / list users
+- [x] Agent self-service activation (`/invite/[token]`)
 - [ ] Custom role with subset permissions (deferred)
 - [ ] Cross-tenant isolation manual test (second tenant)
 
@@ -75,7 +80,7 @@ Living tracker aligned with [context/NEW_PLANING.md](../context/NEW_PLANING.md) 
 | `POST /staff/customers` | ✅ | `/agent/customers` |
 | `POST /staff/purchases` (1 pt / 500 FCFA) | ✅ | Backend |
 | Agent purchase UI | ✅ | `/agent/purchase` |
-| Customer wallet (balance/history) | 📋 | QR-only today |
+| Customer wallet (balance/history) | ✅ | `/customer/wallet` + `GET /v1/pwa/wallet` |
 | Idempotency on purchases | 📋 | Optional MVP |
 | Offline agent queue | ⏸ | Post-MVP |
 
@@ -115,7 +120,11 @@ See [phase3-validation.md](./phase3-validation.md).
 | `POST /v1/pwa/enrollments/scan` | ✅ | `/join/[slug]` |
 | `POST /v1/staff/customers` | ✅ | `/agent/customers` |
 | `POST /v1/staff/purchases` | ✅ | `/agent/purchase` |
-| `GET /customer/me/enrollments` | 📋 | `/customer/wallet` (future) |
+| `GET /v1/invitations/:token` | ✅ | `/invite/[token]` |
+| `POST /v1/invitations/:token/accept` | ✅ | `/invite/[token]` |
+| `GET /v1/store/customers` | ✅ | `/store/customers` |
+| `GET /v1/store/transactions` | ✅ | `/store/transactions` |
+| `GET /v1/pwa/wallet` | ✅ | `/customer/wallet` (customer QR auth) |
 
 ---
 
@@ -124,7 +133,7 @@ See [phase3-validation.md](./phase3-validation.md).
 | Variable | Purpose |
 |----------|---------|
 | `API_INTERNAL_BASE_URL` | Server-side upstream Go API (e.g. `http://localhost:8082`) |
-| `NEXT_PUBLIC_API_BASE_URL` | Fallback public API origin |
+| `NEXT_PUBLIC_API_BASE_URL` | Go API origin only (e.g. `http://localhost:8082`, **not** `.../api`) |
 | `AUTH_COOKIE_DOMAIN` | Optional cookie domain |
 | `AUTH_COOKIE_SAME_SITE` | `lax` (default), `strict`, or `none` |
 | `COOKIE_SECURE` | `true` / `false`; defaults to secure in production |

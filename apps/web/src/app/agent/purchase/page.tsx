@@ -1,114 +1,147 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  ApiResponseError,
-  recordPurchaseFormSchema,
-  type RecordPurchaseForm,
-} from "@jubely/api-schemas";
-import { useMutation } from "@tanstack/react-query";
-import Link from "next/link";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from "@jubely/ui";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { ApiResponseError } from "@jubely/api-schemas";
 import { staffRecordPurchase } from "@/lib/staffApi";
-import { useSession } from "@/hooks/useSession";
+import { Numpad, applyNumpadKey } from "@/components/agent/numpad";
+import { IconChevronLeft, IconClose, IconCheck, IconChevronRight } from "@/components/agent/icons";
 
-export default function AgentPurchasePage() {
+const RULE_LABEL = "1 pt / 500 FCFA";
+const PTS_RATE = 500;
+
+function calcPoints(amount: number) {
+  return Math.floor(amount / PTS_RATE);
+}
+
+export default function PurchasePage() {
   const t = useTranslations("agent.purchase");
-  const { session } = useSession();
-  const [result, setResult] = useState<{ points_awarded: number; delta: number } | null>(null);
+  const router = useRouter();
+  const params = useSearchParams();
+  const phone = params.get("phone") ?? "";
 
-  const form = useForm<RecordPurchaseForm>({
-    resolver: zodResolver(recordPurchaseFormSchema),
-    defaultValues: { phone: "", amount_fcfa: 500 },
-  });
+  const [amount, setAmount] = useState("");
+  const [result, setResult] = useState<{ pts: number; delta: number } | null>(null);
+
+  const num = parseInt(amount || "0", 10);
+  const pts = calcPoints(num);
 
   const mut = useMutation({
-    mutationFn: (values: RecordPurchaseForm) => staffRecordPurchase({ values }),
-    onSuccess: (out) => {
-      setResult({ points_awarded: out.points_awarded, delta: out.delta });
-      toast.success(t("success", { points: String(out.points_awarded) }));
-      form.reset({ phone: "", amount_fcfa: 500 });
-    },
-    onError: (e) => {
-      toast.error(e instanceof ApiResponseError ? e.message : t("error"));
-    },
+    mutationFn: () => staffRecordPurchase({ values: { phone, amount_fcfa: num } }),
+    onSuccess: (out) => setResult({ pts: out.points_awarded, delta: out.delta }),
+    onError: (e) => toast.error(e instanceof ApiResponseError ? e.message : t("error")),
   });
 
-  if (!session) {
-    return (
-      <div className="rounded-xl border border-border bg-card p-6">
-        <p className="text-sm text-muted-foreground">{t("sessionRequired")}</p>
-        <Link className="mt-3 inline-block text-sm font-medium text-primary underline underline-offset-4" href="/login">
-          {t("goLogin")}
-        </Link>
-      </div>
-    );
-  }
+  if (result) return <AwardSuccess t={t} phone={phone} amount={num} pts={result.pts} onReset={() => { setResult(null); setAmount(""); }} router={router} />;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-display text-3xl font-normal tracking-tight">{t("title")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{t("subtitle")}</p>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+      {/* Top bar */}
+      <div className="a-scr-top">
+        <button onClick={() => router.back()} className="a-scr-back" type="button" style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--a-cream-2)", border: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <IconChevronLeft size={20} />
+        </button>
+        <span className="a-scr-title">{t("title")}</span>
+        <button onClick={() => router.push("/agent")} style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--a-cream-2)", border: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} type="button">
+          <IconClose size={18} />
+        </button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("formTitle")}</CardTitle>
-          <CardDescription>{t("formHint")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            className="space-y-4"
-            onSubmit={form.handleSubmit((values) => {
-              setResult(null);
-              mut.mutate(values);
-            })}
-          >
-            <div className="space-y-2">
-              <Label htmlFor="phone">{t("phone")}</Label>
-              <Input id="phone" placeholder="+237611111111" {...form.register("phone")} />
-              {form.formState.errors.phone ? (
-                <p className="text-sm text-destructive">{t("phoneRequired")}</p>
-              ) : null}
-            </div>
+      {/* Customer card */}
+      <div style={{ padding: "4px 16px 0" }}>
+        <div className="a-card-cream" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 14, background: "var(--a-gold-bg)", color: "var(--a-gold-3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, flexShrink: 0 }}>
+            {phone ? phone.slice(-2) : "?"}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{phone || "—"}</div>
+            <div style={{ fontSize: 12, color: "var(--a-ink-mut)", marginTop: 2 }}>{t("enrolledCustomer")}</div>
+          </div>
+          <IconCheck size={18} color="var(--a-green)" />
+        </div>
+      </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="amount_fcfa">{t("amount")}</Label>
-              <Input
-                id="amount_fcfa"
-                type="number"
-                min={500}
-                step={1}
-                {...form.register("amount_fcfa", { valueAsNumber: true })}
-              />
-              {form.formState.errors.amount_fcfa ? (
-                <p className="text-sm text-destructive">{t("amountInvalid")}</p>
-              ) : null}
-              <p className="text-xs text-muted-foreground">{t("ruleHint")}</p>
-            </div>
+      {/* Amount display */}
+      <div style={{ padding: "24px 20px 4px", textAlign: "center" }}>
+        <div style={{ fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--a-ink-mut)", fontWeight: 600, marginBottom: 4 }}>
+          {t("purchaseAmount")}
+        </div>
+        <div style={{ fontFamily: "var(--jubely-font-display)", fontStyle: "italic", fontSize: 56, lineHeight: 1, color: "var(--a-ink)" }}>
+          {num ? num.toLocaleString("fr-FR") : "0"}
+          <span style={{ fontSize: 22, color: "var(--a-ink-mut)", marginLeft: 8 }}>FCFA</span>
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "6px 12px", borderRadius: 999, fontSize: 12.5,
+            background: pts > 0 ? "var(--a-mint)" : "var(--a-cream-2)",
+            color: pts > 0 ? "var(--a-green)" : "var(--a-ink-mut)",
+          }}>
+            <b style={{ fontWeight: 600 }}>{t("ptsPreview", { pts: String(pts), rule: RULE_LABEL })}</b>
+          </span>
+        </div>
+      </div>
 
-            <Button type="submit" disabled={mut.isPending}>
-              {mut.isPending ? t("submitting") : t("submit")}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      {/* Numpad */}
+      <div style={{ padding: "8px 20px 12px" }}>
+        <Numpad onPress={(k) => setAmount((prev) => applyNumpadKey(prev, k))} />
+      </div>
 
-      {result ? (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="text-base">{t("resultTitle")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm">{t("resultBody", { points: String(result.points_awarded) })}</p>
-          </CardContent>
-        </Card>
-      ) : null}
+      {/* Confirm */}
+      <div style={{ padding: "0 16px 16px" }}>
+        <button
+          type="button"
+          onClick={() => mut.mutate()}
+          disabled={pts === 0 || mut.isPending}
+          style={{
+            width: "100%", background: "var(--a-card)", color: "var(--a-cream)",
+            borderRadius: 16, padding: "14px 20px", fontSize: 15, fontWeight: 600,
+            border: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            opacity: pts === 0 || mut.isPending ? 0.35 : 1,
+            transition: "opacity .15s",
+          }}
+        >
+          {mut.isPending ? t("submitting") : pts === 1 ? t("awardBtn", { pts: String(pts) }) : t("awardBtnPlural", { pts: String(pts) })}
+          {!mut.isPending && <IconChevronRight size={18} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AwardSuccess({ t, phone, amount, pts, onReset, router }: {
+  t: ReturnType<typeof useTranslations<"agent.purchase">>;
+  phone: string; amount: number; pts: number;
+  onReset: () => void;
+  router: ReturnType<typeof useRouter>;
+}) {
+  return (
+    <div style={{ minHeight: "100%", background: "var(--a-card)", color: "var(--a-cream)", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 24px 24px", gap: 22 }}>
+      <div className="a-pop-in" style={{ width: 96, height: 96, borderRadius: "50%", background: "var(--a-gold-2)", color: "var(--a-card)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 0 14px rgba(212,174,108,0.18)" }}>
+        <IconCheck size={48} strokeWidth={2.5} />
+      </div>
+
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", fontWeight: 600 }}>{t("successTitle")}</div>
+        <div style={{ fontFamily: "var(--jubely-font-display)", fontStyle: "italic", fontSize: 56, color: "var(--a-gold-2)", lineHeight: 1, marginTop: 4 }}>
+          +{pts}<span style={{ fontSize: 22, color: "rgba(255,255,255,0.55)", marginLeft: 6 }}>pts</span>
+        </div>
+        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.65)", marginTop: 8 }}>
+          {t("successBody", { amount: amount.toLocaleString("fr-FR") })} &mdash; <b style={{ color: "var(--a-cream)" }}>{phone}</b>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", marginTop: "auto" }}>
+        <button type="button" onClick={onReset} style={{ width: "100%", background: "var(--a-gold-2)", color: "var(--a-card)", borderRadius: 16, padding: "14px 20px", fontSize: 15, fontWeight: 600, border: 0, cursor: "pointer" }}>
+          {t("scanNext")}
+        </button>
+        <button type="button" onClick={() => router.push("/agent")} style={{ width: "100%", background: "transparent", color: "var(--a-cream)", borderRadius: 16, padding: "14px 20px", fontSize: 15, fontWeight: 600, border: "1px solid rgba(255,255,255,0.18)", cursor: "pointer" }}>
+          {t("backHome")}
+        </button>
+      </div>
     </div>
   );
 }

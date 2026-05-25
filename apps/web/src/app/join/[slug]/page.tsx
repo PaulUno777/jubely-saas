@@ -66,7 +66,7 @@ export default function JoinBySlugPage() {
       if (out.customer_qr) {
         saveCustomerQr(out.customer_qr);
         toast.success(t("enrolled"));
-        router.push("/customer/qr");
+        router.push("/customer/wallet");
       }
     },
     onError: (e) => toast.error(e instanceof ApiResponseError ? e.message : t("genericError")),

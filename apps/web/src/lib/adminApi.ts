@@ -9,16 +9,15 @@ import {
   type SuperadminStats,
   type Tenant,
 } from "@jubely/api-schemas";
-import { authedFetch, authedJson, joinUrl } from "./http";
+import { authedFetch, authedJson, joinUrl, joinUrlWithQuery } from "./http";
 
 const SUPER = "/v1/admin";
 
 export async function adminListTenants(input: { offset?: number; limit?: number } = {}): Promise<Tenant[]> {
-  const url = new URL(joinUrl(`${SUPER}/tenants`));
-  if (input.offset !== undefined) url.searchParams.set("offset", String(input.offset));
-  if (input.limit !== undefined) url.searchParams.set("limit", String(input.limit));
-
-  const res = await authedFetch(url.toString(), { method: "GET" });
+  const res = await authedFetch(
+    joinUrlWithQuery(`${SUPER}/tenants`, { offset: input.offset, limit: input.limit }),
+    { method: "GET" },
+  );
   const text = await res.text();
   const json = parseJsonUnknown(text);
   if (!res.ok) {
@@ -102,10 +101,13 @@ export async function adminListTenantUsers(input: {
   offset?: number;
   limit?: number;
 }): Promise<TenantUserRow[]> {
-  const url = new URL(joinUrl(`${SUPER}/tenants/${input.tenantId}/users`));
-  if (input.offset !== undefined) url.searchParams.set("offset", String(input.offset));
-  if (input.limit !== undefined) url.searchParams.set("limit", String(input.limit));
-  const res = await authedFetch(url.toString(), { method: "GET" });
+  const res = await authedFetch(
+    joinUrlWithQuery(`${SUPER}/tenants/${input.tenantId}/users`, {
+      offset: input.offset,
+      limit: input.limit,
+    }),
+    { method: "GET" },
+  );
   const text = await res.text();
   const json = parseJsonUnknown(text);
   if (!res.ok) {

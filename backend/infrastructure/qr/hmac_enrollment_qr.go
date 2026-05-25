@@ -49,6 +49,25 @@ func (s *HMACQRCodec) SignCustomerQR(_ context.Context, tenantID, customerID uui
 	return s.sign(qrPayload{V: 1, K: "customer", Ti: tenantID.String(), Ci: customerID.String()})
 }
 
+func (s *HMACQRCodec) ParseCustomerQR(_ context.Context, token string) (uuid.UUID, uuid.UUID, error) {
+	p, err := s.verify(token)
+	if err != nil {
+		return uuid.UUID{}, uuid.UUID{}, err
+	}
+	if p.K != "customer" || p.Ci == "" {
+		return uuid.UUID{}, uuid.UUID{}, fmt.Errorf("invalid customer qr kind")
+	}
+	tid, err := uuid.Parse(p.Ti)
+	if err != nil {
+		return uuid.UUID{}, uuid.UUID{}, err
+	}
+	cid, err := uuid.Parse(p.Ci)
+	if err != nil {
+		return uuid.UUID{}, uuid.UUID{}, err
+	}
+	return tid, cid, nil
+}
+
 func (s *HMACQRCodec) sign(p qrPayload) (string, error) {
 	body, err := json.Marshal(p)
 	if err != nil {

@@ -1,35 +1,35 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { AUTH_SESSION_COOKIE } from "@/server/auth-cookies";
-import { decodeJwtPayload } from "@/server/jwt-payload";
+import { AUTH_REFRESH_COOKIE, AUTH_SESSION_COOKIE } from "@/server/auth-cookies";
+import {
+  decodeJwtPayload,
+} from "@/server/jwt-payload";
+import {
+  exchangeRefreshToken,
+  isAccessTokenUsable,
+  sessionDataFromPayload,
+  setAuthCookiesOnResponse,
+} from "@/server/auth-session";
 
-export async function GET(_req: NextRequest) {
-  const token = _req.cookies.get(AUTH_SESSION_COOKIE)?.value;
-  if (!token) {
-    return NextResponse.json({ error: { code: "auth", message: "unauthorized" } }, { status: 401 });
-  }
-  const payload = decodeJwtPayload(token);
-  if (!payload?.sub || !payload.role) {
-    return NextResponse.json({ error: { code: "auth", message: "invalid session" } }, { status: 401 });
-  }
+/** Returns current session from HttpOnly cookies. `data: null` when logged out (always 200). */
+export async function GET(req: NextRequest) {
+  const accessToken = req.cookies.get(AUTH_SESSION_COOKIE)?.value;
+  let payload = accessToken ? decodeJwtPayload(accessToken) : null;
 
-  const enrolled = typeof payload.mfa_ec === "number" && Number.isFinite(payload.mfa_ec) ? Math.max(0, Math.floor(payload.mfa_ec)) : 0;
-  const adminPortal = payload.role === "superadmin" || payload.role === "merchant_admin";
-  const mfa =
-    adminPortal || enrolled > 0
-      ? {
-          enrolled_factors: enrolled,
-          setup_recommended: adminPortal && enrolled === 0,
+  if (!isAccessTokenUsable(payload)) {
+    const refreshToken = req.cookies.get(AUTH_REFRESH_COOKIE)?.value;
+    if (refreshToken) {
+      const tokens = await exchangeRefreshToken(refreshToken);
+      if (tokens) {
+        payload = decodeJwtPayload(tokens.access);
+        if (isAccessTokenUsable(payload)) {
+          const res = NextResponse.json({ data: sessionDataFromPayload(payload!) });
+          setAuthCookiesOnResponse(res, tokens);
+          return res;
         }
-      : undefined;
+      }
+    }
+    return NextResponse.json({ data: null });
+  }
 
-  return NextResponse.json({
-    data: {
-      user_id: payload.sub,
-      tenant_id: payload.tenant_id ?? null,
-      role: payload.role,
-      email: payload.email ?? "",
-      must_change_password: Boolean(payload.mcp),
-      ...(mfa ? { mfa } : {}),
-    },
-  });
+  return NextResponse.json({ data: sessionDataFromPayload(payload!) });
 }

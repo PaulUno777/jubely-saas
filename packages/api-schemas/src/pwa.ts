@@ -35,3 +35,26 @@ export const enrollResponseDataSchema = z.object({
 });
 
 export const enrollSuccessEnvelopeSchema = successEnvelopeSchema(enrollResponseDataSchema);
+
+export const pwaWalletEventSchema = z.object({
+  event_id: z.string(),
+  event_type: z.string(),
+  delta: z.number(),
+  payload: z.unknown().optional(),
+  created_at: z.union([z.string(), z.date(), z.number()]),
+});
+
+export const pwaWalletSchema = z.object({
+  tenant_id: z.string(),
+  tenant_name: z.string(),
+  tenant_slug: z.string(),
+  customer_id: z.string(),
+  enrollment_id: z.string(),
+  tier: z.string(),
+  points_balance: z.number(),
+  recent_events: z.array(pwaWalletEventSchema),
+});
+
+export const pwaWalletSuccessEnvelopeSchema = successEnvelopeSchema(pwaWalletSchema);
+
+export type PwaWallet = z.infer<typeof pwaWalletSchema>;

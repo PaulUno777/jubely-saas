@@ -5,17 +5,49 @@ import { toast } from "sonner";
 import { API_BASE_URL } from "./env";
 import { clearSession, tryRefreshAccessToken } from "./session";
 
+/** Normalize `/api/v1/...` → `/v1/...` for path joining. */
+function toV1Path(path: string): string {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  if (p.startsWith("/api/v1/")) return p.slice("/api".length);
+  if (p.startsWith("/api/auth/")) return p;
+  return p;
+}
+
+/**
+ * Resolve an API path for fetch.
+ * - Browser: same-origin Next BFF (`/api/v1/...`, `/api/auth/...`) so HttpOnly cookies work.
+ * - Server (SSR): direct Go origin (`http://host:8082/v1/...`) — never `/api/v1` on the backend.
+ */
 export function joinUrl(path: string): string {
   if (/^https?:\/\//i.test(path)) return path;
-  const p = path.startsWith("/") ? path : `/${path}`;
-  if (typeof window !== "undefined" && p.startsWith("/v1/")) {
-    return `/api${p}`;
+
+  const p = toV1Path(path);
+
+  if (typeof window !== "undefined") {
+    if (p.startsWith("/v1/")) return `/api${p}`;
+    if (p.startsWith("/api/auth/")) return p;
+    return p;
   }
-  const base = API_BASE_URL.replace(/\/$/, "");
+
+  const base = API_BASE_URL;
   if (base.endsWith("/v1") && p.startsWith("/v1/")) {
     return `${base.replace(/\/v1$/, "")}${p}`;
   }
   return `${base}${p}`;
+}
+
+/** Append query params to an API path (avoids `new URL(relative)` which throws in the browser). */
+export function joinUrlWithQuery(
+  path: string,
+  params: Record<string, string | number | undefined> = {},
+): string {
+  const sp = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) sp.set(key, String(value));
+  }
+  const qs = sp.toString();
+  const base = joinUrl(path);
+  return qs ? `${base}?${qs}` : base;
 }
 
 export function acceptLanguage(): string {

@@ -55,29 +55,35 @@ export function applyAuthSession(data: {
   });
 }
 
-/** Hydrate client session from HttpOnly access cookie via BFF. */
+/** Hydrate client session from HttpOnly cookies via BFF (`/api/auth/me` returns `data: null` when logged out). */
 export async function bootstrapAuthFromServer(): Promise<boolean> {
-  const r = await fetch("/api/auth/me", { credentials: "include" });
-  if (!r.ok) return false;
-  const json = (await r.json()) as {
-    data?: {
-      user_id: string;
-      tenant_id?: string | null;
-      role: string;
-      email?: string;
-      must_change_password?: boolean;
-      mfa?: MfaSummary;
+  try {
+    const r = await fetch("/api/auth/me", { credentials: "include" });
+    if (!r.ok) return false;
+    const json = (await r.json()) as {
+      data?: {
+        user_id: string;
+        tenant_id?: string | null;
+        role: string;
+        email?: string;
+        must_change_password?: boolean;
+        mfa?: MfaSummary;
+      } | null;
     };
-  };
-  const d = json.data;
-  if (!d?.user_id || !d.role) return false;
-  applyAuthSession(d);
-  return true;
+    const d = json.data;
+    if (!d?.user_id || !d.role) return false;
+    applyAuthSession(d);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function tryRefreshAccessToken(): Promise<boolean> {
   const r = await fetch("/api/auth/refresh", { method: "POST", credentials: "include" });
   if (!r.ok) return false;
+  const json = (await r.json()) as { data?: { ok?: boolean } | null };
+  if (!json.data) return false;
   return bootstrapAuthFromServer();
 }
 

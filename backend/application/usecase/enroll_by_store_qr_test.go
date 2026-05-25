@@ -79,3 +79,7 @@ func (s stubQRCodecForTenant) ParseStoreQR(ctx context.Context, token string) (u
 func (s stubQRCodecForTenant) SignCustomerQR(ctx context.Context, tenantID, customerID uuid.UUID) (string, error) {
 	return "cqr", nil
 }
+
+func (s stubQRCodecForTenant) ParseCustomerQR(ctx context.Context, token string) (uuid.UUID, uuid.UUID, error) {
+	return s.tid, uuid.New(), nil
+}

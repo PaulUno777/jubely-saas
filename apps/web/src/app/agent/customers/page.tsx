@@ -1,81 +1,131 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { createCustomerFormSchema, type CreateCustomerForm } from "@jubely/api-schemas";
-import { useMutation } from "@tanstack/react-query";
-import Link from "next/link";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { Button, Input, Label } from "@jubely/ui";
-import { staffCreateCustomer } from "@/lib/staffApi";
-import { useSession } from "@/hooks/useSession";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { storeListCustomers } from "@/lib/storeApi";
+import type { StoreCustomer } from "@jubely/api-schemas";
+import { IconSearch, IconPlus, IconChevronRight } from "@/components/agent/icons";
 
-export default function AgentCreateCustomerPage() {
-  const { session } = useSession();
-  const [qr, setQr] = useState<string | null>(null);
+const FILTERS = ["filterAll", "filterNew"] as const;
+type Filter = (typeof FILTERS)[number];
 
-  const form = useForm<CreateCustomerForm>({
-    resolver: zodResolver(createCustomerFormSchema),
-    defaultValues: { name: "", phone: "", email: "" },
-  });
+function tierToTone(tier: string) {
+  if (tier.toLowerCase().includes("gold") || tier.toLowerCase().includes("or")) return "gold";
+  if (tier.toLowerCase().includes("silver") || tier.toLowerCase().includes("argent")) return "silver";
+  return "bronze";
+}
 
-  const mut = useMutation({
-    mutationFn: (values: CreateCustomerForm) => staffCreateCustomer({ values }),
-    onSuccess: (out) => setQr(out.customer_qr ?? null),
-  });
+const AVATAR_STYLE: Record<string, { bg: string; color: string }> = {
+  gold:   { bg: "var(--a-gold-bg)", color: "var(--a-gold-3)" },
+  silver: { bg: "#e8e6df",          color: "#6e6a5f" },
+  bronze: { bg: "#efddc8",          color: "#87613a" },
+};
 
-  if (!session) {
-    return (
-      <div className="rounded-xl border border-border bg-card p-6">
-        <p className="text-sm text-muted-foreground">Vous devez vous connecter.</p>
-        <Link className="mt-3 inline-block text-sm font-medium text-primary underline underline-offset-4" href="/login">
-          Aller à la connexion
-        </Link>
-      </div>
-    );
-  }
+function ClientRow({ c }: { c: StoreCustomer }) {
+  const tone = tierToTone(c.tier);
+  const { bg, color } = AVATAR_STYLE[tone] ?? AVATAR_STYLE.bronze;
+  const initials = c.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-display text-3xl font-normal tracking-tight">Créer un client</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Création + enrollement, retourne un QR token.</p>
+    <Link href={`/agent/customers/${c.enrollment_id}`} style={{ textDecoration: "none", color: "inherit" }}>
+      <div className="a-row-client" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "0.5px solid var(--a-line)", cursor: "pointer" }}>
+        <div style={{ width: 40, height: 40, borderRadius: 12, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 14, flexShrink: 0 }}>
+          {initials}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 500, fontSize: 14.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</div>
+          <div style={{ fontSize: 12, color: "var(--a-ink-mut)", marginTop: 1 }}>{c.phone}</div>
+        </div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontFamily: "var(--jubely-font-display)", fontStyle: "italic", fontSize: 18, color: "var(--a-ink)", lineHeight: 1 }}>
+            {c.points_balance.toLocaleString("fr-FR")}
+          </div>
+          <div style={{ fontSize: 10.5, color: "var(--a-gold-3)", marginTop: 2, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>{c.tier}</div>
+        </div>
+        <IconChevronRight size={14} color="var(--a-ink-mut)" />
       </div>
-
-      <form
-        className="rounded-xl border border-border bg-card p-6 space-y-4"
-        onSubmit={form.handleSubmit((values) => {
-          setQr(null);
-          mut.mutate(values);
-        })}
-      >
-        <div className="space-y-2">
-          <Label htmlFor="name">Nom</Label>
-          <Input id="name" {...form.register("name")} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="phone">Téléphone (E.164)</Label>
-          <Input id="phone" {...form.register("phone")} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">Email (optionnel)</Label>
-          <Input id="email" type="email" autoComplete="email" {...form.register("email")} />
-        </div>
-
-        {mut.error ? <p className="text-sm text-destructive">Erreur: {String(mut.error)}</p> : null}
-
-        <Button type="submit" disabled={mut.isPending}>
-          {mut.isPending ? "Création…" : "Créer"}
-        </Button>
-      </form>
-
-      {qr ? (
-        <div className="rounded-xl border border-border bg-card p-6">
-          <p className="text-xs text-muted-foreground">Customer QR (token)</p>
-          <p className="mt-2 font-mono text-sm break-all">{qr}</p>
-        </div>
-      ) : null}
-    </div>
+    </Link>
   );
 }
 
+export default function CustomersPage() {
+  const t = useTranslations("agent.customers");
+  const [filter, setFilter] = useState<Filter>("filterAll");
+  const [query, setQuery] = useState("");
+
+  const { data = [], isLoading } = useQuery({
+    queryKey: ["agent", "customers"],
+    queryFn: () => storeListCustomers({ limit: 100 }),
+  });
+
+  const filtered = data.filter((c) => {
+    if (query && !c.name.toLowerCase().includes(query.toLowerCase()) && !c.phone.includes(query)) return false;
+    return true;
+  });
+
+  return (
+    <div style={{ paddingBottom: 8 }}>
+      {/* Header */}
+      <div style={{ padding: "12px 20px 6px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--a-ink-mut)", fontWeight: 600 }}>{t("listTitle")}</div>
+          <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.02em", marginTop: 2 }}>{t("listTitle")}</div>
+        </div>
+        <Link href="/agent/customers/new" style={{ width: 42, height: 42, borderRadius: 14, background: "var(--a-card)", color: "var(--a-gold-2)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
+          <IconPlus size={20} />
+        </Link>
+      </div>
+
+      {/* Search */}
+      <div style={{ padding: "6px 20px 8px" }}>
+        <div style={{ background: "var(--a-cream-2)", borderRadius: 14, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+          <IconSearch size={18} color="var(--a-ink-mut)" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("searchPlaceholder")}
+            style={{ border: 0, background: "transparent", outline: 0, fontFamily: "inherit", fontSize: 14, color: "var(--a-ink)", flex: 1 }}
+          />
+        </div>
+      </div>
+
+      {/* Filter chips */}
+      <div style={{ padding: "4px 20px 8px", display: "flex", gap: 8, overflowX: "auto" }}>
+        {FILTERS.map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            type="button"
+            style={{
+              appearance: "none", border: 0, cursor: "pointer",
+              padding: "7px 14px", borderRadius: 999,
+              background: filter === f ? "var(--a-card)" : "var(--a-cream-2)",
+              color: filter === f ? "var(--a-cream)" : "var(--a-ink)",
+              fontFamily: "inherit", fontSize: 12.5, fontWeight: 500, flexShrink: 0,
+            }}
+          >
+            {t(f)}
+          </button>
+        ))}
+      </div>
+
+      {/* Count */}
+      <div style={{ padding: "4px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "var(--a-ink-mut)" }}>
+        <span>{filtered.length} {t("listTitle").toLowerCase()}</span>
+        <span style={{ cursor: "pointer" }}>{t("sortRecent")}</span>
+      </div>
+
+      {/* List */}
+      <div style={{ padding: "4px 20px 16px" }}>
+        {isLoading
+          ? <p style={{ fontSize: 13, color: "var(--a-ink-mut)", margin: "20px 0" }}>…</p>
+          : filtered.length === 0
+            ? <p style={{ fontSize: 13, color: "var(--a-ink-mut)", margin: "40px 0", textAlign: "center" }}>{t("noResults")}</p>
+            : filtered.map((c) => <ClientRow key={c.enrollment_id} c={c} />)
+        }
+      </div>
+    </div>
+  );
+}

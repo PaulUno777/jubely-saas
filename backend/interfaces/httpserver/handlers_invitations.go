@@ -49,6 +49,7 @@ func (s *Server) InvitationPreview(c *gin.Context) {
 	respondOK(c, gin.H{
 		"valid":        true,
 		"tenant_name":  t.Name,
+		"tenant_slug":  t.Slug,
 		"email_masked": maskEmail(inv.Email),
 		"expires_at":   inv.ExpiresAt,
 		"role":         inv.Role.String(),

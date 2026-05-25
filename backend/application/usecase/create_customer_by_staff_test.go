@@ -71,6 +71,10 @@ func (stubQRCodec) SignCustomerQR(ctx context.Context, tenantID, customerID uuid
 	return "customer:" + tenantID.String() + ":" + customerID.String(), nil
 }
 
+func (stubQRCodec) ParseCustomerQR(ctx context.Context, token string) (uuid.UUID, uuid.UUID, error) {
+	return uuid.New(), uuid.New(), nil
+}
+
 func TestCreateCustomerByStaff_happy_path(t *testing.T) {
 	t.Parallel()
 	tid := uuid.New()

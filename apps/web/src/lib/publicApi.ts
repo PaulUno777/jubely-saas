@@ -1,4 +1,12 @@
-import { publicTenantSuccessEnvelopeSchema, parseJsonUnknown, parseSuccessData, throwFailedApiResponse } from "@jubely/api-schemas";
+import {
+  acceptInvitationSuccessEnvelopeSchema,
+  acceptInvitationWireSchema,
+  invitationPreviewSuccessEnvelopeSchema,
+  publicTenantSuccessEnvelopeSchema,
+  parseJsonUnknown,
+  parseSuccessData,
+  throwFailedApiResponse,
+} from "@jubely/api-schemas";
 import { z } from "zod";
 import { joinUrl, jsonHeaders } from "./http";
 
@@ -45,4 +53,28 @@ export async function publicOtpVerify(phoneE164: string, code: string) {
   const parsed = otpVerifyEnvelope.safeParse(json);
   if (!parsed.success) throw new Error("invalid_response");
   return parsed.data.data;
+}
+
+export async function publicGetInvitationPreview(token: string) {
+  const res = await fetch(joinUrl(`/v1/invitations/${encodeURIComponent(token)}`), {
+    credentials: "include",
+  });
+  const text = await res.text();
+  const json = parseJsonUnknown(text);
+  if (!res.ok) throwFailedApiResponse(json, res.status, text);
+  return parseSuccessData(json, invitationPreviewSuccessEnvelopeSchema, res.status, text);
+}
+
+export async function publicAcceptInvitation(token: string, password: string) {
+  const body = acceptInvitationWireSchema.parse({ password });
+  const res = await fetch(joinUrl(`/v1/invitations/${encodeURIComponent(token)}/accept`), {
+    method: "POST",
+    headers: jsonHeaders(),
+    body: JSON.stringify(body),
+    credentials: "include",
+  });
+  const text = await res.text();
+  const json = parseJsonUnknown(text);
+  if (!res.ok) throwFailedApiResponse(json, res.status, text);
+  return parseSuccessData(json, acceptInvitationSuccessEnvelopeSchema, res.status, text);
 }
