@@ -1,15 +1,21 @@
 "use client";
 
-import { InstallBanner } from "@/components/InstallBanner";
-import { ProfileChrome } from "@/components/preferences/profile-chrome";
+import { usePathname } from "next/navigation";
+import { CustomerTabBar } from "@/components/customer/tab-bar";
+import "./customer.css";
+
+const HIDE_TABBAR = ["/customer/scan", "/customer/enroll", "/customer/join", "/customer/qr"];
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const hideTabBar = HIDE_TABBAR.some((p) => pathname.startsWith(p));
+
   return (
-    <div className="mx-auto max-w-xl px-5 py-10" suppressHydrationWarning>
-      <ProfileChrome profile="customer" />
-      <InstallBanner />
-      {children}
+    <div data-portal="customer" style={{ display: "flex", flexDirection: "column", minHeight: "100svh" }} suppressHydrationWarning>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+        {children}
+      </div>
+      {!hideTabBar && <CustomerTabBar />}
     </div>
   );
 }
-

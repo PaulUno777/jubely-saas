@@ -64,7 +64,7 @@ export function AgentTabBar() {
           >
             <Icon
               size={22}
-              color={isTabActive(href, pathname) ? "var(--a-card)" : "var(--a-ink-mut)"}
+              color={isTabActive(href, pathname) ? "var(--a-green)" : "var(--a-ink-mut)"}
             />
             <span>{t(labelKey as never)}</span>
           </Link>

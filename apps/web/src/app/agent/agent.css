@@ -1,13 +1,13 @@
 /* Agent portal design tokens — scoped to [data-portal="agent"] */
 
 [data-portal="agent"] {
-  --a-cream:    #f6f4ef;
-  --a-cream-2:  #efece5;
-  --a-cream-3:  #e3ddd0;
-  --a-ink:      #1a1814;
-  --a-ink-mut:  #6b6457;
-  --a-ink-soft: #908871;
-  --a-card:     #29261b;
+  --a-cream:    #f2f5f3;
+  --a-cream-2:  #e8ede9;
+  --a-cream-3:  #dce4de;
+  --a-ink:      #1a1e1b;
+  --a-ink-mut:  #5c6b61;
+  --a-ink-soft: #8a9e90;
+  --a-card:     #1d2b22;
   --a-gold:     #b8924a;
   --a-gold-2:   #d4ae6c;
   --a-gold-3:   #8a6e38;
@@ -45,7 +45,7 @@
 /* Tab bar */
 [data-portal="agent"] .a-tabbar {
   height: 78px;
-  background: rgba(246, 244, 239, 0.92);
+  background: rgba(242, 245, 243, 0.92);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   border-top: 0.5px solid rgba(26, 24, 20, 0.08);
@@ -74,7 +74,7 @@
 }
 
 [data-portal="agent"] .a-tab[data-active="true"] {
-  color: var(--a-ink);
+  color: var(--a-green);
 }
 
 [data-portal="agent"] .a-tab-fab {
@@ -90,8 +90,8 @@
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.08) inset,
     0 0 0 4px var(--a-cream),
-    0 12px 24px rgba(26, 24, 20, 0.28),
-    0 4px 8px rgba(26, 24, 20, 0.16);
+    0 12px 24px rgba(29, 43, 34, 0.30),
+    0 4px 8px rgba(29, 43, 34, 0.18);
   cursor: pointer;
   transition: transform 0.12s ease;
   text-decoration: none;

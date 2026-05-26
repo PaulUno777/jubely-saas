@@ -348,7 +348,8 @@ async function main() {
   console.log(
     `  Agent        email=${config.agentEmail}  password=${config.agentPassword}  slug=${tenantSlug} → /agent`,
   );
-  console.log(`  Join (PWA)   ${webOrigin}/join/${tenantSlug}`);
+  console.log(`  Join (PWA)   ${webOrigin}
+    ${tenantSlug}`);
   console.log(`  Wallet (PWA) ${webOrigin}/customer/wallet  (save customer_qr in browser after join)`);
   console.log(`  Store lists  ${webOrigin}/store/customers  ${webOrigin}/store/transactions`);
   console.log("");

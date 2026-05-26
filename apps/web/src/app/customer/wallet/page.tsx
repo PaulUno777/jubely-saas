@@ -1,169 +1,128 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { ApiResponseError } from "@jubely/api-schemas";
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@jubely/ui";
-import { QRCodeCanvas } from "qrcode.react";
-import Link from "next/link";
-import { useTranslations } from "next-intl";
 import { useSyncExternalStore } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { pwaGetWallet } from "@/lib/customerApi";
-import {
-  clearCustomerQr,
-  loadCustomerQr,
-  subscribeCustomerQr,
-} from "@/lib/customerSession";
+import { loadCustomerQr, subscribeCustomerQr } from "@/lib/customerSession";
+import { LoyaltyCard } from "@/components/customer/loyalty-card";
+import { MoveRow } from "@/components/customer/move-row";
+import { IconQrCode, IconMap } from "@/components/customer/icons";
+import { IconGift, IconReceipt, IconBell } from "@/components/agent/icons";
+import { JubelyLogo } from "@jubely/ui";
 
-function formatDate(value: string | number | Date) {
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString();
+function greeting(t: ReturnType<typeof useTranslations<"customer.wallet">>) {
+  const h = new Date().getHours();
+  if (h < 12) return t("greetingMorning");
+  if (h < 18) return t("greetingAfternoon");
+  return t("greetingEvening");
 }
 
-function amountFromPayload(payload: unknown): string | null {
-  if (!payload || typeof payload !== "object") return null;
-  const amount = (payload as { amount_fcfa?: unknown }).amount_fcfa;
-  if (typeof amount === "number") return `${amount.toLocaleString()} FCFA`;
-  return null;
+function toType(ev: { event_type: string; delta: number }): "award" | "redeem" | "signup" {
+  if (ev.event_type === "signup") return "signup";
+  return ev.delta < 0 ? "redeem" : "award";
+}
+
+function formatTime(d: string | number | Date) {
+  const date = d instanceof Date ? d : new Date(d);
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+type ActionTileProps = { Icon: React.ComponentType<{ size?: number; color?: string }>; label: string; href: string; active?: boolean };
+
+function ActionTile({ Icon, label, href, active }: ActionTileProps) {
+  return (
+    <Link href={href} className="c-action-tile" style={{ textDecoration: "none" }}>
+      <div style={{ width: 56, height: 56, borderRadius: 16,
+        background: active ? "var(--c-green)" : "var(--c-cream-2)",
+        color: active ? "var(--c-gold-2)" : "var(--c-ink)",
+        display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Icon size={22} />
+      </div>
+      <span style={{ fontSize: 11.5, fontWeight: 500, color: "var(--c-ink)" }}>{label}</span>
+    </Link>
+  );
 }
 
 export default function CustomerWalletPage() {
   const t = useTranslations("customer.wallet");
-  const token = useSyncExternalStore(
-    subscribeCustomerQr,
-    loadCustomerQr,
-    () => null,
-  );
+  const token = useSyncExternalStore(subscribeCustomerQr, loadCustomerQr, () => null);
 
-  const walletQ = useQuery({
+  const { data } = useQuery({
     queryKey: ["pwa", "wallet", token],
     enabled: Boolean(token),
     queryFn: () => pwaGetWallet(token!),
   });
 
+  const displayName = data?.tenant_name ? "Customer" : "—";
+  const initials = displayName.slice(0, 2).toUpperCase();
+
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-display text-3xl font-normal tracking-tight">
-          {t("title")}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">{t("hint")}</p>
+    <div style={{ paddingBottom: 8 }}>
+      {/* Header */}
+      <div style={{ padding: "12px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <JubelyLogo size="xs" />
+        <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--c-cream-2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <IconBell size={18} />
+          </div>
+          <Link href="/customer/settings" style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--c-card)", color: "var(--c-gold-2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>
+            {initials}
+          </Link>
+        </div>
       </div>
 
-      {!token ? (
-        <Card>
-          <CardContent className="py-8">
-            <p className="text-sm text-muted-foreground">{t("empty")}</p>
-            <Button asChild variant="outline" className="mt-4">
-              <Link href="/customer/enroll">{t("enrollCta")}</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          {walletQ.isLoading ? (
-            <p className="text-sm text-muted-foreground">{t("loading")}</p>
-          ) : walletQ.error ? (
-            <p className="text-sm text-destructive">
-              {walletQ.error instanceof ApiResponseError
-                ? walletQ.error.message
-                : t("loadError")}
-            </p>
-          ) : walletQ.data ? (
-            <Card className="border-human/30 bg-human-surface/30">
-              <CardHeader>
-                <CardTitle>{walletQ.data.tenant_name}</CardTitle>
-                <CardDescription>
-                  {t("tier")}:{" "}
-                  <Badge variant="outline">{walletQ.data.tier}</Badge>
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {t("balance")}
-                  </p>
-                  <p className="font-display text-4xl tabular-nums">
-                    {walletQ.data.points_balance}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {t("pointsLabel")}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
+      {/* Greeting */}
+      <div style={{ padding: "18px 20px 12px" }}>
+        <div style={{ fontSize: 13.5, color: "var(--c-ink-mut)" }}>{greeting(t)}</div>
+        <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.02em", marginTop: 2 }}>
+          {data?.tenant_name ?? t("empty").split(".")[0]}
+        </div>
+      </div>
 
-          <div className="space-y-4 rounded-xl border border-border bg-card p-6">
-            <p className="text-sm font-medium">{t("qrTitle")}</p>
-            <div className="inline-block rounded-lg border border-border bg-background p-3">
-              <QRCodeCanvas value={token} size={200} />
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => clearCustomerQr()}
-            >
-              {t("clear")}
-            </Button>
+      {/* Loyalty card or empty state */}
+      <div style={{ padding: "0 16px" }}>
+        {token && data ? (
+          <LoyaltyCard token={token} name="Customer" points={data.points_balance} tier={data.tier} storeName={data.tenant_name} />
+        ) : (
+          <div className="c-card-dark" style={{ padding: 24, textAlign: "center" }}>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.5, marginBottom: 14 }}>{t("empty")}</div>
+            <Link href="/customer/enroll" style={{ display: "inline-block", background: "var(--c-gold-2)", color: "var(--c-card)", borderRadius: 12, padding: "10px 20px", fontSize: 13.5, fontWeight: 600, textDecoration: "none" }}>
+              {t("enrollCta")}
+            </Link>
           </div>
+        )}
+      </div>
 
-          {walletQ.data?.recent_events.length ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("historyTitle")}</CardTitle>
-                <CardDescription>{t("historyHint")}</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("date")}</TableHead>
-                      <TableHead>{t("type")}</TableHead>
-                      <TableHead>{t("amount")}</TableHead>
-                      <TableHead className="text-right">
-                        {t("points")}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {walletQ.data.recent_events.map((row) => (
-                      <TableRow key={row.event_id}>
-                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                          {formatDate(row.created_at)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{row.event_type}</Badge>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {amountFromPayload(row.payload) ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-right font-mono tabular-nums">
-                          {row.delta > 0 ? `+${row.delta}` : row.delta}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          ) : null}
-        </>
-      )}
+      {/* Action tiles */}
+      <div style={{ padding: "20px 16px 4px", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+        <ActionTile Icon={IconQrCode}  label={t("actionMyQr")}     href="/customer/qr"      active />
+        <ActionTile Icon={IconGift}    label={t("actionRewards")}  href="/customer/rewards" />
+        <ActionTile Icon={IconReceipt} label={t("actionHistory")}  href="/customer/history" />
+        <ActionTile Icon={IconMap}     label={t("actionStores")}   href="/customer/stores"  />
+      </div>
+
+      {/* Recent moves */}
+      <div style={{ padding: "20px 20px 16px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <div style={{ fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--c-ink-mut)", fontWeight: 600 }}>{t("recentMoves")}</div>
+          <Link href="/customer/history" style={{ fontSize: 12.5, color: "var(--c-green)", fontWeight: 600, textDecoration: "none" }}>{t("seeAll")}</Link>
+        </div>
+        {data?.recent_events.length ? (
+          data.recent_events.slice(0, 4).map((ev) => (
+            <MoveRow
+              key={ev.event_id}
+              type={toType(ev)}
+              label={ev.event_type}
+              meta={formatTime(ev.created_at)}
+              points={Math.abs(ev.delta)}
+            />
+          ))
+        ) : (
+          <p style={{ fontSize: 13, color: "var(--c-ink-mut)", margin: 0 }}>{t("noMoves")}</p>
+        )}
+      </div>
     </div>
   );
 }
