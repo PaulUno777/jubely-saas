@@ -9,6 +9,7 @@ export const tenantSchema = z.object({
   active: z.boolean(),
   plan: z.string(),
   conflict_policy: z.string().optional(),
+  allow_staff_self_enrollment: z.boolean().optional(),
   logo_url: z.string().optional(),
   settings: z.unknown(),
   created_at: z.union([z.string(), z.date(), z.number()]).optional(),
@@ -55,6 +56,7 @@ export const patchTenantWireSchema = z.object({
   active: z.boolean().optional(),
   plan: z.string().optional(),
   conflict_policy: z.string().optional(),
+  allow_staff_self_enrollment: z.boolean().optional(),
   settings: z.unknown().optional(),
 });
 

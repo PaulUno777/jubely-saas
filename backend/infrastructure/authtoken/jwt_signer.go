@@ -22,11 +22,16 @@ func (s *JWTSigner) SignAccessToken(_ context.Context, c ports.TokenClaims) (str
 	claims := jwt.MapClaims{
 		"sub":    c.UserID.String(),
 		"email":  c.Email,
-		"role":   c.Role.String(),
 		"exp":    exp.Unix(),
 		"iat":    now.Unix(),
 		"mcp":    c.MustChangePassword,
 		"mfa_ec": c.MFAEnrolledCount,
+	}
+	if c.Role != nil {
+		claims["role"] = c.Role.String()
+	}
+	if c.MembershipID != nil {
+		claims["membership_id"] = c.MembershipID.String()
 	}
 	if c.TenantID != nil {
 		claims["tenant_id"] = c.TenantID.String()
@@ -37,6 +42,44 @@ func (s *JWTSigner) SignAccessToken(_ context.Context, c ports.TokenClaims) (str
 			arr[i] = p
 		}
 		claims["perms"] = arr
+	}
+	if c.CustomerID != nil {
+		claims["customer_id"] = c.CustomerID.String()
+	}
+	if c.ActiveEnrollmentID != nil {
+		claims["active_enrollment_id"] = c.ActiveEnrollmentID.String()
+	}
+	if len(c.Workspaces) > 0 {
+		items := make([]any, 0, len(c.Workspaces))
+		for _, ws := range c.Workspaces {
+			perms := make([]any, 0, len(ws.Permissions))
+			for _, p := range ws.Permissions {
+				perms = append(perms, p)
+			}
+			items = append(items, map[string]any{
+				"membership_id": ws.MembershipID.String(),
+				"tenant_id":     ws.TenantID.String(),
+				"tenant_name":   ws.TenantName,
+				"tenant_slug":   ws.TenantSlug,
+				"role":          ws.Role.String(),
+				"permissions":   perms,
+			})
+		}
+		claims["workspaces"] = items
+	}
+	if len(c.Enrollments) > 0 {
+		items := make([]any, 0, len(c.Enrollments))
+		for _, enrollment := range c.Enrollments {
+			items = append(items, map[string]any{
+				"enrollment_id": enrollment.EnrollmentID.String(),
+				"tenant_id":     enrollment.TenantID.String(),
+				"tenant_name":   enrollment.TenantName,
+				"tenant_slug":   enrollment.TenantSlug,
+				"tier":          enrollment.Tier,
+				"points_balance": enrollment.PointsBalance,
+			})
+		}
+		claims["enrollments"] = items
 	}
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return t.SignedString(s.Secret)
@@ -63,7 +106,11 @@ func (s *JWTSigner) ParseAccessToken(_ context.Context, token string) (ports.Tok
 	}
 	email, _ := mc["email"].(string)
 	roleStr, _ := mc["role"].(string)
-	role := domain.Role(roleStr)
+	var role *domain.Role
+	if roleStr != "" {
+		r := domain.Role(roleStr)
+		role = &r
+	}
 	mustChange := false
 	switch v := mc["mcp"].(type) {
 	case bool:
@@ -75,6 +122,19 @@ func (s *JWTSigner) ParseAccessToken(_ context.Context, token string) (ports.Tok
 		if f, ok := v.(float64); ok && f != 0 {
 			mustChange = true
 		}
+	}
+
+	var membershipID *uuid.UUID
+	switch v := mc["membership_id"].(type) {
+	case string:
+		id, err := uuid.Parse(v)
+		if err != nil {
+			return ports.TokenClaims{}, domain.ErrUnauthorized
+		}
+		membershipID = &id
+	case nil:
+	default:
+		return ports.TokenClaims{}, domain.ErrUnauthorized
 	}
 
 	var tenantID *uuid.UUID
@@ -119,15 +179,121 @@ func (s *JWTSigner) ParseAccessToken(_ context.Context, token string) (ports.Tok
 		}
 	}
 
+	var customerID *uuid.UUID
+	switch v := mc["customer_id"].(type) {
+	case string:
+		id, err := uuid.Parse(v)
+		if err != nil {
+			return ports.TokenClaims{}, domain.ErrUnauthorized
+		}
+		customerID = &id
+	case nil:
+	default:
+		return ports.TokenClaims{}, domain.ErrUnauthorized
+	}
+
+	var activeEnrollmentID *uuid.UUID
+	switch v := mc["active_enrollment_id"].(type) {
+	case string:
+		id, err := uuid.Parse(v)
+		if err != nil {
+			return ports.TokenClaims{}, domain.ErrUnauthorized
+		}
+		activeEnrollmentID = &id
+	case nil:
+	default:
+		return ports.TokenClaims{}, domain.ErrUnauthorized
+	}
+
+	var workspaces []domain.WorkspaceSummary
+	if raw, ok := mc["workspaces"].([]any); ok {
+		for _, item := range raw {
+			m, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			membershipStr, _ := m["membership_id"].(string)
+			tenantStr, _ := m["tenant_id"].(string)
+			roleStr, _ := m["role"].(string)
+			membershipUUID, err := uuid.Parse(membershipStr)
+			if err != nil {
+				continue
+			}
+			tenantUUID, err := uuid.Parse(tenantStr)
+			if err != nil {
+				continue
+			}
+			role := domain.Role(roleStr)
+			ws := domain.WorkspaceSummary{
+				MembershipID: membershipUUID,
+				TenantID:     tenantUUID,
+				TenantName:   stringValue(m["tenant_name"]),
+				TenantSlug:   stringValue(m["tenant_slug"]),
+				Role:         role,
+			}
+			if rawPerms, ok := m["permissions"].([]any); ok {
+				for _, perm := range rawPerms {
+					if s, ok := perm.(string); ok && s != "" {
+						ws.Permissions = append(ws.Permissions, s)
+					}
+				}
+			}
+			workspaces = append(workspaces, ws)
+		}
+	}
+
+	var enrollments []domain.CustomerEnrollmentSummary
+	if raw, ok := mc["enrollments"].([]any); ok {
+		for _, item := range raw {
+			m, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			enrollmentStr, _ := m["enrollment_id"].(string)
+			tenantStr, _ := m["tenant_id"].(string)
+			enrollmentUUID, err := uuid.Parse(enrollmentStr)
+			if err != nil {
+				continue
+			}
+			tenantUUID, err := uuid.Parse(tenantStr)
+			if err != nil {
+				continue
+			}
+			summary := domain.CustomerEnrollmentSummary{
+				EnrollmentID: enrollmentUUID,
+				TenantID:     tenantUUID,
+				TenantName:   stringValue(m["tenant_name"]),
+				TenantSlug:   stringValue(m["tenant_slug"]),
+				Tier:         stringValue(m["tier"]),
+			}
+			if v, ok := m["points_balance"].(float64); ok {
+				summary.PointsBalance = int64(v)
+			}
+			enrollments = append(enrollments, summary)
+		}
+	}
+
 	return ports.TokenClaims{
 		UserID:             uid,
+		MembershipID:       membershipID,
 		TenantID:           tenantID,
 		Role:               role,
 		Email:              email,
 		MustChangePassword: mustChange,
 		MFAEnrolledCount:   mfaEnrolled,
 		Permissions:        perms,
+		Workspaces:         workspaces,
+		CustomerID:         customerID,
+		ActiveEnrollmentID: activeEnrollmentID,
+		Enrollments:        enrollments,
 	}, nil
+}
+
+func stringValue(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
 }
 
 const jwtTypPhoneEnroll = "phone_enroll"

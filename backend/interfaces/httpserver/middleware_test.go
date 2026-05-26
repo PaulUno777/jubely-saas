@@ -14,6 +14,10 @@ import (
 	"github.com/google/uuid"
 )
 
+func rolePtr(role domain.Role) *domain.Role {
+	return &role
+}
+
 func TestRequireSuperadmin_allows_superadmin(t *testing.T) {
 	t.Parallel()
 	gin.SetMode(gin.TestMode)
@@ -57,7 +61,7 @@ func TestRequirePermission_rejects_missing_permission(t *testing.T) {
 	tok, _ := signer.SignAccessToken(context.Background(), ports.TokenClaims{
 		UserID:      uuid.New(),
 		TenantID:    ptrTenantID(),
-		Role:        domain.RoleMerchantAdmin,
+		Role:        rolePtr(domain.RoleMerchantAdmin),
 		Email:       "admin@store.cm",
 		Permissions: []string{domain.PermManageStaff},
 	})
@@ -87,7 +91,7 @@ func TestRequirePermission_allows_default_staff_transaction(t *testing.T) {
 	tok, _ := signer.SignAccessToken(context.Background(), ports.TokenClaims{
 		UserID:   uuid.New(),
 		TenantID: ptrTenantID(),
-		Role:     domain.RoleStaff,
+		Role:     rolePtr(domain.RoleStaff),
 		Email:    "staff@store.cm",
 	})
 
@@ -120,7 +124,7 @@ func tokenClaimsForTest(role domain.Role, tenantID *uuid.UUID) ports.TokenClaims
 	return ports.TokenClaims{
 		UserID:   uuid.New(),
 		TenantID: tenantID,
-		Role:     role,
+		Role:     rolePtr(role),
 		Email:    "test@jubely.app",
 	}
 }

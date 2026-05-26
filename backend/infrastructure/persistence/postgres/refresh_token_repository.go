@@ -18,9 +18,9 @@ type RefreshTokenRepository struct {
 func (r *RefreshTokenRepository) Create(ctx context.Context, in ports.RefreshTokenCreateInput) error {
 	db := pickDB(ctx, r.Pool)
 	const q = `
-INSERT INTO refresh_tokens (id, user_id, token_hash, user_agent, ip, expires_at)
-VALUES ($1,$2,$3,$4,$5,$6)`
-	_, err := db.Exec(ctx, q, in.ID, in.UserID, in.TokenHash, in.UserAgent, in.IP, in.ExpiresAt)
+INSERT INTO refresh_tokens (id, user_id, token_hash, active_membership_id, active_enrollment_id, user_agent, ip, expires_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`
+	_, err := db.Exec(ctx, q, in.ID, in.UserID, in.TokenHash, in.ActiveMembershipID, in.ActiveEnrollmentID, in.UserAgent, in.IP, in.ExpiresAt)
 	if err != nil && isUniqueViolation(err) {
 		return domain.ErrConflict
 	}
@@ -30,11 +30,11 @@ VALUES ($1,$2,$3,$4,$5,$6)`
 func (r *RefreshTokenRepository) FindActiveByHash(ctx context.Context, tokenHash []byte) (*ports.RefreshToken, error) {
 	db := pickDB(ctx, r.Pool)
 	const q = `
-SELECT id, user_id, token_hash, expires_at, revoked_at
+SELECT id, user_id, token_hash, active_membership_id, active_enrollment_id, expires_at, revoked_at
 FROM refresh_tokens
 WHERE token_hash=$1`
 	var out ports.RefreshToken
-	err := db.QueryRow(ctx, q, tokenHash).Scan(&out.ID, &out.UserID, &out.TokenHash, &out.ExpiresAt, &out.RevokedAt)
+	err := db.QueryRow(ctx, q, tokenHash).Scan(&out.ID, &out.UserID, &out.TokenHash, &out.ActiveMembershipID, &out.ActiveEnrollmentID, &out.ExpiresAt, &out.RevokedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrNotFound
 	}

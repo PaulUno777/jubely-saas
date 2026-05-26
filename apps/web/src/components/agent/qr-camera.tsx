@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 type CameraState = "idle" | "loading" | "scanning" | "denied" | "unsupported";
@@ -17,12 +17,11 @@ function isMobileDevice(): boolean {
 }
 
 function isBarcodeDetectorSupported(): boolean {
-  return "BarcodeDetector" in window;
+  return typeof window !== "undefined" && "BarcodeDetector" in window;
 }
 
 export function useIsMobile() {
-  const [mobile, setMobile] = useState(false);
-  useEffect(() => { setMobile(isMobileDevice()); }, []);
+  const [mobile] = useState(() => (typeof navigator === "undefined" ? false : isMobileDevice()));
   return mobile;
 }
 
@@ -31,41 +30,16 @@ export function QrCamera({ onDetect }: QrCameraProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
-  const [state, setState] = useState<CameraState>("idle");
+  const [state, setState] = useState<CameraState>(() =>
+    isBarcodeDetectorSupported() ? "idle" : "unsupported",
+  );
 
-  useEffect(() => {
-    if (!isBarcodeDetectorSupported()) {
-      setState("unsupported");
-      return;
-    }
-    startCamera();
-    return () => stopCamera();
-  }, []);
-
-  async function startCamera() {
-    setState("loading");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-      setState("scanning");
-      scheduleScan();
-    } catch {
-      setState("denied");
-    }
-  }
-
-  function stopCamera() {
+  const stopCamera = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
     streamRef.current?.getTracks().forEach((t) => t.stop());
-  }
+  }, []);
 
-  function scheduleScan() {
+  const scheduleScan = useCallback(() => {
     rafRef.current = requestAnimationFrame(async () => {
       if (!videoRef.current || videoRef.current.readyState < 2) {
         scheduleScan();
@@ -85,7 +59,33 @@ export function QrCamera({ onDetect }: QrCameraProps) {
       }
       scheduleScan();
     });
-  }
+  }, [onDetect, stopCamera]);
+
+  const startCamera = useCallback(async () => {
+    setState("loading");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setState("scanning");
+      scheduleScan();
+    } catch {
+      setState("denied");
+    }
+  }, [scheduleScan]);
+
+  useEffect(() => {
+    if (!isBarcodeDetectorSupported()) {
+      return;
+    }
+    void startCamera();
+    return () => stopCamera();
+  }, [startCamera, stopCamera]);
 
   if (state === "unsupported") {
     return <CameraMessage title={t("notSupported")} body={t("notSupportedHint")} />;

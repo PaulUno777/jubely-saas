@@ -49,6 +49,7 @@ func (s *Server) StoreGetTenant(c *gin.Context) {
 type storePatchTenantBody struct {
 	Name           *string          `json:"name"`
 	ConflictPolicy *string          `json:"conflict_policy"`
+	AllowStaffSelfEnrollment *bool  `json:"allow_staff_self_enrollment"`
 	Settings       *json.RawMessage `json:"settings"`
 }
 
@@ -63,7 +64,7 @@ func (s *Server) StorePatchTenant(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
-	if body.Name == nil && body.ConflictPolicy == nil && body.Settings == nil {
+	if body.Name == nil && body.ConflictPolicy == nil && body.AllowStaffSelfEnrollment == nil && body.Settings == nil {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "no_fields"})
 		return
 	}
@@ -71,6 +72,7 @@ func (s *Server) StorePatchTenant(c *gin.Context) {
 		TenantID:       *claims.TenantID,
 		Name:           body.Name,
 		ConflictPolicy: body.ConflictPolicy,
+		AllowStaffSelfEnrollment: body.AllowStaffSelfEnrollment,
 		Settings:       body.Settings,
 	})
 	if err != nil {

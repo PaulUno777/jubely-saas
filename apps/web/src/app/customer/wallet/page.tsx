@@ -1,16 +1,15 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { pwaGetWallet } from "@/lib/customerApi";
-import { loadCustomerQr, subscribeCustomerQr } from "@/lib/customerSession";
 import { LoyaltyCard } from "@/components/customer/loyalty-card";
 import { MoveRow } from "@/components/customer/move-row";
 import { IconQrCode, IconMap } from "@/components/customer/icons";
 import { IconGift, IconReceipt, IconBell } from "@/components/agent/icons";
 import { JubelyLogo } from "@jubely/ui";
+import { useSession } from "@/hooks/useSession";
 
 function greeting(t: ReturnType<typeof useTranslations<"customer.wallet">>) {
   const h = new Date().getHours();
@@ -47,12 +46,14 @@ function ActionTile({ Icon, label, href, active }: ActionTileProps) {
 
 export default function CustomerWalletPage() {
   const t = useTranslations("customer.wallet");
-  const token = useSyncExternalStore(subscribeCustomerQr, loadCustomerQr, () => null);
+  const { session } = useSession();
+  const activeEnrollmentId = session?.activeEnrollmentId;
+  const hasPrograms = (session?.customerEnrollments.length ?? 0) > 0;
 
   const { data } = useQuery({
-    queryKey: ["pwa", "wallet", token],
-    enabled: Boolean(token),
-    queryFn: () => pwaGetWallet(token!),
+    queryKey: ["pwa", "wallet", activeEnrollmentId],
+    enabled: Boolean(activeEnrollmentId),
+    queryFn: () => pwaGetWallet(),
   });
 
   const displayName = data?.tenant_name ? "Customer" : "—";
@@ -83,8 +84,8 @@ export default function CustomerWalletPage() {
 
       {/* Loyalty card or empty state */}
       <div style={{ padding: "0 16px" }}>
-        {token && data ? (
-          <LoyaltyCard token={token} name="Customer" points={data.points_balance} tier={data.tier} storeName={data.tenant_name} />
+        {data ? (
+          <LoyaltyCard token={data.customer_qr ?? ""} name="Customer" points={data.points_balance} tier={data.tier} storeName={data.tenant_name} />
         ) : (
           <div className="c-card-dark" style={{ padding: 24, textAlign: "center" }}>
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.5, marginBottom: 14 }}>{t("empty")}</div>
@@ -102,6 +103,15 @@ export default function CustomerWalletPage() {
         <ActionTile Icon={IconReceipt} label={t("actionHistory")}  href="/customer/history" />
         <ActionTile Icon={IconMap}     label={t("actionStores")}   href="/customer/stores"  />
       </div>
+
+      {hasPrograms && (session?.customerEnrollments.length ?? 0) > 1 ? (
+        <div style={{ padding: "8px 20px 0", fontSize: 12.5, color: "var(--c-ink-mut)" }}>
+          Active program: {data?.tenant_name ?? session?.customerEnrollments[0]?.tenantName} ·{" "}
+          <Link href="/customer/stores" style={{ color: "var(--c-green)", textDecoration: "none", fontWeight: 600 }}>
+            switch
+          </Link>
+        </div>
+      ) : null}
 
       {/* Recent moves */}
       <div style={{ padding: "20px 20px 16px" }}>

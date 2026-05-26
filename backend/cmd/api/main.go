@@ -55,6 +55,7 @@ func main() {
 	listStoreCustomers := &usecase.ListStoreCustomers{Catalog: storeCatalog}
 	listStorePointEvents := &usecase.ListStorePointEvents{Catalog: storeCatalog}
 	userRepo := &postgres.UserRepository{Pool: pool}
+	membershipRepo := &postgres.TenantMembershipRepository{Pool: pool}
 	invRepo := &postgres.InvitationRepository{Pool: pool}
 	refreshRepo := &postgres.RefreshTokenRepository{Pool: pool}
 	mfaRepo := &postgres.MFAFactorRepository{Pool: pool}
@@ -80,7 +81,6 @@ func main() {
 			}
 			u := &domain.User{
 				ID:                 uuid.New(),
-				TenantID:           nil,
 				Email:              email,
 				PasswordHash:       hash,
 				Role:               domain.RoleSuperadmin,
@@ -105,8 +105,10 @@ func main() {
 		Secret: cfg.BootstrapSecret,
 	}
 	login := &usecase.Login{
-		Tenants:         tenantRepo,
 		Users:           userRepo,
+		Memberships:     membershipRepo,
+		Customers:       customerRepo,
+		Catalog:         storeCatalog,
 		Hasher:          hasher,
 		Signer:          signer,
 		RefreshTokens:   refreshRepo,
@@ -119,6 +121,9 @@ func main() {
 	refreshAuth := &usecase.RefreshAuth{
 		Users:         userRepo,
 		RefreshTokens: refreshRepo,
+		Memberships:   membershipRepo,
+		Customers:     customerRepo,
+		Catalog:       storeCatalog,
 		Factors:       mfaRepo,
 		Signer:        signer,
 		Clock:         clock,
@@ -180,6 +185,9 @@ func main() {
 		Users:         userRepo,
 		Factors:       mfaRepo,
 		RefreshTokens: refreshRepo,
+		Memberships:   membershipRepo,
+		Customers:     customerRepo,
+		Catalog:       storeCatalog,
 		Signer:        signer,
 		MFASigner:     signer,
 		Clock:         clock,
@@ -191,6 +199,9 @@ func main() {
 		Users:         userRepo,
 		Factors:       mfaRepo,
 		RefreshTokens: refreshRepo,
+		Memberships:   membershipRepo,
+		Customers:     customerRepo,
+		Catalog:       storeCatalog,
 		Signer:        signer,
 		MFASigner:     signer,
 		Clock:         clock,
@@ -207,7 +218,7 @@ func main() {
 	}
 	listTenants := &usecase.ListTenants{Tenants: tenantRepo}
 	updateTenant := &usecase.UpdateTenant{Tenants: tenantRepo, Clock: clock}
-	listTenantUsers := &usecase.ListTenantUsers{Tenants: tenantRepo, Users: userRepo}
+	listTenantUsers := &usecase.ListTenantUsers{Tenants: tenantRepo, Memberships: membershipRepo}
 	inviteTTL := 7 * 24 * time.Hour
 	createInvitation := &usecase.CreateMerchantInvitation{
 		Tenants:     tenantRepo,
@@ -219,18 +230,24 @@ func main() {
 	acceptInvitation := &usecase.AcceptMerchantInvitation{
 		Tx:          txManager,
 		Users:       userRepo,
+		Memberships: membershipRepo,
+		Customers:   customerRepo,
 		Invitations: invRepo,
 		Hasher:      hasher,
 		Clock:       clock,
 	}
 	createTenantUser := &usecase.CreateTenantUser{
-		Tenants: tenantRepo,
-		Users:   userRepo,
-		Hasher:  hasher,
+		Tenants:     tenantRepo,
+		Users:       userRepo,
+		Memberships: membershipRepo,
+		Hasher:      hasher,
 	}
 	superadminStats := &usecase.SuperadminStats{Tenants: tenantRepo}
 	createCustomer := &usecase.CreateCustomerByStaff{
 		Tx:          txManager,
+		Tenants:     tenantRepo,
+		Users:       userRepo,
+		Memberships: membershipRepo,
 		Customers:   customerRepo,
 		Enrollments: enrollmentRepo,
 		QRCodec:     qrCodec,
@@ -245,11 +262,23 @@ func main() {
 		Tx:                       txManager,
 		Clock:                    clock,
 		Tenants:                  tenantRepo,
+		Users:                    userRepo,
+		Memberships:              membershipRepo,
 		Customers:                customerRepo,
 		Enrollments:              enrollmentRepo,
 		QRCodec:                  qrCodec,
 		PhoneProofParser:         signer,
 		RequirePhoneVerification: cfg.PublicEnrollRequirePhoneVerify,
+	}
+	selectWorkspace := &usecase.SelectWorkspace{
+		Users:         userRepo,
+		Memberships:   membershipRepo,
+		Customers:     customerRepo,
+		Catalog:       storeCatalog,
+		RefreshTokens: refreshRepo,
+		Signer:        signer,
+		Clock:         clock,
+		RefreshTTL:    cfg.RefreshTokenTTL,
 	}
 
 	phoneOTPStore := memory.NewPhoneOTPStore()
@@ -257,6 +286,28 @@ func main() {
 		Store:       phoneOTPStore,
 		ProofSigner: signer,
 		Clock:       clock,
+	}
+	customerLogin := &usecase.CustomerLogin{
+		Tx:               txManager,
+		Users:            userRepo,
+		Customers:        customerRepo,
+		Memberships:      membershipRepo,
+		RefreshTokens:    refreshRepo,
+		Signer:           signer,
+		PhoneProofParser: signer,
+		Catalog:          storeCatalog,
+		Clock:            clock,
+		RefreshTTL:       cfg.RefreshTokenTTL,
+	}
+	selectCustomerContext := &usecase.SelectCustomerContext{
+		Users:         userRepo,
+		Memberships:   membershipRepo,
+		Customers:     customerRepo,
+		Catalog:       storeCatalog,
+		RefreshTokens: refreshRepo,
+		Signer:        signer,
+		Clock:         clock,
+		RefreshTTL:    cfg.RefreshTokenTTL,
 	}
 
 	pointEvents := &postgres.PointEventRepository{Pool: pool}
@@ -268,12 +319,14 @@ func main() {
 	}
 
 	storeSignup := &usecase.StoreSignup{
-		Tx:      txManager,
-		Tenants: tenantRepo,
-		Users:   userRepo,
-		Hasher:  hasher,
-		Signer:  signer,
-		Clock:   clock,
+		Tx:          txManager,
+		Tenants:     tenantRepo,
+		Users:       userRepo,
+		Memberships: membershipRepo,
+		Customers:   customerRepo,
+		Hasher:      hasher,
+		Signer:      signer,
+		Clock:       clock,
 	}
 
 	var objStorage ports.ObjectStorage
@@ -319,6 +372,7 @@ func main() {
 	srv := &httpserver.Server{
 		BootstrapUC:           bootstrap,
 		LoginUC:               login,
+		SelectWorkspaceUC:     selectWorkspace,
 		RefreshUC:             refreshAuth,
 		LogoutUC:              logout,
 		SetupTOTPUC:           setupTOTP,
@@ -343,11 +397,14 @@ func main() {
 		CreateCustomerUC:      createCustomer,
 		EnrollByStoreQRUC:     enrollByStoreQR,
 		GetPWAWalletUC:        getPWAWallet,
+		CustomerLoginUC:       customerLogin,
+		SelectCustomerContextUC: selectCustomerContext,
 		StaffRecordPurchaseUC:  staffRecordPurchase,
 		ListStoreCustomersUC:   listStoreCustomers,
 		ListStorePointEventsUC: listStorePointEvents,
 		PublicCustomerOTP:     publicCustomerOTP,
 		QRCodec:               qrCodec,
+		AccessSigner:          signer,
 		Tenants:               tenantRepo,
 		Users:                 userRepo,
 		Invitations:           invRepo,

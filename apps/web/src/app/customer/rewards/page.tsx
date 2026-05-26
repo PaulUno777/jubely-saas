@@ -1,13 +1,12 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { pwaGetWallet } from "@/lib/customerApi";
-import { loadCustomerQr, subscribeCustomerQr } from "@/lib/customerSession";
-import { IconGift, IconChevronRight, IconCheck } from "@/components/agent/icons";
+import { IconGift, IconCheck } from "@/components/agent/icons";
 import { IconStar, IconSparkle } from "@/components/customer/icons";
+import { useSession } from "@/hooks/useSession";
 
 type RewardItem = { Icon: React.ComponentType<{ size?: number; color?: string }>; title: string; cost: number; available: boolean };
 
@@ -52,11 +51,11 @@ function RewardRow({ item, balance }: { item: RewardItem; balance: number }) {
 
 export default function RewardsPage() {
   const t = useTranslations("customer.rewards");
-  const token = useSyncExternalStore(subscribeCustomerQr, loadCustomerQr, () => null);
+  const { session } = useSession();
   const { data } = useQuery({
-    queryKey: ["pwa", "wallet", token],
-    enabled: Boolean(token),
-    queryFn: () => pwaGetWallet(token!),
+    queryKey: ["pwa", "wallet", session?.activeEnrollmentId],
+    enabled: Boolean(session?.activeEnrollmentId),
+    queryFn: () => pwaGetWallet(),
   });
   const balance = data?.points_balance ?? 0;
 
@@ -86,7 +85,7 @@ export default function RewardsPage() {
 
       <div style={{ padding: "20px 16px 16px" }}>
         <div style={{ fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--c-ink-mut)", fontWeight: 600, marginBottom: 10 }}>{t("available")}</div>
-        {token ? (
+        {session?.activeEnrollmentId ? (
           DEMO_REWARDS.map((r, i) => <RewardRow key={i} item={r} balance={balance} />)
         ) : (
           <div style={{ textAlign: "center", padding: "40px 20px" }}>

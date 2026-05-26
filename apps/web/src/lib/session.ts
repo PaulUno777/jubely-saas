@@ -3,6 +3,23 @@
 import { create } from "zustand";
 
 export type Role = "superadmin" | "merchant_admin" | "staff" | "customer";
+export type WorkspaceSummary = {
+  membershipId: string;
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  role: Role;
+  permissions: string[];
+};
+
+export type CustomerEnrollmentSummary = {
+  enrollmentId: string;
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  tier: string;
+  pointsBalance: number;
+};
 
 export type MfaSummary = {
   required?: boolean;
@@ -12,11 +29,16 @@ export type MfaSummary = {
 };
 
 export type Session = {
-  role: Role;
+  role?: Role;
   tenantId?: string;
+  membershipId?: string;
   email?: string;
   mustChangePassword?: boolean;
   userId?: string;
+  customerId?: string;
+  activeEnrollmentId?: string;
+  workspaces: WorkspaceSummary[];
+  customerEnrollments: CustomerEnrollmentSummary[];
   mfa?: MfaSummary;
 };
 
@@ -39,18 +61,60 @@ export function loadSession(): Session | null {
 
 export function applyAuthSession(data: {
   user_id: string;
+  membership_id?: string | null;
   tenant_id?: string | null;
-  role: string;
+  role?: string | null;
   email?: string;
   must_change_password?: boolean;
+  customer_id?: string | null;
+  active_enrollment_id?: string | null;
+  workspaces?: Array<{
+    membership_id: string;
+    tenant_id: string;
+    tenant_name?: string;
+    tenant_slug?: string;
+    role: string;
+    permissions?: string[];
+  }>;
+  customer_enrollments?: Array<{
+    enrollment_id: string;
+    tenant_id: string;
+    tenant_name?: string;
+    tenant_slug?: string;
+    tier?: string;
+    points_balance?: number;
+  }>;
   mfa?: MfaSummary;
 }) {
   useSessionStore.getState().setSession({
-    role: data.role as Role,
+    role: data.role ? (data.role as Role) : undefined,
     tenantId: data.tenant_id ?? undefined,
+    membershipId: data.membership_id ?? undefined,
     email: data.email,
     mustChangePassword: Boolean(data.must_change_password),
     userId: data.user_id,
+    customerId: data.customer_id ?? undefined,
+    activeEnrollmentId: data.active_enrollment_id ?? undefined,
+    workspaces: Array.isArray(data.workspaces)
+      ? data.workspaces.map((workspace) => ({
+          membershipId: workspace.membership_id,
+          tenantId: workspace.tenant_id,
+          tenantName: workspace.tenant_name ?? "",
+          tenantSlug: workspace.tenant_slug ?? "",
+          role: workspace.role as Role,
+          permissions: Array.isArray(workspace.permissions) ? workspace.permissions : [],
+        }))
+      : [],
+    customerEnrollments: Array.isArray(data.customer_enrollments)
+      ? data.customer_enrollments.map((enrollment) => ({
+          enrollmentId: enrollment.enrollment_id,
+          tenantId: enrollment.tenant_id,
+          tenantName: enrollment.tenant_name ?? "",
+          tenantSlug: enrollment.tenant_slug ?? "",
+          tier: enrollment.tier ?? "bronze",
+          pointsBalance: enrollment.points_balance ?? 0,
+        }))
+      : [],
     mfa: data.mfa,
   });
 }
@@ -63,15 +127,34 @@ export async function bootstrapAuthFromServer(): Promise<boolean> {
     const json = (await r.json()) as {
       data?: {
         user_id: string;
+        membership_id?: string | null;
         tenant_id?: string | null;
-        role: string;
+        role?: string | null;
         email?: string;
         must_change_password?: boolean;
+        customer_id?: string | null;
+        active_enrollment_id?: string | null;
+        workspaces?: Array<{
+          membership_id: string;
+          tenant_id: string;
+          tenant_name?: string;
+          tenant_slug?: string;
+          role: string;
+          permissions?: string[];
+        }>;
+        customer_enrollments?: Array<{
+          enrollment_id: string;
+          tenant_id: string;
+          tenant_name?: string;
+          tenant_slug?: string;
+          tier?: string;
+          points_balance?: number;
+        }>;
         mfa?: MfaSummary;
       } | null;
     };
     const d = json.data;
-    if (!d?.user_id || !d.role) return false;
+    if (!d?.user_id) return false;
     applyAuthSession(d);
     return true;
   } catch {

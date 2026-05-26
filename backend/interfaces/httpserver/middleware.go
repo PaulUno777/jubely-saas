@@ -51,7 +51,7 @@ func RequireSuperadmin() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		if claims.Role != domain.RoleSuperadmin || claims.TenantID != nil {
+		if claims.ActiveRole() != domain.RoleSuperadmin || claims.TenantID != nil {
 			respondError(c, http.StatusForbidden, i18n.CodeAuthForbidden, nil)
 			c.Abort()
 			return
@@ -79,7 +79,7 @@ func RequireStaffOrMerchantAdmin() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		if claims.Role != domain.RoleStaff && claims.Role != domain.RoleMerchantAdmin {
+		if claims.ActiveRole() != domain.RoleStaff && claims.ActiveRole() != domain.RoleMerchantAdmin {
 			respondError(c, http.StatusForbidden, i18n.CodeAuthForbidden, nil)
 			c.Abort()
 			return
@@ -102,7 +102,7 @@ func RequireMerchantAdmin() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		if claims.TenantID == nil || claims.Role != domain.RoleMerchantAdmin {
+		if claims.TenantID == nil || claims.ActiveRole() != domain.RoleMerchantAdmin {
 			respondError(c, http.StatusForbidden, i18n.CodeAuthForbidden, nil)
 			c.Abort()
 			return
@@ -127,7 +127,7 @@ func RequirePermission(want string) gin.HandlerFunc {
 		}
 		perms := claims.Permissions
 		if len(perms) == 0 {
-			perms = domain.DefaultPermissionsForRole(claims.Role)
+			perms = domain.DefaultPermissionsForRole(claims.ActiveRole())
 		}
 		if !domain.HasPermission(perms, want) {
 			respondError(c, http.StatusForbidden, i18n.CodeAuthForbidden, nil)
@@ -152,7 +152,7 @@ func RequireAdminPortal() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		if claims.Role != domain.RoleSuperadmin && claims.Role != domain.RoleMerchantAdmin {
+		if claims.ActiveRole() != domain.RoleSuperadmin && claims.ActiveRole() != domain.RoleMerchantAdmin {
 			respondError(c, http.StatusForbidden, i18n.CodeAuthForbidden, nil)
 			c.Abort()
 			return

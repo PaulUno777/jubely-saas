@@ -4,21 +4,19 @@ import { NextResponse, type NextRequest } from "next/server";
 const SESSION_COOKIE = "jubely_session";
 
 type Role = "superadmin" | "merchant_admin" | "staff" | "customer";
+type JwtPayload = {
+  role?: Role | null;
+  tenant_id?: string;
+  workspaces?: Array<{ membership_id?: string; tenant_id?: string; role?: Role }>;
+};
 
-function base64UrlDecode(input: string): string {
-  const pad = "=".repeat((4 - (input.length % 4)) % 4);
-  const base64 = (input + pad).replace(/-/g, "+").replace(/_/g, "/");
-  const str = Buffer.from(base64, "base64").toString("utf8");
-  return str;
-}
-
-function getRoleFromJWT(accessToken: string): Role | null {
+function readPayload(accessToken: string): JwtPayload | null {
   const parts = accessToken.split(".");
   if (parts.length < 2) return null;
   try {
-    const payload = JSON.parse(base64UrlDecode(parts[1]!)) as { role?: string };
-    const role = payload.role as Role | undefined;
-    return role ?? null;
+    const pad = "=".repeat((4 - (parts[1]!.length % 4)) % 4);
+    const base64 = (parts[1]! + pad).replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(Buffer.from(base64, "base64").toString("utf8")) as JwtPayload;
   } catch {
     return null;
   }
@@ -58,14 +56,30 @@ export function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const role = getRoleFromJWT(token);
+  const payload = readPayload(token);
+  if (!payload) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+  const role = payload.role ?? null;
+  const hasWorkspaceSelectionPending =
+    !payload.tenant_id && Array.isArray(payload.workspaces) && payload.workspaces.length > 1;
+
+  const required = requiredRoleForPath(pathname);
+  if ((pathname.startsWith("/store") || pathname.startsWith("/agent")) && hasWorkspaceSelectionPending) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("workspace", "1");
+    return NextResponse.redirect(url);
+  }
+
   if (!role) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  const required = requiredRoleForPath(pathname);
   if (required && role !== required) {
     const url = req.nextUrl.clone();
     url.pathname = homeForRole(role);

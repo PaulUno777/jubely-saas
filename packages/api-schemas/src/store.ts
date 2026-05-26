@@ -13,6 +13,7 @@ export type StoreMetrics = z.infer<typeof storeMetricsSchema>;
 export const patchStoreTenantWireSchema = z.object({
   name: z.string().optional(),
   conflict_policy: z.string().optional(),
+  allow_staff_self_enrollment: z.boolean().optional(),
   settings: z.unknown().optional(),
 });
 

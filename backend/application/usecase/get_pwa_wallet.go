@@ -21,7 +21,8 @@ type GetPWAWallet struct {
 }
 
 type GetPWAWalletInput struct {
-	CustomerQR string
+	CustomerQR   string
+	EnrollmentID *uuid.UUID
 }
 
 type PWAWalletEventView struct {
@@ -38,19 +39,37 @@ type GetPWAWalletOutput struct {
 	TenantSlug     string
 	CustomerID     uuid.UUID
 	EnrollmentID   uuid.UUID
+	CustomerQR     string
 	Tier           string
 	PointsBalance  int64
 	RecentEvents   []PWAWalletEventView
 }
 
 func (uc *GetPWAWallet) Execute(ctx context.Context, in GetPWAWalletInput) (*GetPWAWalletOutput, error) {
+	var tenantID, customerID uuid.UUID
+	var enr *domain.LoyaltyEnrollment
 	qr := strings.TrimSpace(in.CustomerQR)
-	if qr == "" {
-		return nil, fmt.Errorf("%w", domain.ErrInvalid)
-	}
-	tenantID, customerID, err := uc.QRCodec.ParseCustomerQR(ctx, qr)
-	if err != nil {
-		return nil, fmt.Errorf("%w", domain.ErrInvalid)
+	if in.EnrollmentID != nil && *in.EnrollmentID != uuid.Nil {
+		var err error
+		enr, err = uc.Enrollments.FindByID(ctx, *in.EnrollmentID)
+		if err != nil {
+			return nil, err
+		}
+		tenantID = enr.TenantID
+		customerID = enr.CustomerID
+	} else {
+		if qr == "" {
+			return nil, fmt.Errorf("%w", domain.ErrInvalid)
+		}
+		var err error
+		tenantID, customerID, err = uc.QRCodec.ParseCustomerQR(ctx, qr)
+		if err != nil {
+			return nil, fmt.Errorf("%w", domain.ErrInvalid)
+		}
+		enr, err = uc.Enrollments.FindByTenantAndCustomer(ctx, tenantID, customerID)
+		if err != nil {
+			return nil, err
+		}
 	}
 	t, err := uc.Tenants.FindByID(ctx, tenantID)
 	if err != nil {
@@ -58,10 +77,6 @@ func (uc *GetPWAWallet) Execute(ctx context.Context, in GetPWAWalletInput) (*Get
 	}
 	if !t.Active {
 		return nil, domain.ErrNotFound
-	}
-	enr, err := uc.Enrollments.FindByTenantAndCustomer(ctx, tenantID, customerID)
-	if err != nil {
-		return nil, err
 	}
 	balance, err := uc.Catalog.EnrollmentPointsBalance(ctx, enr.ID)
 	if err != nil {
@@ -85,12 +100,19 @@ func (uc *GetPWAWallet) Execute(ctx context.Context, in GetPWAWalletInput) (*Get
 			CreatedAt: row.CreatedAt,
 		})
 	}
+	if qr == "" {
+		qr, err = uc.QRCodec.SignCustomerQR(ctx, tenantID, customerID)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &GetPWAWalletOutput{
 		TenantID:      tenantID,
 		TenantName:    t.Name,
 		TenantSlug:    t.Slug,
 		CustomerID:    customerID,
 		EnrollmentID:  enr.ID,
+		CustomerQR:    qr,
 		Tier:          enr.Tier,
 		PointsBalance: balance,
 		RecentEvents:  events,

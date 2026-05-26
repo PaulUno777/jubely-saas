@@ -4,8 +4,10 @@ import (
 	"net/http"
 
 	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
+	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type bootstrapBody struct {
@@ -32,9 +34,88 @@ func (s *Server) BootstrapSuperadmin(c *gin.Context) {
 }
 
 type loginBody struct {
-	Email      string `json:"email"`
-	Password   string `json:"password"`
-	TenantSlug string `json:"tenant_slug"`
+	Email              string `json:"email"`
+	Password           string `json:"password"`
+	TenantSlug         string `json:"tenant_slug"`
+}
+
+func authDataFromResult(
+	step string,
+	accessToken string,
+	refreshToken string,
+	userID uuid.UUID,
+	membershipID *uuid.UUID,
+	tenantID *uuid.UUID,
+	role *domain.Role,
+	email string,
+	mustChangePassword bool,
+	workspaces []domain.WorkspaceSummary,
+	customerID *uuid.UUID,
+	activeEnrollmentID *uuid.UUID,
+	enrollments []domain.CustomerEnrollmentSummary,
+	mfa gin.H,
+) gin.H {
+	roleValue := any(nil)
+	if role != nil {
+		roleValue = role.String()
+	}
+	var membershipValue any
+	if membershipID != nil {
+		membershipValue = membershipID.String()
+	}
+	var customerValue any
+	if customerID != nil {
+		customerValue = customerID.String()
+	}
+	var enrollmentValue any
+	if activeEnrollmentID != nil {
+		enrollmentValue = activeEnrollmentID.String()
+	}
+	workspaceItems := make([]gin.H, 0, len(workspaces))
+	for _, ws := range workspaces {
+		workspaceItems = append(workspaceItems, gin.H{
+			"membership_id": ws.MembershipID.String(),
+			"tenant_id":     ws.TenantID.String(),
+			"tenant_name":   ws.TenantName,
+			"tenant_slug":   ws.TenantSlug,
+			"role":          ws.Role.String(),
+			"permissions":   ws.Permissions,
+		})
+	}
+	enrollmentItems := make([]gin.H, 0, len(enrollments))
+	for _, enrollment := range enrollments {
+		enrollmentItems = append(enrollmentItems, gin.H{
+			"enrollment_id":  enrollment.EnrollmentID.String(),
+			"tenant_id":      enrollment.TenantID.String(),
+			"tenant_name":    enrollment.TenantName,
+			"tenant_slug":    enrollment.TenantSlug,
+			"tier":           enrollment.Tier,
+			"points_balance": enrollment.PointsBalance,
+		})
+	}
+	out := gin.H{
+		"step":                  step,
+		"user_id":               userID.String(),
+		"membership_id":         membershipValue,
+		"tenant_id":             tenantID,
+		"role":                  roleValue,
+		"email":                 email,
+		"must_change_password":  mustChangePassword,
+		"workspaces":            workspaceItems,
+		"customer_id":           customerValue,
+		"active_enrollment_id":  enrollmentValue,
+		"customer_enrollments":  enrollmentItems,
+	}
+	if accessToken != "" {
+		out["access_token"] = accessToken
+	}
+	if refreshToken != "" {
+		out["refresh_token"] = refreshToken
+	}
+	if mfa != nil {
+		out["mfa"] = mfa
+	}
+	return out
 }
 
 func (s *Server) AuthLogin(c *gin.Context) {
@@ -44,9 +125,10 @@ func (s *Server) AuthLogin(c *gin.Context) {
 		return
 	}
 	out, err := s.LoginUC.Execute(c.Request.Context(), usecase.LoginInput{
-		Email:      body.Email,
-		Password:   body.Password,
-		TenantSlug: body.TenantSlug,
+		Email:               body.Email,
+		Password:            body.Password,
+		PreferredTenantSlug: body.TenantSlug,
+		UserAgent:           c.GetHeader("User-Agent"),
 	})
 	if err != nil {
 		respondMapped(c, mapLoginError(err))
@@ -58,8 +140,6 @@ func (s *Server) AuthLogin(c *gin.Context) {
 			"challenge_token":      out.ChallengeToken,
 			"methods":              out.Methods,
 			"user_id":              out.UserID.String(),
-			"tenant_id":            out.TenantID,
-			"role":                 out.Role.String(),
 			"email":                out.Email,
 			"must_change_password": out.MustChangePassword,
 			"mfa": gin.H{
@@ -71,22 +151,27 @@ func (s *Server) AuthLogin(c *gin.Context) {
 		})
 		return
 	}
-	respondOK(c, gin.H{
-		"step":                 out.Step,
-		"access_token":         out.AccessToken,
-		"refresh_token":        out.RefreshToken,
-		"user_id":              out.UserID.String(),
-		"tenant_id":            out.TenantID,
-		"role":                 out.Role.String(),
-		"email":                out.Email,
-		"must_change_password": out.MustChangePassword,
-		"mfa": gin.H{
+	respondOK(c, authDataFromResult(
+		out.Step,
+		out.AccessToken,
+		out.RefreshToken,
+		out.UserID,
+		out.MembershipID,
+		out.TenantID,
+		out.Role,
+		out.Email,
+		out.MustChangePassword,
+		out.Workspaces,
+		out.CustomerID,
+		out.ActiveEnrollmentID,
+		out.Enrollments,
+		gin.H{
 			"required":          false,
 			"methods":           []string{},
 			"enrolled_factors":  out.MFAEnrolledCount,
 			"setup_recommended": out.MFAEnrolledCount == 0,
 		},
-	})
+	))
 }
 
 type refreshBody struct {
@@ -113,22 +198,27 @@ func (s *Server) AuthMFATOTPVerify(c *gin.Context) {
 		respondMapped(c, mapLoginError(err))
 		return
 	}
-	respondOK(c, gin.H{
-		"step":                 "ok",
-		"access_token":         out.AccessToken,
-		"refresh_token":        out.RefreshToken,
-		"user_id":              out.UserID.String(),
-		"tenant_id":            out.TenantID,
-		"role":                 out.Role.String(),
-		"email":                out.Email,
-		"must_change_password": out.MustChangePassword,
-		"mfa": gin.H{
+	respondOK(c, authDataFromResult(
+		out.Step,
+		out.AccessToken,
+		out.RefreshToken,
+		out.UserID,
+		out.MembershipID,
+		out.TenantID,
+		out.Role,
+		out.Email,
+		out.MustChangePassword,
+		out.Workspaces,
+		out.CustomerID,
+		out.ActiveEnrollmentID,
+		out.Enrollments,
+		gin.H{
 			"required":          false,
 			"methods":           []string{},
 			"enrolled_factors":  1,
 			"setup_recommended": false,
 		},
-	})
+	))
 }
 
 func (s *Server) AuthRefresh(c *gin.Context) {
@@ -145,15 +235,22 @@ func (s *Server) AuthRefresh(c *gin.Context) {
 		respondMapped(c, mapLoginError(err))
 		return
 	}
-	respondOK(c, gin.H{
-		"access_token":         out.AccessToken,
-		"refresh_token":        out.RefreshToken,
-		"user_id":              out.UserID.String(),
-		"tenant_id":            out.TenantID,
-		"role":                 out.Role.String(),
-		"email":                out.Email,
-		"must_change_password": out.MustChangePassword,
-	})
+	respondOK(c, authDataFromResult(
+		"ok",
+		out.AccessToken,
+		out.RefreshToken,
+		out.UserID,
+		out.MembershipID,
+		out.TenantID,
+		out.Role,
+		out.Email,
+		out.MustChangePassword,
+		out.Workspaces,
+		out.CustomerID,
+		out.ActiveEnrollmentID,
+		out.Enrollments,
+		nil,
+	))
 }
 
 func (s *Server) AuthLogout(c *gin.Context) {
@@ -167,4 +264,37 @@ func (s *Server) AuthLogout(c *gin.Context) {
 		return
 	}
 	respondOK(c, gin.H{"ok": true})
+}
+
+type selectWorkspaceBody struct {
+	MembershipID string `json:"membership_id"`
+}
+
+func (s *Server) AuthSelectWorkspace(c *gin.Context) {
+	claims, ok := Claims(c)
+	if !ok {
+		respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+		return
+	}
+	var body selectWorkspaceBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
+		return
+	}
+	membershipID, err := uuid.Parse(body.MembershipID)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_membership_id"})
+		return
+	}
+	out, err := s.SelectWorkspaceUC.Execute(c.Request.Context(), usecase.SelectWorkspaceInput{
+		UserID:             claims.UserID,
+		MembershipID:       membershipID,
+		ActiveEnrollmentID: claims.ActiveEnrollmentID,
+		UserAgent:          c.GetHeader("User-Agent"),
+	})
+	if err != nil {
+		respondMapped(c, mapLoginError(err))
+		return
+	}
+	respondOK(c, authDataFromResult("ok", out.AccessToken, out.RefreshToken, out.UserID, out.MembershipID, out.TenantID, out.Role, out.Email, out.MustChangePassword, out.Workspaces, out.CustomerID, out.ActiveEnrollmentID, out.Enrollments, nil))
 }

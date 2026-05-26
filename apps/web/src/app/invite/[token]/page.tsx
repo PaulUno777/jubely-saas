@@ -53,7 +53,7 @@ export default function InviteAcceptPage() {
 
   const loginHref = useMemo(() => {
     if (!activatedSlug) return "/login";
-    return `/login?slug=${encodeURIComponent(activatedSlug)}`;
+    return `/login?workspace=1&invited=${encodeURIComponent(activatedSlug)}`;
   }, [activatedSlug]);
 
   if (!token) {
@@ -83,8 +83,11 @@ export default function InviteAcceptPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border border-border bg-muted/50 px-4 py-3">
-              <p className="text-xs text-muted-foreground">{t("storeSlugLabel")}</p>
-              <p className="font-mono text-sm">{activatedSlug}</p>
+              <p className="text-xs text-muted-foreground">{t("storeLabel")}</p>
+              <p className="text-sm font-medium">
+                {previewQ.data && "tenant_name" in previewQ.data ? previewQ.data.tenant_name : ""}
+              </p>
+              <p className="font-mono text-xs text-muted-foreground">{activatedSlug}</p>
             </div>
             <Button asChild>
               <Link href={loginHref}>{t("goToLogin")}</Link>

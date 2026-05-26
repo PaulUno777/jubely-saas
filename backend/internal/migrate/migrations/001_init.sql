@@ -23,20 +23,29 @@ CREATE TABLE IF NOT EXISTS tenants (
 
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     email TEXT NOT NULL,
     password_hash TEXT NOT NULL,
     role user_role NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_superadmin_email
-    ON users (lower(email))
-    WHERE tenant_id IS NULL AND role = 'superadmin';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email
+    ON users (lower(email));
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_tenant_email
-    ON users (tenant_id, lower(email))
-    WHERE tenant_id IS NOT NULL;
+CREATE TABLE IF NOT EXISTS tenant_memberships (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    role user_role NOT NULL,
+    permissions JSONB NOT NULL DEFAULT '[]'::jsonb,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT tenant_memberships_role_chk CHECK (role IN ('merchant_admin', 'staff')),
+    CONSTRAINT tenant_memberships_user_tenant_uk UNIQUE (user_id, tenant_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tenant_memberships_tenant ON tenant_memberships(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_memberships_user ON tenant_memberships(user_id);
 
 CREATE TABLE IF NOT EXISTS merchant_invitations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

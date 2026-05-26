@@ -10,6 +10,7 @@ import (
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/authtoken"
+	"github.com/PaulUno777/jubely-saas/backend/infrastructure/persistence/postgres"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/security"
 	"github.com/google/uuid"
 	"github.com/pquerna/otp/totp"
@@ -19,6 +20,9 @@ type VerifyLoginTOTP struct {
 	Users         ports.UserRepository
 	Factors       ports.MFAFactorRepository
 	RefreshTokens ports.RefreshTokenRepository
+	Memberships   ports.TenantMembershipRepository
+	Customers     ports.CustomerIdentityRepository
+	Catalog       *postgres.StoreCatalog
 	Signer        ports.TokenSigner
 	MFASigner     *authtoken.JWTSigner
 	Clock         ports.Clock
@@ -34,13 +38,19 @@ type VerifyLoginTOTPInput struct {
 }
 
 type VerifyLoginTOTPOutput struct {
+	Step               string
 	AccessToken        string
 	RefreshToken       string
 	UserID             uuid.UUID
+	MembershipID       *uuid.UUID
 	TenantID           *uuid.UUID
-	Role               domain.Role
+	Role               *domain.Role
 	Email              string
 	MustChangePassword bool
+	Workspaces         []domain.WorkspaceSummary
+	CustomerID         *uuid.UUID
+	ActiveEnrollmentID *uuid.UUID
+	Enrollments        []domain.CustomerEnrollmentSummary
 }
 
 func (uc *VerifyLoginTOTP) Execute(ctx context.Context, in VerifyLoginTOTPInput) (*VerifyLoginTOTPOutput, error) {
@@ -49,11 +59,11 @@ func (uc *VerifyLoginTOTP) Execute(ctx context.Context, in VerifyLoginTOTPInput)
 	if code == "" || ct == "" || uc.MFASigner == nil {
 		return nil, fmt.Errorf("%w", domain.ErrInvalid)
 	}
-	claims, err := uc.MFASigner.ParseMFAChallengeToken(ctx, ct)
+	challengeClaims, err := uc.MFASigner.ParseMFAChallengeToken(ctx, ct)
 	if err != nil {
 		return nil, err
 	}
-	user, err := uc.Users.FindByID(ctx, claims.UserID)
+	user, err := uc.Users.FindByID(ctx, challengeClaims.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -88,42 +98,41 @@ func (uc *VerifyLoginTOTP) Execute(ctx context.Context, in VerifyLoginTOTPInput)
 		mfaEnrolled = int(n)
 	}
 
-	access, err := uc.Signer.SignAccessToken(ctx, ports.TokenClaims{
-		UserID:             user.ID,
-		TenantID:           user.TenantID,
-		Role:               user.Role,
-		Email:              user.Email,
-		MustChangePassword: user.MustChangePassword,
-		MFAEnrolledCount:   mfaEnrolled,
-		Permissions:        domain.DefaultPermissionsForRole(user.Role),
-	})
+	state, err := loadAuthSessionState(ctx, user, uc.Memberships, uc.Customers, uc.Catalog)
 	if err != nil {
 		return nil, err
 	}
-	refreshPlain, refreshHash, err := newRefreshToken()
+	state.MFAEnrolledCount = mfaEnrolled
+	access, refreshPlain, sessionClaims, err := issueAuthSession(ctx, authSessionDependencies{
+		Signer:        uc.Signer,
+		RefreshTokens: uc.RefreshTokens,
+		Memberships:   uc.Memberships,
+		Customers:     uc.Customers,
+		Catalog:       uc.Catalog,
+		Clock:         uc.Clock,
+		RefreshTTL:    uc.RefreshTTL,
+	}, state, nil, nil, false, in.UserAgent, in.IP)
 	if err != nil {
 		return nil, err
 	}
-	now := uc.Clock.Now()
-	if err := uc.RefreshTokens.Create(ctx, ports.RefreshTokenCreateInput{
-		ID:        uuid.New(),
-		UserID:    user.ID,
-		TokenHash: refreshHash,
-		UserAgent: in.UserAgent,
-		IP:        in.IP,
-		ExpiresAt: now.Add(uc.RefreshTTL),
-	}); err != nil {
-		return nil, err
+	step := "ok"
+	if sessionClaims.MembershipID == nil && !user.IsSuperadmin() && len(state.Workspaces) > 1 {
+		step = "workspace_selection_required"
 	}
-
 	return &VerifyLoginTOTPOutput{
+		Step:               step,
 		AccessToken:        access,
 		RefreshToken:       refreshPlain,
 		UserID:             user.ID,
-		TenantID:           user.TenantID,
-		Role:               user.Role,
+		MembershipID:       sessionClaims.MembershipID,
+		TenantID:           sessionClaims.TenantID,
+		Role:               sessionClaims.Role,
 		Email:              user.Email,
 		MustChangePassword: user.MustChangePassword,
+		Workspaces:         sessionClaims.Workspaces,
+		CustomerID:         sessionClaims.CustomerID,
+		ActiveEnrollmentID: sessionClaims.ActiveEnrollmentID,
+		Enrollments:        sessionClaims.Enrollments,
 	}, nil
 }
 
@@ -131,6 +140,9 @@ type FinishLoginPasskey struct {
 	Users         ports.UserRepository
 	Factors       ports.MFAFactorRepository
 	RefreshTokens ports.RefreshTokenRepository
+	Memberships   ports.TenantMembershipRepository
+	Customers     ports.CustomerIdentityRepository
+	Catalog       *postgres.StoreCatalog
 	Signer        ports.TokenSigner
 	MFASigner     *authtoken.JWTSigner
 	Clock         ports.Clock
@@ -147,13 +159,19 @@ type FinishLoginPasskeyInput struct {
 }
 
 type FinishLoginPasskeyOutput struct {
+	Step               string
 	AccessToken        string
 	RefreshToken       string
 	UserID             uuid.UUID
+	MembershipID       *uuid.UUID
 	TenantID           *uuid.UUID
-	Role               domain.Role
+	Role               *domain.Role
 	Email              string
 	MustChangePassword bool
+	Workspaces         []domain.WorkspaceSummary
+	CustomerID         *uuid.UUID
+	ActiveEnrollmentID *uuid.UUID
+	Enrollments        []domain.CustomerEnrollmentSummary
 }
 
 func (uc *FinishLoginPasskey) Execute(ctx context.Context, in FinishLoginPasskeyInput) (*FinishLoginPasskeyOutput, error) {
@@ -161,18 +179,18 @@ func (uc *FinishLoginPasskey) Execute(ctx context.Context, in FinishLoginPasskey
 	if ct == "" || in.ChallengeID == uuid.Nil || in.Request == nil || uc.MFASigner == nil || uc.PasskeyAuth == nil {
 		return nil, fmt.Errorf("%w", domain.ErrInvalid)
 	}
-	claims, err := uc.MFASigner.ParseMFAChallengeToken(ctx, ct)
+	challengeClaims, err := uc.MFASigner.ParseMFAChallengeToken(ctx, ct)
 	if err != nil {
 		return nil, err
 	}
 	if _, err := uc.PasskeyAuth.Execute(ctx, FinishPasskeyAuthenticationInput{
-		UserID:      claims.UserID,
+		UserID:      challengeClaims.UserID,
 		ChallengeID: in.ChallengeID,
 		Request:     in.Request,
 	}); err != nil {
 		return nil, err
 	}
-	user, err := uc.Users.FindByID(ctx, claims.UserID)
+	user, err := uc.Users.FindByID(ctx, challengeClaims.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -186,40 +204,40 @@ func (uc *FinishLoginPasskey) Execute(ctx context.Context, in FinishLoginPasskey
 		mfaEnrolled = int(n)
 	}
 
-	access, err := uc.Signer.SignAccessToken(ctx, ports.TokenClaims{
-		UserID:             user.ID,
-		TenantID:           user.TenantID,
-		Role:               user.Role,
-		Email:              user.Email,
-		MustChangePassword: user.MustChangePassword,
-		MFAEnrolledCount:   mfaEnrolled,
-		Permissions:        domain.DefaultPermissionsForRole(user.Role),
-	})
+	state, err := loadAuthSessionState(ctx, user, uc.Memberships, uc.Customers, uc.Catalog)
 	if err != nil {
 		return nil, err
 	}
-	refreshPlain, refreshHash, err := newRefreshToken()
+	state.MFAEnrolledCount = mfaEnrolled
+	access, refreshPlain, sessionClaims, err := issueAuthSession(ctx, authSessionDependencies{
+		Signer:        uc.Signer,
+		RefreshTokens: uc.RefreshTokens,
+		Memberships:   uc.Memberships,
+		Customers:     uc.Customers,
+		Catalog:       uc.Catalog,
+		Clock:         uc.Clock,
+		RefreshTTL:    uc.RefreshTTL,
+	}, state, nil, nil, false, in.UserAgent, in.IP)
 	if err != nil {
 		return nil, err
 	}
-	now := uc.Clock.Now()
-	if err := uc.RefreshTokens.Create(ctx, ports.RefreshTokenCreateInput{
-		ID:        uuid.New(),
-		UserID:    user.ID,
-		TokenHash: refreshHash,
-		UserAgent: in.UserAgent,
-		IP:        in.IP,
-		ExpiresAt: now.Add(uc.RefreshTTL),
-	}); err != nil {
-		return nil, err
+	step := "ok"
+	if sessionClaims.MembershipID == nil && !user.IsSuperadmin() && len(state.Workspaces) > 1 {
+		step = "workspace_selection_required"
 	}
 	return &FinishLoginPasskeyOutput{
+		Step:               step,
 		AccessToken:        access,
 		RefreshToken:       refreshPlain,
 		UserID:             user.ID,
-		TenantID:           user.TenantID,
-		Role:               user.Role,
+		MembershipID:       sessionClaims.MembershipID,
+		TenantID:           sessionClaims.TenantID,
+		Role:               sessionClaims.Role,
 		Email:              user.Email,
 		MustChangePassword: user.MustChangePassword,
+		Workspaces:         sessionClaims.Workspaces,
+		CustomerID:         sessionClaims.CustomerID,
+		ActiveEnrollmentID: sessionClaims.ActiveEnrollmentID,
+		Enrollments:        sessionClaims.Enrollments,
 	}, nil
 }

@@ -10,6 +10,9 @@ ALTER TABLE tenants
 ALTER TABLE tenants
     ADD COLUMN IF NOT EXISTS settings JSONB NOT NULL DEFAULT '{}'::jsonb;
 
+ALTER TABLE tenants
+    ADD COLUMN IF NOT EXISTS allow_staff_self_enrollment BOOLEAN NOT NULL DEFAULT false;
+
 -- +goose StatementBegin
 DO $$
 BEGIN

@@ -1,14 +1,13 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { pwaGetWallet } from "@/lib/customerApi";
-import { loadCustomerQr, subscribeCustomerQr, clearCustomerQr } from "@/lib/customerSession";
 import { IconQrCode, IconHeart, IconBookmark } from "@/components/customer/icons";
 import { IconBell, IconShield, IconReceipt, IconLogout, IconChevronRight, IconStore, IconUser } from "@/components/agent/icons";
 import { JubelyLogo } from "@jubely/ui";
+import { clearSession, useSessionStore } from "@/lib/session";
 
 type MenuRowProps = {
   Icon: React.ComponentType<{ size?: number; color?: string }>;
@@ -34,18 +33,18 @@ function MenuRow({ Icon, title, sub, danger, onClick, last }: MenuRowProps) {
 export default function SettingsPage() {
   const t = useTranslations("customer.settings");
   const router = useRouter();
-  const token = useSyncExternalStore(subscribeCustomerQr, loadCustomerQr, () => null);
+  const session = useSessionStore((state) => state.session);
   const { data } = useQuery({
-    queryKey: ["pwa", "wallet", token],
-    enabled: Boolean(token),
-    queryFn: () => pwaGetWallet(token!),
+    queryKey: ["pwa", "wallet", session?.activeEnrollmentId],
+    enabled: Boolean(session?.activeEnrollmentId),
+    queryFn: () => pwaGetWallet(),
   });
 
   const initials = data?.tenant_name?.slice(0, 2).toUpperCase() ?? "?";
   const totalPts = data?.points_balance ?? 0;
 
   function handleSignOut() {
-    clearCustomerQr();
+    clearSession();
     router.push("/customer/wallet");
   }
 
@@ -75,7 +74,7 @@ export default function SettingsPage() {
           <div style={{ marginTop: 16, padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.05)", display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
             {[
               { lbl: t("totalPoints"), val: totalPts.toLocaleString("fr-FR"), accent: true },
-              { lbl: t("programs"), val: token ? "1" : "0" },
+              { lbl: t("programs"), val: String(session?.customerEnrollments.length ?? 0) },
               { lbl: t("rewardsUsed"), val: "—" },
             ].map((s, i) => (
               <div key={i} style={{ paddingLeft: i === 0 ? 0 : 10, borderLeft: i === 0 ? "none" : "0.5px solid rgba(255,255,255,0.08)" }}>

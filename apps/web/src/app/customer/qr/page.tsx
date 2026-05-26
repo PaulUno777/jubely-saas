@@ -1,25 +1,24 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { QRCodeCanvas } from "qrcode.react";
 import { pwaGetWallet } from "@/lib/customerApi";
-import { loadCustomerQr, subscribeCustomerQr, clearCustomerQr } from "@/lib/customerSession";
 import { IconChevronLeft, IconFlash } from "@/components/agent/icons";
 import { IconBookmark, IconQrCode } from "@/components/customer/icons";
+import { clearSession, useSessionStore } from "@/lib/session";
 
 export default function CustomerQrPage() {
   const t = useTranslations("customer.qr");
   const router = useRouter();
-  const token = useSyncExternalStore(subscribeCustomerQr, loadCustomerQr, () => null);
+  const session = useSessionStore((state) => state.session);
 
   const { data } = useQuery({
-    queryKey: ["pwa", "wallet", token],
-    enabled: Boolean(token),
-    queryFn: () => pwaGetWallet(token!),
+    queryKey: ["pwa", "wallet", session?.activeEnrollmentId],
+    enabled: Boolean(session?.activeEnrollmentId),
+    queryFn: () => pwaGetWallet(),
   });
 
   const name = "Customer";
@@ -49,9 +48,9 @@ export default function CustomerQrPage() {
 
       {/* QR code */}
       <div style={{ display: "flex", justifyContent: "center", margin: "24px auto 0" }}>
-        {token ? (
+        {data?.customer_qr ? (
           <div style={{ background: "var(--c-cream)", borderRadius: 28, padding: 16, boxShadow: "0 18px 40px rgba(0,0,0,0.35)" }}>
-            <QRCodeCanvas value={token} size={220} />
+            <QRCodeCanvas value={data.customer_qr} size={220} />
           </div>
         ) : (
           <div style={{ width: 252, height: 252, background: "rgba(255,255,255,0.06)", borderRadius: 28, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 20, textAlign: "center" }}>
@@ -75,16 +74,16 @@ export default function CustomerQrPage() {
         </button>
         <button
           type="button"
-          onClick={async () => { if (token) { await navigator.clipboard.writeText(token); toast.success(t("copied")); } }}
+          onClick={async () => { if (data?.customer_qr) { await navigator.clipboard.writeText(data.customer_qr); toast.success(t("copied")); } }}
           style={{ appearance: "none", border: 0, cursor: "pointer", padding: "14px 12px", borderRadius: 16, background: "var(--c-gold-2)", color: "var(--c-card)", fontFamily: "inherit", fontSize: 13.5, fontWeight: 600, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
         >
           {t("copy")}
         </button>
       </div>
 
-      {token && (
+      {data?.customer_qr && (
         <div style={{ paddingBottom: 16, textAlign: "center" }}>
-          <button type="button" onClick={() => { clearCustomerQr(); router.push("/customer/wallet"); }}
+          <button type="button" onClick={() => { clearSession(); router.push("/customer/wallet"); }}
             style={{ appearance: "none", border: 0, background: "transparent", color: "rgba(255,255,255,0.4)", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
             {t("clear")}
           </button>

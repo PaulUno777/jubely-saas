@@ -5,6 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS customer_identities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID UNIQUE REFERENCES users(id) ON DELETE SET NULL,
     phone TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
     email TEXT,

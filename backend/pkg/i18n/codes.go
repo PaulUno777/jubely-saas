@@ -8,6 +8,7 @@ const (
 	CodeAuthUnauthorized          = "error.auth.unauthorized"
 	CodeAuthForbidden             = "error.auth.forbidden"
 	CodeAuthInvalidCredentials    = "error.auth.invalid_credentials"
+	CodeAuthWorkspaceRequired     = "error.auth.workspace_required"
 	CodeBootstrapForbidden        = "error.bootstrap.forbidden"
 	CodeBootstrapAlreadyCompleted = "error.bootstrap.already_completed"
 	CodeTenantSlugTaken           = "error.tenant.slug_taken"
@@ -18,6 +19,7 @@ const (
 	CodeUserEmailTaken            = "error.user.email_taken"
 	CodeCustomerPhoneTaken        = "error.customer.phone_taken"
 	CodeCustomerEnrollmentActive  = "error.customer.enrollment_active"
+	CodeCustomerSelfEnrollmentDisabled = "error.customer.self_enrollment_disabled"
 	CodeInternal                  = "error.internal"
 	CodeRateLimit                 = "error.rate_limit"
 )

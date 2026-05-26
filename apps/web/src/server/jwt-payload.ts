@@ -3,8 +3,27 @@ import "server-only";
 export type AccessJwtPayload = {
   sub?: string;
   email?: string;
-  role?: string;
+  role?: string | null;
+  membership_id?: string;
   tenant_id?: string;
+  workspaces?: Array<{
+    membership_id?: string;
+    tenant_id?: string;
+    tenant_name?: string;
+    tenant_slug?: string;
+    role?: string;
+    permissions?: string[];
+  }>;
+  customer_id?: string;
+  active_enrollment_id?: string;
+  enrollments?: Array<{
+    enrollment_id?: string;
+    tenant_id?: string;
+    tenant_name?: string;
+    tenant_slug?: string;
+    tier?: string;
+    points_balance?: number;
+  }>;
   mcp?: boolean;
   mfa_ec?: number;
   exp?: number;

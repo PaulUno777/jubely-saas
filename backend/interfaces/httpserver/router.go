@@ -27,6 +27,7 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 
 		v1.POST("/bootstrap/superadmin", GinRateLimit(rateLimitBootstrap), s.BootstrapSuperadmin)
 		v1.POST("/auth/login", GinRateLimit(rateLimitLogin), s.AuthLogin)
+		v1.POST("/auth/workspace", AuthMiddleware(signer), s.AuthSelectWorkspace)
 		v1.POST("/auth/mfa/totp/verify", s.AuthMFATOTPVerify)
 		v1.POST("/auth/refresh", s.AuthRefresh)
 		v1.POST("/auth/logout", s.AuthLogout)
@@ -81,6 +82,8 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 
 		pwa := v1.Group("/pwa")
 		pwa.POST("/enrollments/scan", GinRateLimit(rateLimitPWAEnroll), s.PWAEnrollByStoreQR)
+		pwa.POST("/auth/login", GinRateLimit(rateLimitPublicOTPVerify), s.PWAAuthLogin)
+		pwa.POST("/context", AuthMiddleware(signer), s.PWASelectContext)
 		pwa.GET("/wallet", GinRateLimit(rateLimitPWAEnroll), s.PWAGetWallet)
 
 		me := v1.Group("/me")

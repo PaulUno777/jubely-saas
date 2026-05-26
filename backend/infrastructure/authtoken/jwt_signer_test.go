@@ -10,6 +10,10 @@ import (
 	"github.com/google/uuid"
 )
 
+func rolePtr(role domain.Role) *domain.Role {
+	return &role
+}
+
 func TestJWTSigner_sign_and_parse_roundtrip(t *testing.T) {
 	t.Parallel()
 	tenantID := uuid.New()
@@ -20,7 +24,7 @@ func TestJWTSigner_sign_and_parse_roundtrip(t *testing.T) {
 	want := ports.TokenClaims{
 		UserID:   uuid.New(),
 		TenantID: &tenantID,
-		Role:     domain.RoleMerchantAdmin,
+		Role:     rolePtr(domain.RoleMerchantAdmin),
 		Email:    "admin@chezmama.cm",
 	}
 	tok, err := s.SignAccessToken(context.Background(), want)
@@ -37,7 +41,7 @@ func TestJWTSigner_sign_and_parse_roundtrip(t *testing.T) {
 	if got.TenantID == nil || *got.TenantID != tenantID {
 		t.Fatalf("tenant_id mismatch")
 	}
-	if got.Role != want.Role {
+	if got.Role == nil || want.Role == nil || *got.Role != *want.Role {
 		t.Fatalf("role mismatch")
 	}
 	if got.Email != want.Email {
@@ -59,7 +63,7 @@ func TestJWTSigner_must_change_password_claim_roundtrip(t *testing.T) {
 	}
 	want := ports.TokenClaims{
 		UserID:             uuid.New(),
-		Role:               domain.RoleSuperadmin,
+		Role:               rolePtr(domain.RoleSuperadmin),
 		Email:              "root@jubely.app",
 		MustChangePassword: true,
 		MFAEnrolledCount:   2,
@@ -88,7 +92,7 @@ func TestJWTSigner_parse_rejects_tampered(t *testing.T) {
 	}
 	tok, err := s.SignAccessToken(context.Background(), ports.TokenClaims{
 		UserID: uuid.New(),
-		Role:   domain.RoleSuperadmin,
+		Role:   rolePtr(domain.RoleSuperadmin),
 		Email:  "root@jubely.app",
 	})
 	if err != nil {
@@ -110,7 +114,7 @@ func TestJWTSigner_perms_roundtrip(t *testing.T) {
 	perms := []string{domain.PermManageStaff, domain.PermRecordTransaction}
 	tok, err := s.SignAccessToken(context.Background(), ports.TokenClaims{
 		UserID:      uuid.New(),
-		Role:        domain.RoleStaff,
+		Role:        rolePtr(domain.RoleStaff),
 		Email:       "staff@store.cm",
 		Permissions: perms,
 	})

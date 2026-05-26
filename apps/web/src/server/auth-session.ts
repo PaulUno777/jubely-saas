@@ -13,10 +13,29 @@ import { upstreamApiOrigin } from "./upstream-api";
 
 export type SessionMeData = {
   user_id: string;
+  membership_id: string | null;
   tenant_id: string | null;
-  role: string;
+  role: string | null;
   email: string;
   must_change_password: boolean;
+  workspaces: Array<{
+    membership_id: string;
+    tenant_id: string;
+    tenant_name: string;
+    tenant_slug: string;
+    role: string;
+    permissions: string[];
+  }>;
+  customer_id: string | null;
+  active_enrollment_id: string | null;
+  customer_enrollments: Array<{
+    enrollment_id: string;
+    tenant_id: string;
+    tenant_name: string;
+    tenant_slug: string;
+    tier: string;
+    points_balance: number;
+  }>;
   mfa?: {
     enrolled_factors: number;
     setup_recommended: boolean;
@@ -24,7 +43,7 @@ export type SessionMeData = {
 };
 
 export function isAccessTokenUsable(payload: AccessJwtPayload | null): boolean {
-  if (!payload?.sub || !payload.role) return false;
+  if (!payload?.sub) return false;
   if (typeof payload.exp === "number" && payload.exp <= Math.floor(Date.now() / 1000)) {
     return false;
   }
@@ -47,10 +66,46 @@ export function sessionDataFromPayload(payload: AccessJwtPayload): SessionMeData
 
   return {
     user_id: payload.sub!,
+    membership_id: payload.membership_id ?? null,
     tenant_id: payload.tenant_id ?? null,
-    role: payload.role!,
+    role: payload.role ?? null,
     email: payload.email ?? "",
     must_change_password: Boolean(payload.mcp),
+    workspaces: Array.isArray(payload.workspaces)
+      ? payload.workspaces
+          .filter(
+            (workspace): workspace is NonNullable<typeof workspace> =>
+              Boolean(workspace?.membership_id && workspace?.tenant_id && workspace?.role),
+          )
+          .map((workspace) => ({
+            membership_id: workspace.membership_id!,
+            tenant_id: workspace.tenant_id!,
+            tenant_name: workspace.tenant_name ?? "",
+            tenant_slug: workspace.tenant_slug ?? "",
+            role: workspace.role!,
+            permissions: Array.isArray(workspace.permissions) ? workspace.permissions : [],
+          }))
+      : [],
+    customer_id: payload.customer_id ?? null,
+    active_enrollment_id: payload.active_enrollment_id ?? null,
+    customer_enrollments: Array.isArray(payload.enrollments)
+      ? payload.enrollments
+          .filter(
+            (enrollment): enrollment is NonNullable<typeof enrollment> =>
+              Boolean(enrollment?.enrollment_id && enrollment?.tenant_id),
+          )
+          .map((enrollment) => ({
+            enrollment_id: enrollment.enrollment_id!,
+            tenant_id: enrollment.tenant_id!,
+            tenant_name: enrollment.tenant_name ?? "",
+            tenant_slug: enrollment.tenant_slug ?? "",
+            tier: enrollment.tier ?? "bronze",
+            points_balance:
+              typeof enrollment.points_balance === "number" && Number.isFinite(enrollment.points_balance)
+                ? enrollment.points_balance
+                : 0,
+          }))
+      : [],
     ...(mfa ? { mfa } : {}),
   };
 }

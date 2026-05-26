@@ -81,13 +81,17 @@ const store = {
   },
   settings: {
     title: "Paramètres",
-    subtitle: "Nom du magasin, politique de conflit et JSON de configuration.",
+    subtitle: "Nom du magasin, politique de conflit, politique d'inscription du staff et JSON de configuration.",
     cardTitle: "Paramètres généraux",
     cardDescription: "Les changements s'appliquent immédiatement à votre enseigne.",
     loading: "Chargement…",
     loadError: "Impossible de charger le tenant.",
     name: "Nom du magasin",
     conflictPolicy: "Politique de conflit",
+    allowStaffSelfEnrollmentLabel: "Auto-inscription du staff",
+    allowStaffSelfEnrollmentHelp:
+      "Désactivé par défaut. Activez ceci uniquement si les membres du staff doivent aussi pouvoir rejoindre le programme fidélité de leur propre boutique comme clients.",
+    allowStaffSelfEnrollmentToggle: "Autoriser les membres du staff à s'inscrire au programme fidélité de cette boutique",
     settingsJson: "Paramètres (JSON)",
     save: "Enregistrer",
     saving: "Enregistrement…",

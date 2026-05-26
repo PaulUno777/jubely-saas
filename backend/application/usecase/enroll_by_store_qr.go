@@ -17,6 +17,8 @@ type EnrollByStoreQR struct {
 	Tx                       ports.TxManager
 	Clock                    ports.Clock
 	Tenants                  ports.TenantRepository
+	Users                    ports.UserRepository
+	Memberships              ports.TenantMembershipRepository
 	Customers                ports.CustomerIdentityRepository
 	Enrollments              ports.LoyaltyEnrollmentRepository
 	QRCodec                  ports.QRCodec
@@ -30,6 +32,7 @@ type EnrollByStoreQRInput struct {
 	Name             string
 	Email            *string
 	PhoneVerifyToken string
+	AuthUserID       *uuid.UUID
 }
 
 type EnrollByStoreQROutput struct {
@@ -74,7 +77,8 @@ func (uc *EnrollByStoreQR) Execute(ctx context.Context, in EnrollByStoreQRInput)
 	if err != nil {
 		return nil, fmt.Errorf("%w", domain.ErrInvalid)
 	}
-	if _, err := uc.Tenants.FindByID(ctx, tenantID); err != nil {
+	tenant, err := uc.Tenants.FindByID(ctx, tenantID)
+	if err != nil {
 		return nil, err
 	}
 
@@ -84,17 +88,48 @@ func (uc *EnrollByStoreQR) Execute(ctx context.Context, in EnrollByStoreQRInput)
 		if err != nil && !errors.Is(err, domain.ErrNotFound) {
 			return err
 		}
+		if in.AuthUserID != nil && ci != nil && ci.UserID != nil && *ci.UserID == *in.AuthUserID && !tenant.AllowStaffSelfEnrollment {
+			if _, err := uc.Memberships.FindByUserAndTenant(ctx, *in.AuthUserID, tenantID); err == nil {
+				return fmt.Errorf("%w", domain.ErrSelfEnrollmentForbidden)
+			} else if !errors.Is(err, domain.ErrNotFound) {
+				return err
+			}
+		}
 
 		now := uc.Clock.Now()
 		if ci == nil {
 			ci = &domain.CustomerIdentity{
 				ID:        uuid.New(),
+				UserID:    in.AuthUserID,
 				PhoneE164: phone,
 				Name:      name,
 				Email:     email,
 				CreatedAt: now,
 			}
 			if err := uc.Customers.Create(ctx, ci); err != nil {
+				return err
+			}
+		}
+		if in.AuthUserID != nil {
+			if _, err := uc.Memberships.FindByUserAndTenant(ctx, *in.AuthUserID, tenantID); err == nil && !tenant.AllowStaffSelfEnrollment {
+				return fmt.Errorf("%w", domain.ErrSelfEnrollmentForbidden)
+			} else if err != nil && !errors.Is(err, domain.ErrNotFound) {
+				return err
+			}
+			if ci.UserID == nil {
+				if err := uc.Customers.AssignUser(ctx, ci.ID, *in.AuthUserID); err != nil && !errors.Is(err, domain.ErrConflict) {
+					return err
+				}
+				ci.UserID = in.AuthUserID
+			}
+		} else if ci.UserID == nil && email != nil && uc.Users != nil {
+			if user, err := uc.Users.FindByEmail(ctx, *email); err == nil {
+				if err := uc.Customers.AssignUser(ctx, ci.ID, user.ID); err != nil && !errors.Is(err, domain.ErrConflict) {
+					return err
+				}
+				uid := user.ID
+				ci.UserID = &uid
+			} else if !errors.Is(err, domain.ErrNotFound) {
 				return err
 			}
 		}

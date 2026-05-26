@@ -1,19 +1,35 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { pwaGetWallet } from "@/lib/customerApi";
-import { loadCustomerQr, subscribeCustomerQr } from "@/lib/customerSession";
+import { customerSelectContext, pwaGetWallet } from "@/lib/customerApi";
 import { IconStore, IconChevronRight, IconSearch } from "@/components/agent/icons";
 import { IconPin } from "@/components/customer/icons";
+import { useSession } from "@/hooks/useSession";
+import { bootstrapAuthFromServer } from "@/lib/session";
 
-function EnrolledStoreCard({ name, tier, points }: { name: string; tier: string; points: number }) {
+function EnrolledStoreCard({
+  name,
+  tier,
+  points,
+  active,
+  onSelect,
+}: {
+  name: string;
+  tier: string;
+  points: number;
+  active?: boolean;
+  onSelect?: () => void;
+}) {
   const t = useTranslations("customer.stores");
   return (
-    <Link href="/customer/wallet" style={{ textDecoration: "none" }}>
-      <div style={{ background: "var(--c-cream)", border: "1px solid var(--c-line)", borderRadius: 18, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+    <button
+      type="button"
+      onClick={onSelect}
+      style={{ width: "100%", textAlign: "left", background: "transparent", border: 0, padding: 0 }}
+    >
+      <div style={{ background: "var(--c-cream)", border: active ? "1px solid var(--c-green)" : "1px solid var(--c-line)", borderRadius: 18, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
         <div style={{ width: 44, height: 44, borderRadius: 14, background: "var(--c-card)", color: "var(--c-gold-2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14, fontWeight: 700 }}>
           {name.slice(0, 2).toUpperCase()}
         </div>
@@ -23,19 +39,27 @@ function EnrolledStoreCard({ name, tier, points }: { name: string; tier: string;
             {t("enrolled", { pts: String(points.toLocaleString("fr-FR")), tier })}
           </div>
         </div>
-        <IconChevronRight size={14} color="var(--c-ink-mut)" />
+        <div style={{ fontSize: 12, color: active ? "var(--c-green)" : "var(--c-ink-mut)", fontWeight: 600 }}>
+          {active ? "Active" : "Open"}
+        </div>
       </div>
-    </Link>
+    </button>
   );
 }
 
 export default function StoresPage() {
   const t = useTranslations("customer.stores");
-  const token = useSyncExternalStore(subscribeCustomerQr, loadCustomerQr, () => null);
+  const { session } = useSession();
   const { data } = useQuery({
-    queryKey: ["pwa", "wallet", token],
-    enabled: Boolean(token),
-    queryFn: () => pwaGetWallet(token!),
+    queryKey: ["pwa", "wallet", session?.activeEnrollmentId],
+    enabled: Boolean(session?.activeEnrollmentId),
+    queryFn: () => pwaGetWallet(),
+  });
+  const selectMut = useMutation({
+    mutationFn: async (enrollmentId: string) => {
+      await customerSelectContext(enrollmentId);
+      await bootstrapAuthFromServer();
+    },
   });
 
   return (
@@ -54,12 +78,21 @@ export default function StoresPage() {
       </div>
 
       <div style={{ padding: "4px 16px 16px" }}>
-        {data ? (
+        {session?.customerEnrollments.length ? (
           <>
             <div style={{ fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--c-ink-mut)", fontWeight: 600, marginBottom: 8 }}>
               {t("myPrograms")}
             </div>
-            <EnrolledStoreCard name={data.tenant_name} tier={data.tier} points={data.points_balance} />
+            {session.customerEnrollments.map((enrollment) => (
+              <EnrolledStoreCard
+                key={enrollment.enrollmentId}
+                name={enrollment.tenantName || enrollment.tenantSlug}
+                tier={enrollment.tier}
+                points={enrollment.pointsBalance}
+                active={session.activeEnrollmentId === enrollment.enrollmentId}
+                onSelect={() => selectMut.mutate(enrollment.enrollmentId)}
+              />
+            ))}
           </>
         ) : (
           <div style={{ textAlign: "center", padding: "40px 20px" }}>

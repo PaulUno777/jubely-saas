@@ -50,6 +50,7 @@ export const pwaWalletSchema = z.object({
   tenant_slug: z.string(),
   customer_id: z.string(),
   enrollment_id: z.string(),
+  customer_qr: z.string().optional(),
   tier: z.string(),
   points_balance: z.number(),
   recent_events: z.array(pwaWalletEventSchema),

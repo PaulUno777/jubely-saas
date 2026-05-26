@@ -14,16 +14,20 @@ import (
 
 type CreateCustomerByStaff struct {
 	Tx          ports.TxManager
+	Tenants     ports.TenantRepository
+	Users       ports.UserRepository
+	Memberships ports.TenantMembershipRepository
 	Customers   ports.CustomerIdentityRepository
 	Enrollments ports.LoyaltyEnrollmentRepository
 	QRCodec     ports.QRCodec
 }
 
 type CreateCustomerByStaffInput struct {
-	TenantID  uuid.UUID
-	PhoneE164 string
-	Name      string
-	Email     *string
+	TenantID    uuid.UUID
+	ActorUserID *uuid.UUID
+	PhoneE164   string
+	Name        string
+	Email       *string
 }
 
 type CreateCustomerByStaffOutput struct {
@@ -49,9 +53,16 @@ func (uc *CreateCustomerByStaff) Execute(ctx context.Context, in CreateCustomerB
 
 	var out *CreateCustomerByStaffOutput
 	err := uc.Tx.WithinTx(ctx, func(ctx context.Context) error {
+		tenant, err := uc.Tenants.FindByID(ctx, in.TenantID)
+		if err != nil {
+			return err
+		}
 		ci, err := uc.Customers.FindByPhoneE164(ctx, phone)
 		if err != nil && !errors.Is(err, domain.ErrNotFound) {
 			return err
+		}
+		if in.ActorUserID != nil && ci != nil && ci.UserID != nil && *ci.UserID == *in.ActorUserID && !tenant.AllowStaffSelfEnrollment {
+			return fmt.Errorf("%w", domain.ErrSelfEnrollmentForbidden)
 		}
 		if ci == nil {
 			now := time.Now().UTC()
@@ -66,6 +77,25 @@ func (uc *CreateCustomerByStaff) Execute(ctx context.Context, in CreateCustomerB
 				if errors.Is(err, domain.ErrConflict) {
 					return fmt.Errorf("%w", domain.ErrConflict)
 				}
+				return err
+			}
+		}
+		if in.ActorUserID != nil && email != nil && !tenant.AllowStaffSelfEnrollment {
+			actor, err := uc.Users.FindByID(ctx, *in.ActorUserID)
+			if err == nil && strings.EqualFold(actor.Email, *email) {
+				return fmt.Errorf("%w", domain.ErrSelfEnrollmentForbidden)
+			}
+		}
+		if in.ActorUserID != nil && ci.UserID == nil {
+			if _, err := uc.Memberships.FindByUserAndTenant(ctx, *in.ActorUserID, in.TenantID); err == nil {
+				if !tenant.AllowStaffSelfEnrollment {
+					return fmt.Errorf("%w", domain.ErrSelfEnrollmentForbidden)
+				}
+				if err := uc.Customers.AssignUser(ctx, ci.ID, *in.ActorUserID); err != nil && !errors.Is(err, domain.ErrConflict) {
+					return err
+				}
+				ci.UserID = in.ActorUserID
+			} else if !errors.Is(err, domain.ErrNotFound) {
 				return err
 			}
 		}

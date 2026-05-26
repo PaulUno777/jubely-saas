@@ -30,7 +30,14 @@ export async function storeGetTenant() {
   return parseSuccessData(json, singleTenantSuccessEnvelopeSchema, res.status, text);
 }
 
-export async function storePatchTenant(input: { body: { name?: string; conflict_policy?: string; settings?: unknown } }) {
+export async function storePatchTenant(input: {
+  body: {
+    name?: string;
+    conflict_policy?: string;
+    allow_staff_self_enrollment?: boolean;
+    settings?: unknown;
+  };
+}) {
   const body = patchStoreTenantWireSchema.parse(input.body);
   const res = await authedFetch("/v1/store/tenant", {
     method: "PATCH",

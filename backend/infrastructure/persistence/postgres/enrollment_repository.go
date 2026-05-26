@@ -42,3 +42,43 @@ WHERE tenant_id=$1 AND customer_id=$2`
 	}
 	return &e, nil
 }
+
+func (r *EnrollmentRepository) FindByID(ctx context.Context, enrollmentID uuid.UUID) (*domain.LoyaltyEnrollment, error) {
+	db := pickDB(ctx, r.Pool)
+	const q = `
+SELECT id, tenant_id, customer_id, tier, created_at
+FROM loyalty_enrollments
+WHERE id=$1`
+	var e domain.LoyaltyEnrollment
+	err := db.QueryRow(ctx, q, enrollmentID).Scan(&e.ID, &e.TenantID, &e.CustomerID, &e.Tier, &e.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, domain.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &e, nil
+}
+
+func (r *EnrollmentRepository) ListByCustomer(ctx context.Context, customerID uuid.UUID) ([]domain.LoyaltyEnrollment, error) {
+	db := pickDB(ctx, r.Pool)
+	const q = `
+SELECT id, tenant_id, customer_id, tier, created_at
+FROM loyalty_enrollments
+WHERE customer_id=$1
+ORDER BY created_at DESC`
+	rows, err := db.Query(ctx, q, customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.LoyaltyEnrollment
+	for rows.Next() {
+		var e domain.LoyaltyEnrollment
+		if err := rows.Scan(&e.ID, &e.TenantID, &e.CustomerID, &e.Tier, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}

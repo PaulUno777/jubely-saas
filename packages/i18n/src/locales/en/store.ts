@@ -81,13 +81,17 @@ const store = {
   },
   settings: {
     title: "Settings",
-    subtitle: "Store name, conflict policy, and JSON settings.",
+    subtitle: "Store name, conflict policy, staff enrollment policy, and JSON settings.",
     cardTitle: "General settings",
     cardDescription: "Changes apply to your tenant immediately.",
     loading: "Loading…",
     loadError: "Could not load tenant.",
     name: "Store name",
     conflictPolicy: "Conflict policy",
+    allowStaffSelfEnrollmentLabel: "Staff self-enrollment",
+    allowStaffSelfEnrollmentHelp:
+      "Disabled by default. Turn this on only if staff should also be allowed to join this store's loyalty program as customers.",
+    allowStaffSelfEnrollmentToggle: "Allow staff members to enroll in this store's loyalty program",
     settingsJson: "Settings (JSON)",
     save: "Save",
     saving: "Saving…",

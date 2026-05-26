@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input, Textarea } from "@jubely/ui";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage, Input, Textarea } from "@jubely/ui";
 import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -17,6 +17,7 @@ import { ApiResponseError } from "@jubely/api-schemas";
 const schema = z.object({
   name: z.string().min(1),
   conflict_policy: z.string().min(1),
+  allow_staff_self_enrollment: z.boolean(),
   settingsJson: z.string(),
 });
 
@@ -33,7 +34,12 @@ export default function StoreSettingsPage() {
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", conflict_policy: "FIFO", settingsJson: "{}" },
+    defaultValues: {
+      name: "",
+      conflict_policy: "FIFO",
+      allow_staff_self_enrollment: false,
+      settingsJson: "{}",
+    },
   });
 
   useEffect(() => {
@@ -41,6 +47,7 @@ export default function StoreSettingsPage() {
     form.reset({
       name: q.data.name,
       conflict_policy: q.data.conflict_policy ?? "FIFO",
+      allow_staff_self_enrollment: Boolean(q.data.allow_staff_self_enrollment),
       settingsJson: JSON.stringify(q.data.settings ?? {}, null, 2),
     });
   }, [q.data, form]);
@@ -57,6 +64,7 @@ export default function StoreSettingsPage() {
         body: {
           name: values.name,
           conflict_policy: values.conflict_policy,
+          allow_staff_self_enrollment: values.allow_staff_self_enrollment,
           settings,
         },
       });
@@ -108,6 +116,29 @@ export default function StoreSettingsPage() {
                         <FormLabel>{t("conflictPolicy")}</FormLabel>
                         <FormControl>
                           <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="allow_staff_self_enrollment"
+                    render={({ field }) => (
+                      <FormItem className="rounded-lg border border-border p-4">
+                        <div className="space-y-1">
+                          <FormLabel>{t("allowStaffSelfEnrollmentLabel")}</FormLabel>
+                          <FormDescription>{t("allowStaffSelfEnrollmentHelp")}</FormDescription>
+                        </div>
+                        <FormControl>
+                          <label className="mt-3 flex items-center gap-3 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={field.value}
+                              onChange={(event) => field.onChange(event.target.checked)}
+                            />
+                            <span>{t("allowStaffSelfEnrollmentToggle")}</span>
+                          </label>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

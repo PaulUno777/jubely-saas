@@ -8,11 +8,13 @@ import (
 )
 
 type RefreshToken struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	TokenHash []byte
-	ExpiresAt time.Time
-	RevokedAt *time.Time
+	ID                uuid.UUID
+	UserID            uuid.UUID
+	TokenHash         []byte
+	ActiveMembershipID *uuid.UUID
+	ActiveEnrollmentID *uuid.UUID
+	ExpiresAt         time.Time
+	RevokedAt         *time.Time
 }
 
 type RefreshTokenRepository interface {
@@ -22,10 +24,12 @@ type RefreshTokenRepository interface {
 }
 
 type RefreshTokenCreateInput struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	TokenHash []byte
-	UserAgent string
-	IP        *string
-	ExpiresAt time.Time
+	ID                uuid.UUID
+	UserID            uuid.UUID
+	TokenHash         []byte
+	ActiveMembershipID *uuid.UUID
+	ActiveEnrollmentID *uuid.UUID
+	UserAgent         string
+	IP                *string
+	ExpiresAt         time.Time
 }

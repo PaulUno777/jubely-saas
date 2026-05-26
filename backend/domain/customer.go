@@ -10,6 +10,7 @@ import (
 // A customer can have multiple loyalty relationships via LoyaltyEnrollment.
 type CustomerIdentity struct {
 	ID        uuid.UUID
+	UserID    *uuid.UUID
 	PhoneE164 string
 	Name      string
 	Email     *string

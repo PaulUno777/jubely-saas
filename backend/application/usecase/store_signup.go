@@ -15,12 +15,14 @@ import (
 // StoreSignup creates a new tenant and the first store admin user (merchant_admin) in one flow.
 // This is the Phase 2 pivot enabling self-serve onboarding.
 type StoreSignup struct {
-	Tx      ports.TxManager
-	Tenants ports.TenantRepository
-	Users   ports.UserRepository
-	Hasher  ports.PasswordHasher
-	Signer  ports.TokenSigner
-	Clock   ports.Clock
+	Tx          ports.TxManager
+	Tenants     ports.TenantRepository
+	Users       ports.UserRepository
+	Memberships ports.TenantMembershipRepository
+	Customers   ports.CustomerIdentityRepository
+	Hasher      ports.PasswordHasher
+	Signer      ports.TokenSigner
+	Clock       ports.Clock
 }
 
 type StoreSignupInput struct {
@@ -90,10 +92,17 @@ func (uc *StoreSignup) Execute(ctx context.Context, in StoreSignupInput) (*Store
 	}
 
 	u := &domain.User{
-		ID:       uuid.New(),
-		TenantID: &t.ID,
-		Email:    email,
-		Role:     domain.RoleMerchantAdmin,
+		ID:    uuid.New(),
+		Email: email,
+		Role:  domain.RoleMerchantAdmin,
+	}
+	membership := &domain.TenantMembership{
+		ID:        uuid.New(),
+		UserID:    u.ID,
+		TenantID:  t.ID,
+		Role:      domain.RoleMerchantAdmin,
+		Status:    domain.MembershipStatusActive,
+		CreatedAt: now,
 	}
 
 	var accessToken string
@@ -102,8 +111,7 @@ func (uc *StoreSignup) Execute(ctx context.Context, in StoreSignupInput) (*Store
 			return err
 		}
 
-		// Ensure no existing user exists with same email in tenant (defensive; should be empty for new tenant).
-		_, err := uc.Users.FindByTenantAndEmail(ctx, t.ID, email)
+		_, err := uc.Users.FindByEmail(ctx, email)
 		if err == nil {
 			return fmt.Errorf("%w", domain.ErrEmailTaken)
 		}
@@ -123,15 +131,39 @@ func (uc *StoreSignup) Execute(ctx context.Context, in StoreSignupInput) (*Store
 			}
 			return err
 		}
+		if err := uc.Memberships.Create(ctx, membership); err != nil {
+			if errors.Is(err, domain.ErrConflict) {
+				return fmt.Errorf("%w", domain.ErrEmailTaken)
+			}
+			return err
+		}
+		if uc.Customers != nil {
+			if customer, err := uc.Customers.FindByEmail(ctx, email); err == nil && customer.UserID == nil {
+				if err := uc.Customers.AssignUser(ctx, customer.ID, u.ID); err != nil && !errors.Is(err, domain.ErrConflict) {
+					return err
+				}
+			} else if err != nil && !errors.Is(err, domain.ErrNotFound) {
+				return err
+			}
+		}
 
 		tok, err := uc.Signer.SignAccessToken(ctx, ports.TokenClaims{
 			UserID:             u.ID,
-			TenantID:           u.TenantID,
-			Role:               u.Role,
+			MembershipID:       &membership.ID,
+			TenantID:           &t.ID,
+			Role:               func() *domain.Role { role := domain.RoleMerchantAdmin; return &role }(),
 			Email:              u.Email,
 			MustChangePassword: u.MustChangePassword,
 			MFAEnrolledCount:   0,
-			Permissions:        domain.DefaultPermissionsForRole(u.Role),
+			Permissions:        domain.DefaultPermissionsForRole(domain.RoleMerchantAdmin),
+			Workspaces: []domain.WorkspaceSummary{{
+				MembershipID: membership.ID,
+				TenantID:     t.ID,
+				TenantName:   t.Name,
+				TenantSlug:   t.Slug,
+				Role:         domain.RoleMerchantAdmin,
+				Permissions:  domain.DefaultPermissionsForRole(domain.RoleMerchantAdmin),
+			}},
 		})
 		if err != nil {
 			return err

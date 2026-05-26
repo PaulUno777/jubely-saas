@@ -1,6 +1,6 @@
 const auth = {
   login: {
-    hint: "You need a staff or merchant admin account. Tenant slug must match the tenant you are invited to.",
+    hint: "Use your email and password to manage a store. If you belong to more than one workspace, you'll choose it after sign-in.",
     accessEyebrow: "ACCESS",
     title: "Hello.",
     subtitle: "Sign in with your email and password.",
@@ -53,8 +53,8 @@ const auth = {
     activate: "Activate account",
     activating: "Activating…",
     successTitle: "Account ready",
-    successBody: "Sign in with your store identifier, email, and the password you just set.",
-    storeSlugLabel: "Store identifier",
+    successBody: "Sign in with your email and the password you just set. We'll take you to the right workspace next.",
+    storeSlugLabel: "Workspace hint",
     goToLogin: "Go to sign in",
     genericError: "Something went wrong",
   },

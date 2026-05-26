@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token_hash BYTEA NOT NULL UNIQUE,
+    active_membership_id UUID REFERENCES tenant_memberships(id) ON DELETE SET NULL,
+    active_enrollment_id UUID REFERENCES loyalty_enrollments(id) ON DELETE SET NULL,
     user_agent TEXT,
     ip INET,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

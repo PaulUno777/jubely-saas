@@ -15,6 +15,8 @@ import (
 type AcceptMerchantInvitation struct {
 	Tx          ports.TxManager
 	Users       ports.UserRepository
+	Memberships ports.TenantMembershipRepository
+	Customers   ports.CustomerIdentityRepository
 	Invitations ports.InvitationRepository
 	Hasher      ports.PasswordHasher
 	Clock       ports.Clock
@@ -51,32 +53,57 @@ func (uc *AcceptMerchantInvitation) Execute(ctx context.Context, in AcceptMercha
 			return fmt.Errorf("%w", domain.ErrInvitationExpired)
 		}
 
-		_, err = uc.Users.FindByTenantAndEmail(ctx, inv.TenantID, inv.Email)
-		if err == nil {
-			return fmt.Errorf("%w", domain.ErrEmailTaken)
-		}
-		if !errors.Is(err, domain.ErrNotFound) {
-			return err
-		}
-
 		hash, err := uc.Hasher.Hash(in.Password)
 		if err != nil {
 			return err
 		}
-		u := &domain.User{
-			ID:           uuid.New(),
-			TenantID:     &inv.TenantID,
-			Email:        inv.Email,
-			PasswordHash: hash,
-			Role:         inv.Role,
-		}
-		if err := uc.Users.Create(ctx, u); err != nil {
+		user, err := uc.Users.FindByEmail(ctx, inv.Email)
+		if err != nil && !errors.Is(err, domain.ErrNotFound) {
 			return err
+		}
+		if user == nil {
+			user = &domain.User{
+				ID:           uuid.New(),
+				Email:        inv.Email,
+				PasswordHash: hash,
+				Role:         inv.Role,
+			}
+			if err := uc.Users.Create(ctx, user); err != nil {
+				return err
+			}
+		} else {
+			if err := uc.Users.UpdatePassword(ctx, user.ID, hash, false); err != nil {
+				return err
+			}
+		}
+		if _, err := uc.Memberships.FindByUserAndTenant(ctx, user.ID, inv.TenantID); err == nil {
+			return fmt.Errorf("%w", domain.ErrEmailTaken)
+		} else if !errors.Is(err, domain.ErrNotFound) {
+			return err
+		}
+		if err := uc.Memberships.Create(ctx, &domain.TenantMembership{
+			ID:        uuid.New(),
+			UserID:    user.ID,
+			TenantID:  inv.TenantID,
+			Role:      inv.Role,
+			Status:    domain.MembershipStatusActive,
+			CreatedAt: now,
+		}); err != nil {
+			return err
+		}
+		if uc.Customers != nil {
+			if customer, err := uc.Customers.FindByEmail(ctx, inv.Email); err == nil && customer.UserID == nil {
+				if err := uc.Customers.AssignUser(ctx, customer.ID, user.ID); err != nil && !errors.Is(err, domain.ErrConflict) {
+					return err
+				}
+			} else if err != nil && !errors.Is(err, domain.ErrNotFound) {
+				return err
+			}
 		}
 		if err := uc.Invitations.MarkAccepted(ctx, inv.ID, now); err != nil {
 			return err
 		}
-		out.UserID = u.ID
+		out.UserID = user.ID
 		out.TenantID = inv.TenantID
 		return nil
 	})

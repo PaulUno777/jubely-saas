@@ -22,6 +22,7 @@ type UpdateTenantInput struct {
 	Active         *bool
 	Plan           *string
 	ConflictPolicy *string
+	AllowStaffSelfEnrollment *bool
 	Settings       *json.RawMessage
 }
 
@@ -58,6 +59,9 @@ func (uc *UpdateTenant) Execute(ctx context.Context, in UpdateTenantInput) (*Upd
 		}
 		// For now, accept any non-empty string. Phase 4 will enforce a finite set.
 		t.ConflictPolicy = cp
+	}
+	if in.AllowStaffSelfEnrollment != nil {
+		t.AllowStaffSelfEnrollment = *in.AllowStaffSelfEnrollment
 	}
 	if in.Settings != nil {
 		if len(*in.Settings) == 0 {

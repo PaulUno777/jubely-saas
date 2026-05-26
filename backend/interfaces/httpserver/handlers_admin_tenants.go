@@ -35,6 +35,7 @@ func tenantToGin(t *domain.Tenant) gin.H {
 		"active":          t.Active,
 		"plan":            t.Plan,
 		"conflict_policy": t.ConflictPolicy,
+		"allow_staff_self_enrollment": t.AllowStaffSelfEnrollment,
 		"settings":        settings,
 		"logo_url":        logoURL,
 		"created_at":      t.CreatedAt,
@@ -85,6 +86,7 @@ type patchTenantBody struct {
 	Active         *bool            `json:"active"`
 	Plan           *string          `json:"plan"`
 	ConflictPolicy *string          `json:"conflict_policy"`
+	AllowStaffSelfEnrollment *bool  `json:"allow_staff_self_enrollment"`
 	Settings       *json.RawMessage `json:"settings"`
 }
 
@@ -99,7 +101,7 @@ func (s *Server) AdminPatchTenant(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
-	if body.Name == nil && body.Active == nil && body.Plan == nil && body.ConflictPolicy == nil && body.Settings == nil {
+	if body.Name == nil && body.Active == nil && body.Plan == nil && body.ConflictPolicy == nil && body.AllowStaffSelfEnrollment == nil && body.Settings == nil {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "no_fields"})
 		return
 	}
@@ -109,6 +111,7 @@ func (s *Server) AdminPatchTenant(c *gin.Context) {
 		Active:         body.Active,
 		Plan:           body.Plan,
 		ConflictPolicy: body.ConflictPolicy,
+		AllowStaffSelfEnrollment: body.AllowStaffSelfEnrollment,
 		Settings:       body.Settings,
 	})
 	if err != nil {

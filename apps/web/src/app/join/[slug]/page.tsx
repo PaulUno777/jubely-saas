@@ -16,9 +16,9 @@ import { useTranslations } from "next-intl";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { enrollByStoreQr } from "@/lib/customerApi";
-import { saveCustomerQr } from "@/lib/customerSession";
+import { customerAuthLogin, customerSelectContext, enrollByStoreQr } from "@/lib/customerApi";
 import { publicGetTenantBySlug, publicOtpSend, publicOtpVerify } from "@/lib/publicApi";
+import { bootstrapAuthFromServer, loadSession, tryRefreshAccessToken } from "@/lib/session";
 
 export default function JoinBySlugPage() {
   const params = useParams<{ slug: string }>();
@@ -63,11 +63,25 @@ export default function JoinBySlugPage() {
         phoneVerifyToken: verifyToken ?? undefined,
       }),
     onSuccess: (out) => {
-      if (out.customer_qr) {
-        saveCustomerQr(out.customer_qr);
+      void (async () => {
+        if (verifyToken) {
+          await customerAuthLogin(verifyToken);
+        } else if (loadSession()?.userId) {
+          await tryRefreshAccessToken();
+        }
+        if (out.enrollment_id) {
+          try {
+            await customerSelectContext(out.enrollment_id);
+          } catch {
+            // Session may not exist yet; bootstrap still refreshes the latest customer context.
+          }
+        }
+        await bootstrapAuthFromServer();
         toast.success(t("enrolled"));
         router.push("/customer/wallet");
-      }
+      })().catch((error) => {
+        toast.error(error instanceof Error ? error.message : t("genericError"));
+      });
     },
     onError: (e) => toast.error(e instanceof ApiResponseError ? e.message : t("genericError")),
   });

@@ -82,6 +82,9 @@ func TestCreateCustomerByStaff_happy_path(t *testing.T) {
 	enr := &memEnrollmentRepo{}
 	uc := &CreateCustomerByStaff{
 		Tx:          noopTx{},
+		Tenants:     &stubTenantRepoForUsers{t: &domain.Tenant{ID: tid, Name: "Chez Mama", Slug: "chez-mama"}},
+		Users:       &stubUserRepo{},
+		Memberships: &stubMembershipRepo{},
 		Customers:   cust,
 		Enrollments: enr,
 		QRCodec:     stubQRCodec{},
@@ -105,9 +108,18 @@ func TestCreateCustomerByStaff_happy_path(t *testing.T) {
 
 func TestCreateCustomerByStaff_rejects_non_e164(t *testing.T) {
 	t.Parallel()
-	uc := &CreateCustomerByStaff{Tx: noopTx{}, Customers: &memCustomerRepo{}, Enrollments: &memEnrollmentRepo{}, QRCodec: stubQRCodec{}}
+	tid := uuid.New()
+	uc := &CreateCustomerByStaff{
+		Tx:          noopTx{},
+		Tenants:     &stubTenantRepoForUsers{t: &domain.Tenant{ID: tid, Name: "Chez Mama", Slug: "chez-mama"}},
+		Users:       &stubUserRepo{},
+		Memberships: &stubMembershipRepo{},
+		Customers:   &memCustomerRepo{},
+		Enrollments: &memEnrollmentRepo{},
+		QRCodec:     stubQRCodec{},
+	}
 	_, err := uc.Execute(context.Background(), CreateCustomerByStaffInput{
-		TenantID:  uuid.New(),
+		TenantID:  tid,
 		Name:      "A B",
 		PhoneE164: "339",
 	})

@@ -1,6 +1,6 @@
 const auth = {
   login: {
-    hint: "Compte requis (staff ou admin marchand). L’identifiant boutique doit correspondre à votre invitation.",
+    hint: "Utilisez votre email et votre mot de passe pour gérer une boutique. Si vous avez plusieurs espaces, vous le choisirez après connexion.",
     accessEyebrow: "ACCÈS",
     title: "Bonjour.",
     subtitle: "Connectez-vous avec votre email et votre mot de passe.",
@@ -53,8 +53,8 @@ const auth = {
     activate: "Activer le compte",
     activating: "Activation…",
     successTitle: "Compte prêt",
-    successBody: "Connectez-vous avec l'identifiant boutique, votre email et le mot de passe choisi.",
-    storeSlugLabel: "Identifiant boutique",
+    successBody: "Connectez-vous avec votre email et le mot de passe choisi. Nous vous guiderons ensuite vers le bon espace.",
+    storeSlugLabel: "Indice d'espace",
     goToLogin: "Aller à la connexion",
     genericError: "Une erreur est survenue",
   },

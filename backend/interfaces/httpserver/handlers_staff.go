@@ -27,10 +27,11 @@ func (s *Server) StaffCreateCustomer(c *gin.Context) {
 		return
 	}
 	out, err := s.CreateCustomerUC.Execute(c.Request.Context(), usecase.CreateCustomerByStaffInput{
-		TenantID:  *claims.TenantID,
-		PhoneE164: body.PhoneE164,
-		Name:      body.Name,
-		Email:     body.Email,
+		TenantID:    *claims.TenantID,
+		ActorUserID: &claims.UserID,
+		PhoneE164:   body.PhoneE164,
+		Name:        body.Name,
+		Email:       body.Email,
 	})
 	if err != nil {
 		respondMapped(c, mapCustomerError(err))

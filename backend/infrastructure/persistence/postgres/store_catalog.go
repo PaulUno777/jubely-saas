@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -79,6 +80,45 @@ OFFSET $2 LIMIT $3`
 			&row.Tier,
 			&row.PointsBalance,
 			&row.EnrolledAt,
+		); err != nil {
+			return nil, err
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
+func (r *StoreCatalog) ListCustomerEnrollments(ctx context.Context, customerID uuid.UUID) ([]domain.CustomerEnrollmentSummary, error) {
+	db := pickDB(ctx, r.Pool)
+	const q = `
+SELECT
+  le.id,
+  le.tenant_id,
+  t.name,
+  t.slug,
+  le.tier,
+  COALESCE((
+    SELECT SUM(pe.delta)::bigint FROM point_events pe WHERE pe.enrollment_id = le.id
+  ), 0)
+FROM loyalty_enrollments le
+JOIN tenants t ON t.id = le.tenant_id
+WHERE le.customer_id = $1 AND t.active=true
+ORDER BY le.created_at DESC`
+	rows, err := db.Query(ctx, q, customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.CustomerEnrollmentSummary
+	for rows.Next() {
+		var row domain.CustomerEnrollmentSummary
+		if err := rows.Scan(
+			&row.EnrollmentID,
+			&row.TenantID,
+			&row.TenantName,
+			&row.TenantSlug,
+			&row.Tier,
+			&row.PointsBalance,
 		); err != nil {
 			return nil, err
 		}

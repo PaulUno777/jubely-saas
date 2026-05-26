@@ -11,6 +11,7 @@ import (
 type Server struct {
 	BootstrapUC           *usecase.BootstrapSuperadmin
 	LoginUC               *usecase.Login
+	SelectWorkspaceUC     *usecase.SelectWorkspace
 	RefreshUC             *usecase.RefreshAuth
 	LogoutUC              *usecase.Logout
 	StoreSignupUC         *usecase.StoreSignup
@@ -25,6 +26,8 @@ type Server struct {
 	CreateCustomerUC      *usecase.CreateCustomerByStaff
 	EnrollByStoreQRUC     *usecase.EnrollByStoreQR
 	GetPWAWalletUC        *usecase.GetPWAWallet
+	CustomerLoginUC       *usecase.CustomerLogin
+	SelectCustomerContextUC *usecase.SelectCustomerContext
 	StaffRecordPurchaseUC *usecase.StaffRecordPurchase
 	ListStoreCustomersUC  *usecase.ListStoreCustomers
 	ListStorePointEventsUC *usecase.ListStorePointEvents
@@ -40,6 +43,7 @@ type Server struct {
 	MFASigner             *authtoken.JWTSigner
 	ChangePasswordUC      *usecase.ChangePassword
 	QRCodec               ports.QRCodec
+	AccessSigner          ports.TokenSigner
 
 	Tenants      *postgres.TenantRepository
 	Users        *postgres.UserRepository
