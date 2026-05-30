@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/PaulUno777/jubely-saas/backend/domain"
@@ -173,17 +175,44 @@ LIMIT $2`
 	return out, rows.Err()
 }
 
-func (r *StoreCatalog) CountPointEvents(ctx context.Context, tenantID uuid.UUID) (int64, error) {
+type PointEventFilter struct {
+	EventType *string
+	From      *time.Time
+	To        *time.Time
+}
+
+func (r *StoreCatalog) CountPointEvents(ctx context.Context, tenantID uuid.UUID, f PointEventFilter) (int64, error) {
 	db := pickDB(ctx, r.Pool)
-	const q = `SELECT count(*) FROM point_events WHERE tenant_id=$1`
+	where, args := pointEventWhere(tenantID, f)
+	q := `SELECT count(*) FROM point_events pe WHERE ` + where
 	var n int64
-	err := db.QueryRow(ctx, q, tenantID).Scan(&n)
+	err := db.QueryRow(ctx, q, args...).Scan(&n)
 	return n, err
 }
 
-func (r *StoreCatalog) ListPointEvents(ctx context.Context, tenantID uuid.UUID, offset, limit int) ([]StorePointEventRow, error) {
+func pointEventWhere(tenantID uuid.UUID, f PointEventFilter) (string, []any) {
+	args := []any{tenantID}
+	clauses := []string{"pe.tenant_id = $1"}
+	if f.EventType != nil && *f.EventType != "" {
+		args = append(args, *f.EventType)
+		clauses = append(clauses, fmt.Sprintf("pe.event_type = $%d", len(args)))
+	}
+	if f.From != nil {
+		args = append(args, *f.From)
+		clauses = append(clauses, fmt.Sprintf("pe.created_at >= $%d", len(args)))
+	}
+	if f.To != nil {
+		args = append(args, *f.To)
+		clauses = append(clauses, fmt.Sprintf("pe.created_at <= $%d", len(args)))
+	}
+	return strings.Join(clauses, " AND "), args
+}
+
+func (r *StoreCatalog) ListPointEvents(ctx context.Context, tenantID uuid.UUID, offset, limit int, f PointEventFilter) ([]StorePointEventRow, error) {
 	db := pickDB(ctx, r.Pool)
-	const q = `
+	where, args := pointEventWhere(tenantID, f)
+	args = append(args, offset, limit)
+	q := `
 SELECT
   pe.id,
   pe.event_type,
@@ -195,10 +224,10 @@ SELECT
 FROM point_events pe
 LEFT JOIN loyalty_enrollments le ON le.id = pe.enrollment_id
 LEFT JOIN customer_identities ci ON ci.id = le.customer_id
-WHERE pe.tenant_id = $1
+WHERE ` + where + `
 ORDER BY pe.created_at DESC
-OFFSET $2 LIMIT $3`
-	rows, err := db.Query(ctx, q, tenantID, offset, limit)
+OFFSET $` + fmt.Sprint(len(args)-1) + ` LIMIT $` + fmt.Sprint(len(args))
+	rows, err := db.Query(ctx, q, args...)
 	if err != nil {
 		return nil, err
 	}

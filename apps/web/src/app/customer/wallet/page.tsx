@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { pwaGetWallet } from "@/lib/customerApi";
+import { customerGetWallet } from "@/lib/customerApi";
 import { LoyaltyCard } from "@/components/customer/loyalty-card";
 import { MoveRow } from "@/components/customer/move-row";
 import { IconQrCode, IconMap } from "@/components/customer/icons";
@@ -53,7 +53,7 @@ export default function CustomerWalletPage() {
   const { data } = useQuery({
     queryKey: ["pwa", "wallet", activeEnrollmentId],
     enabled: Boolean(activeEnrollmentId),
-    queryFn: () => pwaGetWallet(),
+    queryFn: () => customerGetWallet(),
   });
 
   const displayName = data?.tenant_name ? "Customer" : "—";

@@ -25,10 +25,20 @@ type Server struct {
 	SuperadminStatsUC     *usecase.SuperadminStats
 	CreateCustomerUC      *usecase.CreateCustomerByStaff
 	EnrollByStoreQRUC     *usecase.EnrollByStoreQR
-	GetPWAWalletUC        *usecase.GetPWAWallet
+	GetCustomerWalletUC   *usecase.GetCustomerWallet
 	CustomerLoginUC       *usecase.CustomerLogin
 	SelectCustomerContextUC *usecase.SelectCustomerContext
-	StaffRecordPurchaseUC *usecase.StaffRecordPurchase
+	StaffRecordPurchaseUC   *usecase.StaffRecordPurchase
+	StaffValidateRedemptionUC *usecase.StaffValidateRedemption
+	ListStoreRewardsUC      *usecase.ListStoreRewards
+	CreateStoreRewardUC     *usecase.CreateStoreReward
+	PatchStoreRewardUC      *usecase.PatchStoreReward
+	ListCustomerRewardsUC   *usecase.ListCustomerRewards
+	CustomerClaimRewardUC   *usecase.CustomerClaimReward
+	ListStoreRulesUC        *usecase.ListStoreRules
+	CreateStoreRuleUC       *usecase.CreateStoreRule
+	PatchStoreRuleUC        *usecase.PatchStoreRule
+	SimulateStoreRulesUC    *usecase.SimulateStoreRules
 	ListStoreCustomersUC  *usecase.ListStoreCustomers
 	ListStorePointEventsUC *usecase.ListStorePointEvents
 	PublicCustomerOTP     *usecase.PublicCustomerOTP

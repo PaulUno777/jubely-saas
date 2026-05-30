@@ -70,7 +70,7 @@ POST /v1/auth/login
 5. Create a tenant (`self_serve` is forced to `false` in the HTTP layer for MVP):
 
 ```http
-POST /v1/admin/tenants
+POST /v1/superadmin/tenants
 Authorization: Bearer <token>
 {"name":"Chez Mama","slug":"chez-mama"}
 ```
@@ -78,7 +78,7 @@ Authorization: Bearer <token>
 6. Invite a merchant admin:
 
 ```http
-POST /v1/admin/tenants/<tenantId>/invitations
+POST /v1/superadmin/tenants/<tenantId>/invitations
 Authorization: Bearer <token>
 {"email":"merchant@example.com","role":"merchant_admin"}
 ```
@@ -102,14 +102,14 @@ Response includes `customer_qr` (HMAC token string) for client display in early 
 9. Generate a store QR (superadmin token required). This token can be printed/displayed in the store for self-enrollment.
 
 ```http
-GET /v1/admin/tenants/<tenantId>/store-qr
+GET /v1/superadmin/tenants/<tenantId>/store-qr
 Authorization: Bearer <token>
 ```
 
-10. Enroll by scanning a store QR (PWA flow):
+10. Enroll by scanning a store QR:
 
 ```http
-POST /v1/pwa/enrollments/scan
+POST /v1/public/enrollments
 Content-Type: application/json
 
 {"store_qr":"<storeQrToken>","phone_e164":"+221771234567","name":"Awa Diop"}

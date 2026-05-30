@@ -86,16 +86,13 @@ func (uc *CreateCustomerByStaff) Execute(ctx context.Context, in CreateCustomerB
 				return fmt.Errorf("%w", domain.ErrSelfEnrollmentForbidden)
 			}
 		}
-		if in.ActorUserID != nil && ci.UserID == nil {
-			if _, err := uc.Memberships.FindByUserAndTenant(ctx, *in.ActorUserID, in.TenantID); err == nil {
-				if !tenant.AllowStaffSelfEnrollment {
-					return fmt.Errorf("%w", domain.ErrSelfEnrollmentForbidden)
-				}
-				if err := uc.Customers.AssignUser(ctx, ci.ID, *in.ActorUserID); err != nil && !errors.Is(err, domain.ErrConflict) {
-					return err
-				}
-				ci.UserID = in.ActorUserID
-			} else if !errors.Is(err, domain.ErrNotFound) {
+		// Block staff from enrolling their own phone at the counter unless the store allows it.
+		if in.ActorUserID != nil && !tenant.AllowStaffSelfEnrollment {
+			actorCI, err := uc.Customers.FindByUserID(ctx, *in.ActorUserID)
+			if err == nil && actorCI.PhoneE164 == phone {
+				return fmt.Errorf("%w", domain.ErrSelfEnrollmentForbidden)
+			}
+			if err != nil && !errors.Is(err, domain.ErrNotFound) {
 				return err
 			}
 		}

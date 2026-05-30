@@ -24,6 +24,15 @@ func (m *memCustomerRepo) Create(ctx context.Context, c *domain.CustomerIdentity
 	return nil
 }
 
+func (m *memCustomerRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.CustomerIdentity, error) {
+	for _, c := range m.customers {
+		if c.ID == id {
+			return c, nil
+		}
+	}
+	return nil, domain.ErrNotFound
+}
+
 func (m *memCustomerRepo) FindByPhoneE164(ctx context.Context, phoneE164 string) (*domain.CustomerIdentity, error) {
 	for _, c := range m.customers {
 		if c.PhoneE164 == phoneE164 {
@@ -73,6 +82,14 @@ func (stubQRCodec) SignCustomerQR(ctx context.Context, tenantID, customerID uuid
 
 func (stubQRCodec) ParseCustomerQR(ctx context.Context, token string) (uuid.UUID, uuid.UUID, error) {
 	return uuid.New(), uuid.New(), nil
+}
+
+func (stubQRCodec) SignClaimQR(ctx context.Context, redemptionID uuid.UUID) (string, error) {
+	return redemptionID.String(), nil
+}
+
+func (stubQRCodec) ParseClaimQR(ctx context.Context, token string) (uuid.UUID, error) {
+	return uuid.Parse(token)
 }
 
 func TestCreateCustomerByStaff_happy_path(t *testing.T) {

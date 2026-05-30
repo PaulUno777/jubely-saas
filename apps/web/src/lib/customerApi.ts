@@ -3,11 +3,13 @@ import {
   enrollSuccessEnvelopeSchema,
   parseJsonUnknown,
   parseSuccessData,
-  pwaWalletSuccessEnvelopeSchema,
+  customerWalletSuccessEnvelopeSchema,
+  listCustomerRewardsSuccessEnvelopeSchema,
+  claimRewardSuccessEnvelopeSchema,
   throwFailedApiResponse,
 } from "@jubely/api-schemas";
-import type { ClientEnrollForm, PwaWallet } from "@jubely/api-schemas";
-import { authedJson, joinUrl, joinUrlWithQuery, jsonHeaders } from "./http";
+import type { ClientEnrollForm, CustomerWallet } from "@jubely/api-schemas";
+import { authedFetch, authedJson, joinUrl, joinUrlWithQuery, jsonHeaders } from "./http";
 
 export async function enrollByStoreQr(values: ClientEnrollForm) {
   const body = enrollByStoreQrWireSchema.parse({
@@ -18,7 +20,7 @@ export async function enrollByStoreQr(values: ClientEnrollForm) {
     phone_verify_token: values.phoneVerifyToken?.trim() || undefined,
   });
 
-  const res = await fetch(joinUrl("/v1/pwa/enrollments/scan"), {
+  const res = await fetch(joinUrl("/v1/public/enrollments"), {
     method: "POST",
     headers: jsonHeaders(),
     body: JSON.stringify(body),
@@ -30,18 +32,21 @@ export async function enrollByStoreQr(values: ClientEnrollForm) {
   return parseSuccessData(json, enrollSuccessEnvelopeSchema, res.status, text);
 }
 
-export async function pwaGetWallet(customerQr?: string) {
+export async function customerGetWallet(customerQr?: string) {
   if (!customerQr) {
-    return authedJson<PwaWallet>("/v1/pwa/wallet");
+    return authedJson<CustomerWallet>("/v1/customers/me/wallet");
   }
-  const res = await fetch(joinUrlWithQuery("/v1/pwa/wallet", { customer_qr: customerQr }), {
+  const res = await fetch(joinUrlWithQuery("/v1/customers/wallet", { customer_qr: customerQr }), {
     credentials: "include",
   });
   const text = await res.text();
   const json = parseJsonUnknown(text);
   if (!res.ok) throwFailedApiResponse(json, res.status, text);
-  return parseSuccessData(json, pwaWalletSuccessEnvelopeSchema, res.status, text);
+  return parseSuccessData(json, customerWalletSuccessEnvelopeSchema, res.status, text);
 }
+
+/** @deprecated Use customerGetWallet */
+export const pwaGetWallet = customerGetWallet;
 
 export async function customerAuthLogin(phoneVerifyToken: string) {
   const res = await fetch("/api/auth/customer/login", {
@@ -56,6 +61,29 @@ export async function customerAuthLogin(phoneVerifyToken: string) {
   return json;
 }
 
+export async function customerListRewards(tenantId?: string) {
+  const path = tenantId
+    ? joinUrlWithQuery("/v1/customers/me/rewards", { tenant_id: tenantId })
+    : "/v1/customers/me/rewards";
+  const res = await authedFetch(path, { method: "GET" });
+  const text = await res.text();
+  const json = parseJsonUnknown(text);
+  if (!res.ok) throwFailedApiResponse(json, res.status, text);
+  return parseSuccessData(json, listCustomerRewardsSuccessEnvelopeSchema, res.status, text);
+}
+
+export async function customerClaimReward(rewardId: string) {
+  const res = await authedFetch(`/v1/customers/me/rewards/${encodeURIComponent(rewardId)}/claims`, {
+    method: "POST",
+    headers: jsonHeaders(),
+    body: JSON.stringify({}),
+  });
+  const text = await res.text();
+  const json = parseJsonUnknown(text);
+  if (!res.ok) throwFailedApiResponse(json, res.status, text);
+  return parseSuccessData(json, claimRewardSuccessEnvelopeSchema, res.status, text);
+}
+
 export async function customerSelectContext(enrollmentId: string) {
   const res = await fetch("/api/auth/customer/context", {
     method: "POST",
@@ -68,4 +96,3 @@ export async function customerSelectContext(enrollmentId: string) {
   if (!res.ok) throwFailedApiResponse(json, res.status, text);
   return json;
 }
-

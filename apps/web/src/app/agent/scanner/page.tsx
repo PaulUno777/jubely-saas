@@ -18,14 +18,25 @@ export default function ScannerPage() {
   const [phone, setPhone] = useState("");
 
   function handleDetect(raw: string) {
-    const extracted = extractPhone(raw);
-    if (mode === "award") {
-      router.push(`/agent/purchase?phone=${encodeURIComponent(extracted ?? raw)}`);
+    const trimmed = raw.trim();
+    if (mode === "validate") {
+      router.push(`/agent/validate?claim_qr=${encodeURIComponent(trimmed)}`);
+      return;
     }
+    const phoneMatch = extractPhone(trimmed);
+    if (phoneMatch) {
+      router.push(`/agent/purchase?phone=${encodeURIComponent(phoneMatch)}`);
+      return;
+    }
+    router.push(`/agent/purchase?customer_qr=${encodeURIComponent(trimmed)}`);
   }
 
   function handleManualProceed() {
     if (!phone.trim()) return;
+    if (mode === "validate") {
+      router.push(`/agent/validate?claim_qr=${encodeURIComponent(phone.trim())}`);
+      return;
+    }
     router.push(`/agent/purchase?phone=${encodeURIComponent(phone.trim())}`);
   }
 
@@ -117,7 +128,7 @@ export default function ScannerPage() {
             type="button"
             style={{ background: "var(--a-gold-2)", color: "var(--a-card)", borderRadius: 16, padding: "14px 20px", fontSize: 15, fontWeight: 600, border: 0, cursor: "pointer", opacity: phone.trim() ? 1 : 0.4 }}
           >
-            {t("proceed")}
+            {mode === "award" ? t("proceed") : t("proceedValidate")}
           </button>
         </div>
       </div>

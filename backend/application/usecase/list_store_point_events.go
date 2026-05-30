@@ -14,9 +14,12 @@ type ListStorePointEvents struct {
 }
 
 type ListStorePointEventsInput struct {
-	TenantID uuid.UUID
-	Offset   int
-	Limit    int
+	TenantID  uuid.UUID
+	Offset    int
+	Limit     int
+	EventType *string
+	From      *time.Time
+	To        *time.Time
 }
 
 type StorePointEventView struct {
@@ -38,11 +41,12 @@ type ListStorePointEventsOutput struct {
 
 func (uc *ListStorePointEvents) Execute(ctx context.Context, in ListStorePointEventsInput) (*ListStorePointEventsOutput, error) {
 	offset, limit := clampTenantPage(in.Offset, in.Limit)
-	total, err := uc.Catalog.CountPointEvents(ctx, in.TenantID)
+	filter := postgres.PointEventFilter{EventType: in.EventType, From: in.From, To: in.To}
+	total, err := uc.Catalog.CountPointEvents(ctx, in.TenantID, filter)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := uc.Catalog.ListPointEvents(ctx, in.TenantID, offset, limit)
+	rows, err := uc.Catalog.ListPointEvents(ctx, in.TenantID, offset, limit, filter)
 	if err != nil {
 		return nil, err
 	}

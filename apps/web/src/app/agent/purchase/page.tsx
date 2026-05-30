@@ -10,8 +10,8 @@ import { staffRecordPurchase } from "@/lib/staffApi";
 import { Numpad, applyNumpadKey } from "@/components/agent/numpad";
 import { IconChevronLeft, IconClose, IconCheck, IconChevronRight } from "@/components/agent/icons";
 
-const RULE_LABEL = "1 pt / 500 FCFA";
-const PTS_RATE = 500;
+const RULE_LABEL = "1 pt / 100 FCFA";
+const PTS_RATE = 100;
 
 function calcPoints(amount: number) {
   return Math.floor(amount / PTS_RATE);
@@ -22,20 +22,48 @@ export default function PurchasePage() {
   const router = useRouter();
   const params = useSearchParams();
   const phone = params.get("phone") ?? "";
+  const customerQr = params.get("customer_qr") ?? "";
+  const customerLabel = phone || (customerQr ? t("enrolledCustomer") : "");
 
   const [amount, setAmount] = useState("");
-  const [result, setResult] = useState<{ pts: number; delta: number } | null>(null);
+  const [result, setResult] = useState<{ pts: number; delta: number; balanceAfter?: number } | null>(null);
 
   const num = parseInt(amount || "0", 10);
   const pts = calcPoints(num);
 
   const mut = useMutation({
-    mutationFn: () => staffRecordPurchase({ values: { phone, amount_fcfa: num } }),
-    onSuccess: (out) => setResult({ pts: out.points_awarded, delta: out.delta }),
+    mutationFn: () =>
+      staffRecordPurchase({
+        values: {
+          phone: phone || undefined,
+          customer_qr: customerQr || undefined,
+          amount_fcfa: num,
+        },
+      }),
+    onSuccess: (out) =>
+      setResult({
+        pts: out.points_awarded,
+        delta: out.delta,
+        balanceAfter: out.balance_after,
+      }),
     onError: (e) => toast.error(e instanceof ApiResponseError ? e.message : t("error")),
   });
 
-  if (result) return <AwardSuccess t={t} phone={phone} amount={num} pts={result.pts} onReset={() => { setResult(null); setAmount(""); }} router={router} />;
+  if (result)
+    return (
+      <AwardSuccess
+        t={t}
+        phone={customerLabel}
+        amount={num}
+        pts={result.pts}
+        balanceAfter={result.balanceAfter}
+        onReset={() => {
+          setResult(null);
+          setAmount("");
+        }}
+        router={router}
+      />
+    );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
@@ -54,10 +82,10 @@ export default function PurchasePage() {
       <div style={{ padding: "4px 16px 0" }}>
         <div className="a-card-cream" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 44, height: 44, borderRadius: 14, background: "var(--a-gold-bg)", color: "var(--a-gold-3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, flexShrink: 0 }}>
-            {phone ? phone.slice(-2) : "?"}
+            {customerLabel ? customerLabel.slice(-2) : "?"}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{phone || "—"}</div>
+            <div style={{ fontWeight: 600, fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{customerLabel || "—"}</div>
             <div style={{ fontSize: 12, color: "var(--a-ink-mut)", marginTop: 2 }}>{t("enrolledCustomer")}</div>
           </div>
           <IconCheck size={18} color="var(--a-green)" />
@@ -95,7 +123,7 @@ export default function PurchasePage() {
         <button
           type="button"
           onClick={() => mut.mutate()}
-          disabled={pts === 0 || mut.isPending}
+          disabled={pts === 0 || mut.isPending || (!phone && !customerQr)}
           style={{
             width: "100%", background: "var(--a-card)", color: "var(--a-cream)",
             borderRadius: 16, padding: "14px 20px", fontSize: 15, fontWeight: 600,
@@ -112,9 +140,9 @@ export default function PurchasePage() {
   );
 }
 
-function AwardSuccess({ t, phone, amount, pts, onReset, router }: {
+function AwardSuccess({ t, phone, amount, pts, balanceAfter, onReset, router }: {
   t: ReturnType<typeof useTranslations<"agent.purchase">>;
-  phone: string; amount: number; pts: number;
+  phone: string; amount: number; pts: number; balanceAfter?: number;
   onReset: () => void;
   router: ReturnType<typeof useRouter>;
 }) {
@@ -132,6 +160,11 @@ function AwardSuccess({ t, phone, amount, pts, onReset, router }: {
         <div style={{ fontSize: 14, color: "rgba(255,255,255,0.65)", marginTop: 8 }}>
           {t("successBody", { amount: amount.toLocaleString("fr-FR") })} &mdash; <b style={{ color: "var(--a-cream)" }}>{phone}</b>
         </div>
+        {balanceAfter !== undefined && (
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 6 }}>
+            {t("balanceAfter")}: {balanceAfter.toLocaleString("fr-FR")} pts
+          </div>
+        )}
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", marginTop: "auto" }}>

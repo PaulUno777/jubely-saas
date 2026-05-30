@@ -13,7 +13,9 @@ Base URL is configured per environment (e.g. `http://localhost:8082/v1`). Respon
 | GET    | `/public/tenant/:slug`       | Public tenant card: name, slug, logo, `store_qr` token for enrollment                            |
 | POST   | `/public/otp/send`           | Request SMS-style OTP (in-memory MVP; use `PUBLIC_OTP_LOG_CODE=true` on API to log codes in dev) |
 | POST   | `/public/otp/verify`         | Verify OTP; returns `phone_verify_token` JWT for optional `phone_verify_token` on enroll         |
+| POST   | `/public/enrollments`        | Enroll customer via signed `store_qr` + phone + name                                             |
 | POST   | `/auth/login`                | Email + password; optional `tenant_slug` for tenant-scoped users                                 |
+| POST   | `/auth/customer/login`       | Customer login after OTP verify (`phone_verify_token`)                                           |
 | POST   | `/auth/refresh`              | Refresh access token                                                                             |
 | POST   | `/auth/logout`               | Revoke refresh session                                                                           |
 | POST   | `/auth/mfa/totp/verify`      | Complete MFA login                                                                               |
@@ -21,16 +23,17 @@ Base URL is configured per environment (e.g. `http://localhost:8082/v1`). Respon
 | GET    | `/invitations/:token`        | Invitation preview                                                                               |
 | POST   | `/invitations/:token/accept` | Accept invitation                                                                                |
 
-## PWA / enrollment (customer QR auth, no JWT)
+## Customers (loyalty member)
 
-| Method | Path                    | Description                                                                                                   |
-| ------ | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
-| POST   | `/pwa/enrollments/scan` | Enroll customer via signed `store_qr` + phone + name; optional `phone_verify_token` from `/public/otp/verify` |
-| GET    | `/pwa/wallet`           | Wallet for one enrollment: balance + recent point events. Query `customer_qr` or `Authorization: Bearer <customer_qr>` |
+| Method | Path                         | Auth | Description |
+| ------ | ---------------------------- | ---- | ----------- |
+| GET    | `/customers/wallet`          | —    | Wallet by query `customer_qr` (MVP device-local QR access) |
+| GET    | `/customers/me/wallet`       | Bearer (customer JWT, `active_enrollment_id` set) | Wallet for active enrollment |
+| POST   | `/auth/customer/session`     | Bearer (customer JWT) | Set active enrollment in session (`enrollment_id`) |
 
 ## Authenticated — superadmin (`Authorization: Bearer`, role `superadmin`)
 
-Group `/v1/superadmin` (legacy alias `/v1/admin` mirrors the same routes).
+Group `/v1/superadmin`.
 
 | Method | Path                                        | Description                                                    |
 | ------ | ------------------------------------------- | -------------------------------------------------------------- |
@@ -79,9 +82,9 @@ Group `/v1/staff`.
 
 ## Rate limits
 
-- `POST /v1/auth/login`, `POST /v1/bootstrap/superadmin`, `POST /v1/public/store/signup`, `GET /v1/public/tenant/:slug`, `POST /v1/public/otp/send`, `POST /v1/public/otp/verify`, `POST /v1/pwa/enrollments/scan`: per-IP sliding-window limits (`backend/interfaces/httpserver/ratelimit.go`).
+- `POST /v1/auth/login`, `POST /v1/bootstrap/superadmin`, `POST /v1/public/store/signup`, `GET /v1/public/tenant/:slug`, `POST /v1/public/otp/send`, `POST /v1/public/otp/verify`, `POST /v1/public/enrollments`, `GET /v1/customers/wallet`: per-IP sliding-window limits (`backend/interfaces/httpserver/ratelimit.go`).
 
-Optional: set `PUBLIC_ENROLL_REQUIRE_PHONE_VERIFY=true` to require a verified phone token on PWA enrollment.
+Optional: set `PUBLIC_ENROLL_REQUIRE_PHONE_VERIFY=true` to require a verified phone token on public enrollment.
 
 ## Implementation map (planning docs vs code)
 

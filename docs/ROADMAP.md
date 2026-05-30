@@ -1,6 +1,6 @@
 # Jubely MVP roadmap
 
-Living tracker aligned with [context/NEW_PLANING.md](../context/NEW_PLANING.md) and [Jubely Document de Cadrage](../context/Jubely%20Document%20de%20Cadrage%20Projet.md).
+Living tracker aligned with [context/NEW_PLANING.md](../context/NEW_PLANING.md), [Jubely Document de Cadrage](../context/Jubely%20Document%20de%20Cadrage%20Projet.md), and UX maquettes in [context/jubelee_design/](../context/jubelee_design/) (Customer / Staff / Admin HTML + [Jubelee_Architecture.png](../context/Jubelee_Architecture.png)).
 
 **Legend:** ✅ Done · 🚧 In progress · 📋 Planned · ⏸ Out of MVP scope
 
@@ -17,7 +17,7 @@ Living tracker aligned with [context/NEW_PLANING.md](../context/NEW_PLANING.md) 
 | 3 | Manual Phase 3 validation (enroll → purchase → metrics) | [phase3-validation.md](./phase3-validation.md) · `pnpm dev:seed` |
 | ✅ | Staff invite accept page `/invite/[token]` | local |
 | ✅ | Store customers / transactions list (read-only) | local |
-| ✅ | Customer wallet balance + history (`GET /v1/pwa/wallet?customer_qr=`) | local |
+| ✅ | Customer wallet (`GET /v1/customers/me/wallet`, `/v1/customers/wallet?customer_qr=`) | local |
 
 ---
 
@@ -33,7 +33,7 @@ Living tracker aligned with [context/NEW_PLANING.md](../context/NEW_PLANING.md) 
 | Web login + role routing | ✅ | `/login`, `proxy.ts` |
 | Superadmin UI (tenants, wizard, detail) | ✅ | `/root/*` |
 | CI lint/test | 🚧 | `pnpm test:backend` · `pnpm test:web` |
-| Fly.io / Vercel deploy | 📋 | |
+| Fly.io / Vercel deploy | ✅ | `backend/Dockerfile`, `fly.toml`, `apps/web/vercel.json`, CI workflows, [deploy-production.md](./deploy-production.md) |
 
 ### Phase 1 manual checks
 
@@ -76,11 +76,12 @@ Living tracker aligned with [context/NEW_PLANING.md](../context/NEW_PLANING.md) 
 | Item | Status | Notes |
 |------|--------|-------|
 | `POST /public/otp/send` + `verify` | ✅ | In-memory OTP dev |
-| `POST /pwa/enrollments/scan` | ✅ | `/join/[slug]` |
+| `POST /v1/public/enrollments` | ✅ | `/join/[slug]` |
 | `POST /staff/customers` | ✅ | `/agent/customers` |
-| `POST /staff/purchases` (1 pt / 500 FCFA) | ✅ | Backend |
+| `POST /staff/purchases` (rule engine, default 1 pt / 100 FCFA) | ✅ | QR + phone |
+| `POST /staff/redemptions/validate` | ✅ | `/agent/validate` |
 | Agent purchase UI | ✅ | `/agent/purchase` |
-| Customer wallet (balance/history) | ✅ | `/customer/wallet` + `GET /v1/pwa/wallet` |
+| Customer wallet + rewards claim | ✅ | `/customer/wallet`, `/customer/rewards` |
 | Idempotency on purchases | 📋 | Optional MVP |
 | Offline agent queue | ⏸ | Post-MVP |
 
@@ -99,11 +100,11 @@ See [phase3-validation.md](./phase3-validation.md).
 
 | Item | Status |
 |------|--------|
-| Rules table + Rule Engine | ⏸ |
-| Rewards CRUD + claim + agent validate | ⏸ |
-| Rule builder UI | ⏸ |
+| Rules table + Rule Engine | ✅ | `points_rules` + `POST /v1/store/rules/simulate` |
+| Rewards CRUD + claim + agent validate | ✅ | Flows 3/5/8 |
+| Rule builder UI (visual) | ⏸ | Form + simulator at `/store/points-rules` |
 | Redis rule cache | ⏸ |
-| Security audit / pilot launch | ⏸ |
+| Security headers + pilot deploy docs | ✅ | See [deploy-production.md](./deploy-production.md) |
 
 ---
 
@@ -117,14 +118,20 @@ See [phase3-validation.md](./phase3-validation.md).
 | `GET /v1/store/tenant` | ✅ | `/store/settings`, branding |
 | `GET /v1/store/metrics` | ✅ | `/store` dashboard |
 | `GET /v1/public/tenant/:slug` | ✅ | `/join/[slug]` |
-| `POST /v1/pwa/enrollments/scan` | ✅ | `/join/[slug]` |
+| `POST /v1/public/enrollments` | ✅ | `/join/[slug]` |
+| `POST /v1/auth/customer/login` + `session` | ✅ | Customer OTP login |
+| `GET /v1/customers/me/wallet` | ✅ | `/customer/wallet` |
+| `GET/POST /v1/customers/me/rewards` | ✅ | `/customer/rewards` |
 | `POST /v1/staff/customers` | ✅ | `/agent/customers` |
-| `POST /v1/staff/purchases` | ✅ | `/agent/purchase` |
+| `POST /v1/staff/purchases` | ✅ | `/agent/purchase`, scanner |
+| `POST /v1/staff/redemptions/validate` | ✅ | `/agent/validate` |
+| `GET/POST /v1/store/rewards` | ✅ | `/store/rewards` |
+| `GET/POST /v1/store/rules` + simulate | ✅ | `/store/points-rules` |
 | `GET /v1/invitations/:token` | ✅ | `/invite/[token]` |
 | `POST /v1/invitations/:token/accept` | ✅ | `/invite/[token]` |
 | `GET /v1/store/customers` | ✅ | `/store/customers` |
 | `GET /v1/store/transactions` | ✅ | `/store/transactions` |
-| `GET /v1/pwa/wallet` | ✅ | `/customer/wallet` (customer QR auth) |
+| `GET /v1/customers/wallet?customer_qr=` | ✅ | Staff/customer QR lookup |
 
 ---
 

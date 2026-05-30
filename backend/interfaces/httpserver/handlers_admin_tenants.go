@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
@@ -47,6 +48,22 @@ func parsePageQuery(c *gin.Context) (offset, limit int) {
 	limit, _ = strconv.Atoi(c.Query("limit"))
 	offset, _ = strconv.Atoi(c.Query("offset"))
 	return offset, limit
+}
+
+func parseTimeRangeQuery(c *gin.Context) (from, to *time.Time) {
+	if s := strings.TrimSpace(c.Query("from")); s != "" {
+		if t, err := time.Parse(time.RFC3339, s); err == nil {
+			utc := t.UTC()
+			from = &utc
+		}
+	}
+	if s := strings.TrimSpace(c.Query("to")); s != "" {
+		if t, err := time.Parse(time.RFC3339, s); err == nil {
+			utc := t.UTC()
+			to = &utc
+		}
+	}
+	return from, to
 }
 
 func (s *Server) AdminListTenants(c *gin.Context) {

@@ -91,6 +91,8 @@ const customer = {
     enrollCta: "Enroll now",
     preview: "Preview",
     yourBalance: "Your balance",
+    loading: "Loading…",
+    claimError: "Could not claim reward.",
   },
   stores: {
     title: "Stores",

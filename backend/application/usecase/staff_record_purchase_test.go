@@ -5,10 +5,26 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
+	"github.com/PaulUno777/jubely-saas/backend/application/ports"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/google/uuid"
 )
+
+type memPointsRuleRepo struct{}
+
+func (m *memPointsRuleRepo) ListByTenant(context.Context, uuid.UUID) ([]ports.PointsRuleRecord, error) {
+	return nil, nil
+}
+
+func (m *memPointsRuleRepo) FindByID(context.Context, uuid.UUID, uuid.UUID) (*ports.PointsRuleRecord, error) {
+	return nil, domain.ErrNotFound
+}
+
+func (m *memPointsRuleRepo) Create(context.Context, *ports.PointsRuleRecord) error { return nil }
+
+func (m *memPointsRuleRepo) Update(context.Context, *ports.PointsRuleRecord) error { return nil }
 
 type memPointAppend struct {
 	lastDelta int
@@ -40,7 +56,13 @@ func TestStaffRecordPurchase_happy_path(t *testing.T) {
 		},
 	}
 	points := &memPointAppend{}
-	uc := &StaffRecordPurchase{Customers: cust, Enrollments: enr, Points: points}
+	uc := &StaffRecordPurchase{
+		Customers:   cust,
+		Enrollments: enr,
+		Points:      points,
+		Rules:       &memPointsRuleRepo{},
+		Clock:       stubClock{t: time.Date(2026, 5, 29, 12, 0, 0, 0, time.UTC)},
+	}
 
 	out, err := uc.Execute(context.Background(), StaffRecordPurchaseInput{
 		TenantID:   tid,
@@ -50,10 +72,10 @@ func TestStaffRecordPurchase_happy_path(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if out.PointsAwarded != 3 || out.Delta != 3 {
+	if out.PointsAwarded != 15 || out.Delta != 15 {
 		t.Fatalf("points: %+v", out)
 	}
-	if points.lastType != "purchase_award" || points.lastDelta != 3 {
+	if points.lastType != "earn" || points.lastDelta != 15 {
 		t.Fatalf("append: type=%s delta=%d", points.lastType, points.lastDelta)
 	}
 }
@@ -71,7 +93,13 @@ func TestStaffRecordPurchase_cross_tenant_requires_enrollment(t *testing.T) {
 			{ID: uuid.New(), TenantID: tidA, CustomerID: cid, Tier: "bronze"},
 		},
 	}
-	uc := &StaffRecordPurchase{Customers: cust, Enrollments: enr, Points: &memPointAppend{}}
+	uc := &StaffRecordPurchase{
+		Customers:   cust,
+		Enrollments: enr,
+		Points:      &memPointAppend{},
+		Rules:       &memPointsRuleRepo{},
+		Clock:       stubClock{t: time.Unix(1, 0)},
+	}
 
 	_, err := uc.Execute(context.Background(), StaffRecordPurchaseInput{
 		TenantID:   tidB,

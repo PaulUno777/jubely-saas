@@ -16,10 +16,11 @@ export default function StoreHome() {
   const metricsQuery = useStoreMetrics();
   const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
 
-  const points = metricsQuery.data?.points_distributed;
-  const events = metricsQuery.data?.point_events_this_month;
-  const pointsValue = points === undefined ? "—" : nf.format(points);
-  const eventsValue = events === undefined ? "—" : nf.format(events);
+  const m = metricsQuery.data;
+  const pointsValue = m?.points_distributed === undefined ? "—" : nf.format(m.points_distributed);
+  const eventsValue = m?.point_events_this_month === undefined ? "—" : nf.format(m.point_events_this_month);
+  const clientsToday = m?.clients_served_today === undefined ? "—" : nf.format(m.clients_served_today);
+  const redemptionsToday = m?.redemptions_today === undefined ? "—" : nf.format(m.redemptions_today);
 
   return (
     <>
@@ -27,10 +28,10 @@ export default function StoreHome() {
       <Main className="space-y-6">
         {session ? <MfaEnrollBanner /> : null}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label={t("kpis.activeCustomers")} value="—" trend="neutral" />
+          <StatCard label={t("kpis.activeCustomers")} value={clientsToday} trend="neutral" />
           <StatCard label={t("kpis.pointsDistributed")} value={pointsValue} trend="neutral" />
           <StatCard label={t("kpis.pointEventsMonth")} value={eventsValue} trend="neutral" />
-          <StatCard label={t("kpis.rewardsClaimed")} value="—" trend="neutral" />
+          <StatCard label={t("kpis.rewardsClaimed")} value={redemptionsToday} trend="neutral" />
         </div>
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <Card className="border-border bg-card">

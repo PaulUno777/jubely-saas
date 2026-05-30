@@ -9,6 +9,7 @@ import (
 
 type CustomerIdentityRepository interface {
 	Create(ctx context.Context, c *domain.CustomerIdentity) error
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.CustomerIdentity, error)
 	FindByPhoneE164(ctx context.Context, phoneE164 string) (*domain.CustomerIdentity, error)
 	FindByEmail(ctx context.Context, email string) (*domain.CustomerIdentity, error)
 	FindByUserID(ctx context.Context, userID uuid.UUID) (*domain.CustomerIdentity, error)

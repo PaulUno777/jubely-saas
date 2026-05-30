@@ -45,8 +45,9 @@ func (s *Server) StaffCreateCustomer(c *gin.Context) {
 }
 
 type staffPurchaseBody struct {
-	PhoneE164  string `json:"phone_e164"`
-	AmountFcfa int64  `json:"amount_fcfa"`
+	PhoneE164   string `json:"phone_e164"`
+	CustomerQR  string `json:"customer_qr"`
+	AmountFcfa  int64  `json:"amount_fcfa"`
 }
 
 func (s *Server) StaffRecordPurchase(c *gin.Context) {
@@ -65,17 +66,23 @@ func (s *Server) StaffRecordPurchase(c *gin.Context) {
 		return
 	}
 	out, err := s.StaffRecordPurchaseUC.Execute(c.Request.Context(), usecase.StaffRecordPurchaseInput{
-		TenantID:   *claims.TenantID,
-		PhoneE164:  body.PhoneE164,
-		AmountFcfa: body.AmountFcfa,
+		TenantID:    *claims.TenantID,
+		PhoneE164:   body.PhoneE164,
+		CustomerQR:  body.CustomerQR,
+		AmountFcfa:  body.AmountFcfa,
 	})
 	if err != nil {
 		respondMapped(c, mapCustomerError(err))
 		return
 	}
 	respondCreated(c, gin.H{
-		"points_awarded": out.PointsAwarded,
-		"delta":          out.Delta,
-		"enrollment_id":  out.EnrollmentID.String(),
+		"points_awarded":  out.PointsAwarded,
+		"delta":           out.Delta,
+		"enrollment_id":   out.EnrollmentID.String(),
+		"customer_id":     out.CustomerID.String(),
+		"customer_name":   out.CustomerName,
+		"tier":            out.Tier,
+		"balance_before":  out.BalanceBefore,
+		"balance_after":   out.BalanceAfter,
 	})
 }

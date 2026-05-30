@@ -8,7 +8,7 @@ import (
 
 func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 	r := gin.New()
-	r.Use(gin.Recovery())
+	r.Use(gin.Recovery(), SecurityHeaders())
 	if s != nil && s.CORSAllowAll {
 		r.Use(CORSAllowAll())
 	}
@@ -22,11 +22,14 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		public.GET("/tenant/:slug", GinRateLimit(rateLimitPublicTenant), s.PublicGetTenantBySlug)
 		public.POST("/otp/send", GinRateLimit(rateLimitPublicOTPSend), s.PublicOTPSend)
 		public.POST("/otp/verify", GinRateLimit(rateLimitPublicOTPVerify), s.PublicOTPVerify)
+		public.POST("/enrollments", GinRateLimit(rateLimitPublicEnroll), s.PublicCreateEnrollment)
 		public.POST("/store/signup", GinRateLimit(rateLimitPublicSignup), s.PublicStoreSignup)
 		public.GET("/files/*filepath", s.PublicServeUpload)
 
 		v1.POST("/bootstrap/superadmin", GinRateLimit(rateLimitBootstrap), s.BootstrapSuperadmin)
 		v1.POST("/auth/login", GinRateLimit(rateLimitLogin), s.AuthLogin)
+		v1.POST("/auth/customer/login", GinRateLimit(rateLimitPublicOTPVerify), s.CustomerAuthLogin)
+		v1.POST("/auth/customer/session", AuthMiddleware(signer), s.CustomerSelectSession)
 		v1.POST("/auth/workspace", AuthMiddleware(signer), s.AuthSelectWorkspace)
 		v1.POST("/auth/mfa/totp/verify", s.AuthMFATOTPVerify)
 		v1.POST("/auth/refresh", s.AuthRefresh)
@@ -50,19 +53,13 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		superadmin.GET("/stats", s.SuperadminStats)
 		superadmin.POST("/uploads/tenant-logo", s.AdminUploadTenantLogo)
 
-		// Backwards-compatible aliases (will be removed after clients migrate).
-		admin := v1.Group("/admin")
-		admin.Use(AuthMiddleware(signer), RequireSuperadmin())
-		admin.GET("/tenants", s.AdminListTenants)
-		admin.POST("/tenants", s.AdminCreateTenant)
-		admin.GET("/tenants/:tenantId", s.AdminGetTenant)
-		admin.PATCH("/tenants/:tenantId", s.AdminPatchTenant)
-		admin.GET("/tenants/:tenantId/users", s.AdminListTenantUsers)
-		admin.POST("/tenants/:tenantId/users", s.AdminCreateTenantUser)
-		admin.POST("/tenants/:tenantId/invitations", s.AdminCreateMerchantInvitation)
-		admin.GET("/tenants/:tenantId/store-qr", s.AdminGetStoreQR)
-		admin.GET("/stats", s.SuperadminStats)
-		admin.POST("/uploads/tenant-logo", s.AdminUploadTenantLogo)
+		customers := v1.Group("/customers")
+		customers.GET("/wallet", GinRateLimit(rateLimitPublicEnroll), s.CustomerGetWalletByQR)
+		customersMe := customers.Group("/me")
+		customersMe.Use(AuthMiddleware(signer))
+		customersMe.GET("/wallet", s.CustomerGetMyWallet)
+		customersMe.GET("/rewards", s.CustomerListRewards)
+		customersMe.POST("/rewards/:rewardId/claims", s.CustomerClaimReward)
 
 		store := v1.Group("/store")
 		store.Use(AuthMiddleware(signer), RequireMerchantAdmin())
@@ -73,18 +70,20 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		store.GET("/users", s.StoreListUsers)
 		store.GET("/customers", s.StoreListCustomers)
 		store.GET("/transactions", s.StoreListPointEvents)
+		store.GET("/rewards", s.StoreListRewards)
+		store.POST("/rewards", s.StoreCreateReward)
+		store.PATCH("/rewards/:rewardId", s.StorePatchReward)
+		store.GET("/rules", s.StoreListRules)
+		store.POST("/rules", s.StoreCreateRule)
+		store.PATCH("/rules/:ruleId", s.StorePatchRule)
+		store.POST("/rules/simulate", s.StoreSimulateRules)
 		store.POST("/invitations", s.StoreCreateInvitation)
 
 		staff := v1.Group("/staff")
 		staff.Use(AuthMiddleware(signer), RequireStaffOrMerchantAdmin())
 		staff.POST("/customers", RequirePermission(domain.PermEnrollCustomer), s.StaffCreateCustomer)
 		staff.POST("/purchases", RequirePermission(domain.PermRecordTransaction), s.StaffRecordPurchase)
-
-		pwa := v1.Group("/pwa")
-		pwa.POST("/enrollments/scan", GinRateLimit(rateLimitPWAEnroll), s.PWAEnrollByStoreQR)
-		pwa.POST("/auth/login", GinRateLimit(rateLimitPublicOTPVerify), s.PWAAuthLogin)
-		pwa.POST("/context", AuthMiddleware(signer), s.PWASelectContext)
-		pwa.GET("/wallet", GinRateLimit(rateLimitPWAEnroll), s.PWAGetWallet)
+		staff.POST("/redemptions/validate", RequirePermission(domain.PermRecordTransaction), s.StaffValidateRedemption)
 
 		me := v1.Group("/me")
 		me.Use(AuthMiddleware(signer))

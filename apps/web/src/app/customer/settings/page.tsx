@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { pwaGetWallet } from "@/lib/customerApi";
+import { customerGetWallet } from "@/lib/customerApi";
 import { IconQrCode, IconHeart, IconBookmark } from "@/components/customer/icons";
 import { IconBell, IconShield, IconReceipt, IconLogout, IconChevronRight, IconStore, IconUser } from "@/components/agent/icons";
 import { JubelyLogo } from "@jubely/ui";
@@ -37,7 +37,7 @@ export default function SettingsPage() {
   const { data } = useQuery({
     queryKey: ["pwa", "wallet", session?.activeEnrollmentId],
     enabled: Boolean(session?.activeEnrollmentId),
-    queryFn: () => pwaGetWallet(),
+    queryFn: () => customerGetWallet(),
   });
 
   const initials = data?.tenant_name?.slice(0, 2).toUpperCase() ?? "?";

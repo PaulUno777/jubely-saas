@@ -14,4 +14,7 @@ type QRCodec interface {
 
 	SignCustomerQR(ctx context.Context, tenantID, customerID uuid.UUID) (token string, err error)
 	ParseCustomerQR(ctx context.Context, token string) (tenantID, customerID uuid.UUID, err error)
+
+	SignClaimQR(ctx context.Context, redemptionID uuid.UUID) (token string, err error)
+	ParseClaimQR(ctx context.Context, token string) (redemptionID uuid.UUID, err error)
 }

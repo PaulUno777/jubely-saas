@@ -19,9 +19,10 @@ type HMACQRCodec struct {
 
 type qrPayload struct {
 	V  int    `json:"v"`
-	K  string `json:"k"` // "store" | "customer"
+	K  string `json:"k"` // "store" | "customer" | "claim"
 	Ti string `json:"ti"`
 	Ci string `json:"ci,omitempty"`
+	Ri string `json:"ri,omitempty"`
 }
 
 func (s *HMACQRCodec) SignStoreQR(_ context.Context, tenantID uuid.UUID) (string, error) {
@@ -66,6 +67,24 @@ func (s *HMACQRCodec) ParseCustomerQR(_ context.Context, token string) (uuid.UUI
 		return uuid.UUID{}, uuid.UUID{}, err
 	}
 	return tid, cid, nil
+}
+
+func (s *HMACQRCodec) SignClaimQR(_ context.Context, redemptionID uuid.UUID) (string, error) {
+	if len(s.Secret) < 32 {
+		return "", fmt.Errorf("qr secret too short")
+	}
+	return s.sign(qrPayload{V: 1, K: "claim", Ri: redemptionID.String()})
+}
+
+func (s *HMACQRCodec) ParseClaimQR(_ context.Context, token string) (uuid.UUID, error) {
+	p, err := s.verify(token)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+	if p.K != "claim" || p.Ri == "" {
+		return uuid.UUID{}, fmt.Errorf("invalid claim qr kind")
+	}
+	return uuid.Parse(p.Ri)
 }
 
 func (s *HMACQRCodec) sign(p qrPayload) (string, error) {

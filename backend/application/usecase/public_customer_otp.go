@@ -43,9 +43,13 @@ func (uc *PublicCustomerOTP) Send(ctx context.Context, in PublicCustomerOTPSendI
 	if !isE164PhoneEnroll(phone) {
 		return fmt.Errorf("%w", domain.ErrInvalid)
 	}
-	code, err := memory.Random6Digit()
-	if err != nil {
-		return err
+	code := strings.TrimSpace(os.Getenv("PUBLIC_OTP_DEV_CODE"))
+	if code == "" {
+		var err error
+		code, err = memory.Random6Digit()
+		if err != nil {
+			return err
+		}
 	}
 	ttl := uc.CodeTTL
 	if ttl <= 0 {

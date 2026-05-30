@@ -1,11 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { QRCodeCanvas } from "qrcode.react";
-import { pwaGetWallet } from "@/lib/customerApi";
+import { customerGetWallet } from "@/lib/customerApi";
 import { IconChevronLeft, IconFlash } from "@/components/agent/icons";
 import { IconBookmark, IconQrCode } from "@/components/customer/icons";
 import { clearSession, useSessionStore } from "@/lib/session";
@@ -13,14 +13,19 @@ import { clearSession, useSessionStore } from "@/lib/session";
 export default function CustomerQrPage() {
   const t = useTranslations("customer.qr");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const session = useSessionStore((state) => state.session);
+  const claimQr = searchParams.get("claim_qr");
+  const displayCode = searchParams.get("code");
+  const rewardName = searchParams.get("reward");
 
   const { data } = useQuery({
-    queryKey: ["pwa", "wallet", session?.activeEnrollmentId],
-    enabled: Boolean(session?.activeEnrollmentId),
-    queryFn: () => pwaGetWallet(),
+    queryKey: ["customer", "wallet", session?.activeEnrollmentId],
+    enabled: Boolean(session?.activeEnrollmentId) && !claimQr,
+    queryFn: () => customerGetWallet(),
   });
 
+  const qrValue = claimQr ?? data?.customer_qr;
   const name = "Customer";
 
   return (
@@ -42,15 +47,20 @@ export default function CustomerQrPage() {
           {t("memberLabel")}
         </div>
         <div style={{ fontFamily: "var(--jubely-font-display)", fontStyle: "italic", fontSize: 26, color: "var(--c-cream)", marginTop: 6, lineHeight: 1.1 }}>
-          {data?.tenant_name ?? name}
+          {rewardName ?? data?.tenant_name ?? name}
         </div>
+        {displayCode && (
+          <div style={{ fontFamily: "monospace", fontSize: 20, fontWeight: 700, marginTop: 10, color: "var(--c-gold-2)" }}>
+            {displayCode}
+          </div>
+        )}
       </div>
 
       {/* QR code */}
       <div style={{ display: "flex", justifyContent: "center", margin: "24px auto 0" }}>
-        {data?.customer_qr ? (
+        {qrValue ? (
           <div style={{ background: "var(--c-cream)", borderRadius: 28, padding: 16, boxShadow: "0 18px 40px rgba(0,0,0,0.35)" }}>
-            <QRCodeCanvas value={data.customer_qr} size={220} />
+            <QRCodeCanvas value={qrValue} size={220} />
           </div>
         ) : (
           <div style={{ width: 252, height: 252, background: "rgba(255,255,255,0.06)", borderRadius: 28, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 20, textAlign: "center" }}>
@@ -74,14 +84,14 @@ export default function CustomerQrPage() {
         </button>
         <button
           type="button"
-          onClick={async () => { if (data?.customer_qr) { await navigator.clipboard.writeText(data.customer_qr); toast.success(t("copied")); } }}
+          onClick={async () => { if (qrValue) { await navigator.clipboard.writeText(qrValue); toast.success(t("copied")); } }}
           style={{ appearance: "none", border: 0, cursor: "pointer", padding: "14px 12px", borderRadius: 16, background: "var(--c-gold-2)", color: "var(--c-card)", fontFamily: "inherit", fontSize: 13.5, fontWeight: 600, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
         >
           {t("copy")}
         </button>
       </div>
 
-      {data?.customer_qr && (
+      {qrValue && (
         <div style={{ paddingBottom: 16, textAlign: "center" }}>
           <button type="button" onClick={() => { clearSession(); router.push("/customer/wallet"); }}
             style={{ appearance: "none", border: 0, background: "transparent", color: "rgba(255,255,255,0.4)", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>

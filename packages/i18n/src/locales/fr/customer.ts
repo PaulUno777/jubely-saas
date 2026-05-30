@@ -91,6 +91,8 @@ const customer = {
     enrollCta: "S'inscrire",
     preview: "Aperçu",
     yourBalance: "Votre solde",
+    loading: "Chargement…",
+    claimError: "Impossible de réclamer la récompense.",
   },
   stores: {
     title: "Enseignes",

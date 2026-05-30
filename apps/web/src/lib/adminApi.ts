@@ -11,7 +11,7 @@ import {
 } from "@jubely/api-schemas";
 import { authedFetch, authedJson, joinUrl, joinUrlWithQuery } from "./http";
 
-const SUPER = "/v1/admin";
+const SUPER = "/v1/superadmin";
 
 export async function adminListTenants(input: { offset?: number; limit?: number } = {}): Promise<Tenant[]> {
   const res = await authedFetch(

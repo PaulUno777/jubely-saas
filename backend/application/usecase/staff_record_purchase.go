@@ -11,56 +11,120 @@ import (
 	"github.com/google/uuid"
 )
 
-// StaffRecordPurchase awards points from a purchase amount using the MVP rule:
-// 1 point per 500 FCFA (integer division of amount_fcfa by 500).
+// StaffRecordPurchase awards points using the tenant rule engine (default 1 pt / 100 FCFA).
 type StaffRecordPurchase struct {
+	QRCodec     ports.QRCodec
 	Tenants     ports.TenantRepository
 	Customers   ports.CustomerIdentityRepository
 	Enrollments ports.LoyaltyEnrollmentRepository
 	Points      ports.PointEventWriter
+	Balances    ports.EnrollmentBalanceReader
+	Rules       ports.PointsRuleRepository
+	Clock       ports.Clock
 }
 
 type StaffRecordPurchaseInput struct {
-	TenantID   uuid.UUID
-	PhoneE164  string
-	AmountFcfa int64
+	TenantID    uuid.UUID
+	PhoneE164   string
+	CustomerQR  string
+	AmountFcfa  int64
 }
 
 type StaffRecordPurchaseOutput struct {
-	PointsAwarded int
-	Delta         int
-	EnrollmentID  uuid.UUID
+	PointsAwarded  int
+	Delta          int
+	EnrollmentID   uuid.UUID
+	CustomerID     uuid.UUID
+	CustomerName   string
+	Tier           string
+	BalanceBefore  int64
+	BalanceAfter   int64
 }
 
 func (uc *StaffRecordPurchase) Execute(ctx context.Context, in StaffRecordPurchaseInput) (*StaffRecordPurchaseOutput, error) {
-	phone := strings.TrimSpace(in.PhoneE164)
-	if phone == "" || in.AmountFcfa <= 0 {
+	if in.AmountFcfa <= 0 {
 		return nil, fmt.Errorf("%w", domain.ErrInvalid)
 	}
-	delta := int(in.AmountFcfa / 500)
+	enr, ci, err := uc.resolveEnrollment(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
+	if uc.Rules == nil || uc.Clock == nil {
+		return nil, fmt.Errorf("%w", domain.ErrInvalid)
+	}
+	occurredAt := uc.Clock.Now().UTC()
+	evalOut, err := EvaluatePurchasePoints(ctx, uc.Rules, in.TenantID, in.AmountFcfa, enr.Tier, occurredAt)
+	if err != nil {
+		return nil, err
+	}
+	delta := evalOut.Total
 	if delta <= 0 {
 		return nil, fmt.Errorf("%w", domain.ErrInvalid)
 	}
 
-	ci, err := uc.Customers.FindByPhoneE164(ctx, phone)
-	if err != nil {
-		return nil, err
-	}
-	enr, err := uc.Enrollments.FindByTenantAndCustomer(ctx, in.TenantID, ci.ID)
-	if err != nil {
-		return nil, err
+	var balanceBefore int64
+	if uc.Balances != nil {
+		balanceBefore, err = uc.Balances.EnrollmentPointsBalance(ctx, enr.ID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	payload, _ := json.Marshal(map[string]any{
 		"amount_fcfa": in.AmountFcfa,
-		"rule":        "mvp_1pt_per_500_fcfa",
+		"event_type":  "earn",
+		"rules_eval":  evalOut,
 	})
-	if err := uc.Points.Append(ctx, in.TenantID, &enr.ID, "purchase_award", delta, payload); err != nil {
+	if err := uc.Points.Append(ctx, in.TenantID, &enr.ID, "earn", delta, payload); err != nil {
 		return nil, err
 	}
 	return &StaffRecordPurchaseOutput{
 		PointsAwarded: delta,
 		Delta:         delta,
 		EnrollmentID:  enr.ID,
+		CustomerID:    ci.ID,
+		CustomerName:  ci.Name,
+		Tier:          enr.Tier,
+		BalanceBefore: balanceBefore,
+		BalanceAfter:  balanceBefore + int64(delta),
 	}, nil
+}
+
+func (uc *StaffRecordPurchase) resolveEnrollment(ctx context.Context, in StaffRecordPurchaseInput) (*domain.LoyaltyEnrollment, *domain.CustomerIdentity, error) {
+	qr := strings.TrimSpace(in.CustomerQR)
+	phone := strings.TrimSpace(in.PhoneE164)
+	if qr == "" && phone == "" {
+		return nil, nil, fmt.Errorf("%w", domain.ErrInvalid)
+	}
+	if qr != "" {
+		if uc.QRCodec == nil {
+			return nil, nil, fmt.Errorf("%w", domain.ErrInvalid)
+		}
+		tenantID, customerID, err := uc.QRCodec.ParseCustomerQR(ctx, qr)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w", domain.ErrInvalid)
+		}
+		if tenantID != in.TenantID {
+			return nil, nil, domain.ErrNotFound
+		}
+		ci, err := uc.Customers.FindByID(ctx, customerID)
+		if err != nil {
+			return nil, nil, err
+		}
+		enr, err := uc.Enrollments.FindByTenantAndCustomer(ctx, in.TenantID, customerID)
+		if err != nil {
+			return nil, nil, err
+		}
+		return enr, ci, nil
+	}
+	ci, err := uc.Customers.FindByPhoneE164(ctx, phone)
+	if err != nil {
+		return nil, nil, err
+	}
+	enr, err := uc.Enrollments.FindByTenantAndCustomer(ctx, in.TenantID, ci.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+	return enr, ci, nil
 }

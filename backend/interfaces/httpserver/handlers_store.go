@@ -3,6 +3,7 @@ package httpserver
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
@@ -21,14 +22,18 @@ func (s *Server) StoreGetMetrics(c *gin.Context) {
 		respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
 		return
 	}
-	points, events, err := s.StoreMetrics.TenantSummary(c.Request.Context(), *claims.TenantID)
+	m, err := s.StoreMetrics.TenantSummary(c.Request.Context(), *claims.TenantID)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
 		return
 	}
 	respondOK(c, gin.H{
-		"points_distributed":      points,
-		"point_events_this_month": events,
+		"points_distributed":       m.PointsDistributed,
+		"point_events_this_month":  m.PointEventsThisMonth,
+		"clients_served_today":     m.ClientsServedToday,
+		"points_issued_today":      m.PointsIssuedToday,
+		"redemptions_today":        m.RedemptionsToday,
+		"new_enrollments_today":    m.NewEnrollmentsToday,
 	})
 }
 
@@ -208,10 +213,18 @@ func (s *Server) StoreListPointEvents(c *gin.Context) {
 		return
 	}
 	offset, limit := parsePageQuery(c)
+	var eventType *string
+	if t := strings.TrimSpace(c.Query("type")); t != "" {
+		eventType = &t
+	}
+	from, to := parseTimeRangeQuery(c)
 	out, err := s.ListStorePointEventsUC.Execute(c.Request.Context(), usecase.ListStorePointEventsInput{
-		TenantID: *claims.TenantID,
-		Offset:   offset,
-		Limit:    limit,
+		TenantID:  *claims.TenantID,
+		Offset:    offset,
+		Limit:     limit,
+		EventType: eventType,
+		From:      from,
+		To:        to,
 	})
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)

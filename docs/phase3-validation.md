@@ -18,7 +18,7 @@ Use after [phase1-validation.md](./phase1-validation.md) and with auth BFF cooki
 pnpm dev:seed
 ```
 
-Creates superadmin, tenant `chez-mama`, merchant admin, agent, sample customer, and a **4500 FCFA** purchase (9 points). Re-running may fail on duplicate tenant/email — use fresh DB or adjust env vars in `scripts/dev-seed.mjs`.
+Creates superadmin, tenant `chez-mama`, merchant admin, agent, sample customer, and a **4500 FCFA** purchase (**45 points** at default 1 pt / 100 FCFA). Re-running may fail on duplicate tenant/email — use fresh DB or adjust env vars in `scripts/dev-seed.mjs`.
 
 The script reads `BOOTSTRAP_SECRET` from `backend/.env` and picks the API URL from `API_BASE`, `API_PUBLIC_BASE`, `PUBLIC_FILE_BASE_URL`, or `docker-compose.yml` (`8082:8080`). Override with `API_BASE=http://localhost:8082 pnpm dev:seed` if needed.
 
@@ -47,7 +47,7 @@ The script reads `BOOTSTRAP_SECRET` from `backend/.env` and picks the API URL fr
 
 1. Still as staff, open **Record purchase** (`/agent/purchase`) from the agent home or sidebar.
 2. Enter the same phone as Flow A or C (E.164 format).
-3. Enter amount **4500** FCFA → expect **+9 points** (1 point per 500 FCFA).
+3. Enter amount **4500** FCFA → expect **+45 points** (default rule: 1 point per 100 FCFA), or scan customer QR from wallet.
 4. Confirm toast and result card show points awarded.
 
 ## Flow E — Merchant metrics & lists
@@ -55,7 +55,13 @@ The script reads `BOOTSTRAP_SECRET` from `backend/.env` and picks the API URL fr
 1. Log in as **merchant_admin** for the tenant → `/store`.
 2. Dashboard and sidebar footer should show non-zero **points distributed** and **point events this month** after the purchase flow.
 3. Open `/store/customers` — enrolled customer(s) with point balance.
-4. Open `/store/transactions` — `purchase_award` row with amount and delta.
+4. Open `/store/transactions` — `earn` row with amount and delta.
+
+## Flow F — Reward claim & validate (Phase 4)
+
+1. As merchant admin, create a reward on `/store/rewards` (e.g. 50 pts).
+2. As customer with balance, open `/customer/rewards`, claim → claim QR on `/customer/qr`.
+3. As staff, scanner **Validate** mode → `/agent/validate` → confirm burn.
 
 ## Automated backend checks
 

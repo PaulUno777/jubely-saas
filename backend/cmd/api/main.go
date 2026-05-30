@@ -252,7 +252,7 @@ func main() {
 		Enrollments: enrollmentRepo,
 		QRCodec:     qrCodec,
 	}
-	getPWAWallet := &usecase.GetPWAWallet{
+	getCustomerWallet := &usecase.GetCustomerWallet{
 		QRCodec:     qrCodec,
 		Tenants:     tenantRepo,
 		Enrollments: enrollmentRepo,
@@ -311,11 +311,48 @@ func main() {
 	}
 
 	pointEvents := &postgres.PointEventRepository{Pool: pool}
+	rewardRepo := &postgres.RewardRepository{Pool: pool}
+	redemptionRepo := &postgres.RedemptionRepository{Pool: pool}
+	listStoreRewards := &usecase.ListStoreRewards{Rewards: rewardRepo}
+	createStoreReward := &usecase.CreateStoreReward{Rewards: rewardRepo, Clock: clock}
+	patchStoreReward := &usecase.PatchStoreReward{Rewards: rewardRepo, Clock: clock}
+	listCustomerRewards := &usecase.ListCustomerRewards{
+		Rewards:     rewardRepo,
+		Enrollments: enrollmentRepo,
+		Balances:    storeCatalog,
+	}
+	customerClaimReward := &usecase.CustomerClaimReward{
+		Tx:          txManager,
+		QRCodec:     qrCodec,
+		Rewards:     rewardRepo,
+		Redemptions: redemptionRepo,
+		Enrollments: enrollmentRepo,
+		Balances:    storeCatalog,
+		Points:      pointEvents,
+		Clock:       clock,
+	}
+	staffValidateRedemption := &usecase.StaffValidateRedemption{
+		QRCodec:     qrCodec,
+		Redemptions: redemptionRepo,
+		Rewards:     rewardRepo,
+		Enrollments: enrollmentRepo,
+		Customers:   customerRepo,
+		Clock:       clock,
+	}
+	pointsRuleRepo := &postgres.PointsRuleRepository{Pool: pool}
+	listStoreRules := &usecase.ListStoreRules{Rules: pointsRuleRepo}
+	createStoreRule := &usecase.CreateStoreRule{Rules: pointsRuleRepo}
+	patchStoreRule := &usecase.PatchStoreRule{Rules: pointsRuleRepo}
+	simulateStoreRules := &usecase.SimulateStoreRules{Rules: pointsRuleRepo}
 	staffRecordPurchase := &usecase.StaffRecordPurchase{
+		QRCodec:     qrCodec,
 		Tenants:     tenantRepo,
 		Customers:   customerRepo,
 		Enrollments: enrollmentRepo,
 		Points:      pointEvents,
+		Balances:    storeCatalog,
+		Rules:       pointsRuleRepo,
+		Clock:       clock,
 	}
 
 	storeSignup := &usecase.StoreSignup{
@@ -396,10 +433,20 @@ func main() {
 		SuperadminStatsUC:     superadminStats,
 		CreateCustomerUC:      createCustomer,
 		EnrollByStoreQRUC:     enrollByStoreQR,
-		GetPWAWalletUC:        getPWAWallet,
+		GetCustomerWalletUC:   getCustomerWallet,
 		CustomerLoginUC:       customerLogin,
 		SelectCustomerContextUC: selectCustomerContext,
-		StaffRecordPurchaseUC:  staffRecordPurchase,
+		StaffRecordPurchaseUC:       staffRecordPurchase,
+		StaffValidateRedemptionUC:   staffValidateRedemption,
+		ListStoreRewardsUC:          listStoreRewards,
+		CreateStoreRewardUC:         createStoreReward,
+		PatchStoreRewardUC:          patchStoreReward,
+		ListCustomerRewardsUC:       listCustomerRewards,
+		CustomerClaimRewardUC:       customerClaimReward,
+		ListStoreRulesUC:            listStoreRules,
+		CreateStoreRuleUC:           createStoreRule,
+		PatchStoreRuleUC:            patchStoreRule,
+		SimulateStoreRulesUC:        simulateStoreRules,
 		ListStoreCustomersUC:   listStoreCustomers,
 		ListStorePointEventsUC: listStorePointEvents,
 		PublicCustomerOTP:     publicCustomerOTP,

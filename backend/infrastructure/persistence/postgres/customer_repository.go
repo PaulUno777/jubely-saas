@@ -26,6 +26,27 @@ VALUES ($1,$2,$3,$4,$5,$6)`
 	return err
 }
 
+func (r *CustomerRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.CustomerIdentity, error) {
+	db := pickDB(ctx, r.Pool)
+	const q = `
+SELECT id, user_id, phone, name, email, created_at
+FROM customer_identities
+WHERE id=$1`
+	var c domain.CustomerIdentity
+	var userID *uuid.UUID
+	var email *string
+	err := db.QueryRow(ctx, q, id).Scan(&c.ID, &userID, &c.PhoneE164, &c.Name, &email, &c.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, domain.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	c.UserID = userID
+	c.Email = email
+	return &c, nil
+}
+
 func (r *CustomerRepository) FindByPhoneE164(ctx context.Context, phoneE164 string) (*domain.CustomerIdentity, error) {
 	db := pickDB(ctx, r.Pool)
 	const q = `

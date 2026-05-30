@@ -12,15 +12,43 @@ type StoreLoyaltyMetrics struct {
 	Pool *pgxpool.Pool
 }
 
-// TenantSummary returns points issued (sum of positive deltas, all time) and point event count in the current UTC month.
-func (r *StoreLoyaltyMetrics) TenantSummary(ctx context.Context, tenantID uuid.UUID) (pointsDistributed int64, pointEventsThisMonth int64, err error) {
+type TenantDashboardMetrics struct {
+	PointsDistributed      int64
+	PointEventsThisMonth   int64
+	ClientsServedToday     int64
+	PointsIssuedToday      int64
+	RedemptionsToday       int64
+	NewEnrollmentsToday    int64
+}
+
+// TenantSummary returns dashboard aggregates for merchant admin KPIs.
+func (r *StoreLoyaltyMetrics) TenantSummary(ctx context.Context, tenantID uuid.UUID) (TenantDashboardMetrics, error) {
 	db := pickDB(ctx, r.Pool)
 	const q = `
 SELECT
   COALESCE(SUM(GREATEST(delta, 0)), 0)::bigint,
-  COALESCE(COUNT(*) FILTER (WHERE created_at >= date_trunc('month', CURRENT_TIMESTAMP)), 0)::bigint
+  COALESCE(COUNT(*) FILTER (WHERE created_at >= date_trunc('month', CURRENT_TIMESTAMP)), 0)::bigint,
+  COALESCE(COUNT(DISTINCT enrollment_id) FILTER (
+    WHERE created_at >= date_trunc('day', CURRENT_TIMESTAMP) AND enrollment_id IS NOT NULL
+  ), 0)::bigint,
+  COALESCE(SUM(GREATEST(delta, 0)) FILTER (WHERE created_at >= date_trunc('day', CURRENT_TIMESTAMP)), 0)::bigint,
+  COALESCE(COUNT(*) FILTER (
+    WHERE created_at >= date_trunc('day', CURRENT_TIMESTAMP) AND event_type = 'redeem'
+  ), 0)::bigint,
+  (
+    SELECT COUNT(*)::bigint FROM loyalty_enrollments
+    WHERE tenant_id = $1 AND created_at >= date_trunc('day', CURRENT_TIMESTAMP)
+  )
 FROM point_events
 WHERE tenant_id = $1`
-	err = db.QueryRow(ctx, q, tenantID).Scan(&pointsDistributed, &pointEventsThisMonth)
-	return pointsDistributed, pointEventsThisMonth, err
+	var out TenantDashboardMetrics
+	err := db.QueryRow(ctx, q, tenantID).Scan(
+		&out.PointsDistributed,
+		&out.PointEventsThisMonth,
+		&out.ClientsServedToday,
+		&out.PointsIssuedToday,
+		&out.RedemptionsToday,
+		&out.NewEnrollmentsToday,
+	)
+	return out, err
 }

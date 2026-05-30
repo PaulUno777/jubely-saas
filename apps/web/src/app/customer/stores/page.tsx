@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { customerSelectContext, pwaGetWallet } from "@/lib/customerApi";
+import { customerSelectContext, customerGetWallet } from "@/lib/customerApi";
 import { IconStore, IconChevronRight, IconSearch } from "@/components/agent/icons";
 import { IconPin } from "@/components/customer/icons";
 import { useSession } from "@/hooks/useSession";
@@ -53,7 +53,7 @@ export default function StoresPage() {
   const { data } = useQuery({
     queryKey: ["pwa", "wallet", session?.activeEnrollmentId],
     enabled: Boolean(session?.activeEnrollmentId),
-    queryFn: () => pwaGetWallet(),
+    queryFn: () => customerGetWallet(),
   });
   const selectMut = useMutation({
     mutationFn: async (enrollmentId: string) => {

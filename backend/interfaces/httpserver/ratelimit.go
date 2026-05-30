@@ -57,7 +57,7 @@ var (
 	rateLimitBootstrap       = newIPWindowLimiter(10, time.Minute)
 	rateLimitLogin           = newIPWindowLimiter(30, time.Minute)
 	rateLimitPublicSignup    = newIPWindowLimiter(20, time.Minute)
-	rateLimitPWAEnroll       = newIPWindowLimiter(40, time.Minute)
+	rateLimitPublicEnroll    = newIPWindowLimiter(40, time.Minute)
 	rateLimitPublicTenant    = newIPWindowLimiter(120, time.Minute)
 	rateLimitPublicOTPSend   = newIPWindowLimiter(10, time.Minute)
 	rateLimitPublicOTPVerify = newIPWindowLimiter(30, time.Minute)

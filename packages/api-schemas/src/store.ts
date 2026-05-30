@@ -4,6 +4,10 @@ import { successEnvelopeSchema } from "./envelope";
 export const storeMetricsSchema = z.object({
   points_distributed: z.number().nonnegative(),
   point_events_this_month: z.number().nonnegative(),
+  clients_served_today: z.number().nonnegative().optional(),
+  points_issued_today: z.number().nonnegative().optional(),
+  redemptions_today: z.number().nonnegative().optional(),
+  new_enrollments_today: z.number().nonnegative().optional(),
 });
 
 export const storeMetricsSuccessEnvelopeSchema = successEnvelopeSchema(storeMetricsSchema);

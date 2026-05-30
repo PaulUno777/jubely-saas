@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
   const origin = upstreamApiOrigin();
   const bodyText = await req.text();
-  const upstream = await fetch(`${origin}/v1/pwa/context`, {
+  const upstream = await fetch(`${origin}/v1/auth/customer/session`, {
     method: "POST",
     headers: {
       "content-type": "application/json",

@@ -1,13 +1,28 @@
 # Document de Cadrage Projet : Jubely
 
 **Date :** 27 Avril 2026
-**Version :** 1.0
+**Version :** 1.1 — alignée maquettes `context/jubelee_design/` (Mai 2026)
+
+## 0. Maquettes & architecture produit (référence UX)
+
+Le périmètre fonctionnel du MVP est illustré par trois portails interactifs et un schéma de flux :
+
+| Portail | Fichier | Rôle |
+|---------|---------|------|
+| Client (PWA) | [jubelee_design/Jubelee Customer.html](jubelee_design/Jubelee%20Customer.html) | Wallet multi-enseignes, Mon QR, récompenses, rejoindre une boutique |
+| Personnel caisse | [jubelee_design/Jubelee Staff.html](jubelee_design/Jubelee%20Staff.html) | Scanner Attribuer/Valider, numpad achat, clients, activité |
+| Admin boutique | [jubelee_design/Jubelee Admin.html](jubelee_design/Jubelee%20Admin.html) | Dashboard, clients, transactions, règles, récompenses, équipe, QR |
+| Flux | [Jubelee_Architecture.png](Jubelee_Architecture.png) | 9 flux (QR enrôlement → scan caisse → config → analytics) |
+
+**Implémentation cible :** une application Next.js unique (`apps/web`) + API Go (`/v1/store`, `/v1/staff`, `/v1/pwa`). Plan détaillé : [NEW_PLANING.md](NEW_PLANING.md) · suivi : [docs/ROADMAP.md](../docs/ROADMAP.md).
+
+---
 
 ## 1. Vision du Produit
 
 - **Problème résolu :** Les PME commerciales en Afrique (ex: boutiques d'équipement électronique, restaurants, salons de coiffure) luttent pour fidéliser leurs clients et les faire revenir efficacement. Leurs méthodes actuelles (principalement les groupes WhatsApp génériques) sont perçues comme inefficaces, agaçantes et manquent de structure pour récompenser la fidélité, comprendre les comportements d'achat et personnaliser les interactions, ce qui limite leur valeur vie client (LTV) et leur chiffre d'affaires.
 
-- **Solution proposée (Jubely) :** Une plateforme de fidélisation client digitalisée et modulaire, composée d'une Progressive Web App (PWA) pour les clients finaux, et d'applications métier (web/mobile) pour le personnel des commerçants et les administrateurs. Jubely remplace les communications génériques et inefficaces par des récompenses structurées (système de points), des offres personnalisées et des notifications ciblées, facilitant le retour en magasin et une connaissance client approfondie.
+- **Solution proposée (Jubely) :** Une plateforme de fidélisation client digitalisée et modulaire : **PWA client** (wallet, Mon QR, récompenses), **app personnel** (scan caisse, attribution de points, validation des réclamations), **back-office admin** (règles, catalogue, KPIs, équipe). Les maquettes Staff/Admin/Customer définissent l’expérience cible ; le MVP livre d’abord la boucle caisse (scan QR → points → réclamation → validation), puis l’enrichissement (campagnes, multi-boutiques, push).
 
 - **Mission :** Démocratiser l'accès à des outils de fidélisation client digitalisée de qualité professionnelle pour les PME africaines, leur permettant de construire des relations durables avec leurs clients et d'augmenter significativement leur chiffre d'affaires, avec la même sophistication que les grands groupes mais une simplicité et un coût adaptés.
 
@@ -31,8 +46,8 @@
     - **Justification :** Permet une robustesse et une auditabilité inégalées. Les soldes de points peuvent être recalculés à tout moment à partir des événements bruts, offrant une flexibilité cruciale pour l'évolution des règles de fidélité sans corruption de données. Évite la sur-ingénierie en n'appliquant cette complexité qu'au cœur du système.
 
 - **Frontend :**
-    - **Technologie :** React ou Next.js (pour les applications web/PWA).
-    - **Justification :** Modernité, performance, capacité à créer des Progressive Web Apps (PWA) pour une distribution facile et une expérience mobile native sans passer par les stores d'applications au démarrage, et des interfaces web réactives pour le personnel/admin.
+    - **Technologie :** Next.js 16 (monorepo `apps/web` — portails client `/customer`, staff `/agent`, admin `/store`, superadmin `/root`).
+    - **Justification :** Une seule base de code alignée sur les trois maquettes HTML ; PWA installable (`display: standalone`) ; BFF Next pour cookies HttpOnly vers l’API Go.
 
 - **Infrastructure de déploiement :**
     - **Cible :** Plateformes cloud optimisées pour free tier / bas coût (Fly.io, Railway pour le backend ; Vercel, Netlify pour le frontend statique/PWA).
@@ -46,20 +61,38 @@
 
 - **Cible :** Petites entreprises sans solution de fidélité ou utilisant des méthodes inefficaces (WhatsApp).
 
-- **Fonctionnalités :**
-    1.  **Enrôlement Client :** Création simple et rapide de comptes clients via l'application du personnel (Nom, Téléphone, Email) ou directement par le client via la PWA.
-    2.  **Attribution de Points :** Personnel scanne un QR code unique du client, saisit le montant de l'achat ; les points sont automatiquement attribués selon 1 règle de cumul simple et fixe (ex: 1 point par tranche de X FCFA).
-    3.  **Expérience Client PWA :**
-        - Connexion/déconnexion sécurisée.
-        - Affichage clair du solde de points actuel.
-        - Visualisation d'une unique récompense générique disponible (ex: "5% de réduction" ou "produit Y gratuit" une fois X points atteints).
-        - Génération d'un QR code de réclamation pour la récompense.
-    4.  **Réclamation & Validation de Récompense :** Le personnel scanne le QR code de réclamation du client, valide la transaction, et le code est "cramé" (non réutilisable).
-    5.  **Tableau de Bord Commerçant (Web/Mobile) :**
-        - Vue basique : nombre total de clients enregistrés, total des points distribués, liste des récompenses réclamées.
-        - Gestion d'une seule règle de cumul de points et d'une seule récompense.
+- **Fonctionnalités (alignées maquettes — périmètre pilot) :**
 
-- **Limites du plan Essentiel** (pour inciter à l'upgrade) : Nombre limité de clients (ex: jusqu'à 100 ou 200 actifs), 1 seule règle de cumul, 1 seul type de récompense, pas de segmentation client, pas de notifications ciblées, rapports basiques.
+    1.  **Enrôlement client**
+        - Client : `/join/:slug` — OTP téléphone, nom, carte wallet (design *Rejoindre · sheet*).
+        - Personnel : création client + affichage **Mon QR** (design *Nouveau client*).
+        - Admin : QR d’enrôlement boutique (`jubelee.app/join/chez-mama`).
+
+    2.  **Attribution de points (flux caisse — design Staff)**
+        - Mode scanner **Attribuer** : scan du **Mon QR** client (token HMAC), pas seulement le téléphone.
+        - Saisie montant FCFA (numpad), aperçu points, écran succès avec solde avant/après et palier.
+        - Règle par défaut type maquette : **1 point par 100 FCFA** (configurable via moteur de règles dès Phase 4).
+
+    3.  **Expérience client PWA (design Customer)**
+        - Wallet **multi-enseignes** (plusieurs cartes si plusieurs tenants rejoints).
+        - Détail par enseigne : solde, palier, barre de progression.
+        - **Mon QR** personnel pour la caisse.
+        - Catalogue **récompenses** par enseigne ; bouton Réclamer.
+
+    4.  **Réclamation & validation (flux 3 architecture)**
+        - Client : QR de réclamation + code lisible (ex. `JBL-4F7K-29`) + **expiration ~15 min** (design *Réclamer · code*).
+        - Personnel : mode scanner **Valider**, détail récompense, confirmation — code **cramé**, points débités (`event_type: redeem`).
+
+    5.  **Back-office admin (design Admin — pilot)**
+        - Dashboard : KPIs (points distribués, clients actifs, récompenses validées), feed activité agents.
+        - Clients & transactions (filtres gain / récompense / bonus).
+        - Équipe & agents, QR enrôlement, paramètres boutique.
+        - Règles : liste, paliers, **simulateur & détection de conflits** (UI formulaire en pilot ; éditeur visuel drag-and-drop = plan Growth).
+        - Catalogue récompenses : coût en points, palier minimum, actif/pause, compteur d’utilisations.
+
+- **Hors MVP Essentiel (visible dans les maquettes, livraison ultérieure) :** multi-boutiques (3 emplacements Chez Mama), campagnes push, carte découverte géolocalisée, inbox notifications, profil client complet (genre, date de naissance), abonnements Standard/Growth/Scale avec feature gating, intégration POS.
+
+- **Limites du plan Essentiel** (inchangées pour la monétisation) : nombre de clients plafonné, règles et récompenses limitées en nombre, pas de segmentation ni campagnes ciblées, rapports basiques.
 
 ### 3.2. Jubely Pro (Abonnement Mensuel)
 
@@ -81,7 +114,7 @@
 - **Cible :** PME avec plusieurs points de vente (chaînes, franchises) ou des besoins d'intégration/support spécifiques (ex: centres commerciaux).
 
 - **Fonctionnalités (en plus du Pro) :**
-    - Gestion Multi-Points de Vente : Administration centralisée et rapports consolidés pour plusieurs boutiques.
+    - **Gestion multi-points de vente** (maquette Admin *Boutiques* — 3 emplacements, filtres par site, KPIs par boutique) : administration centralisée et rapports consolidés.
     - Intégration API : Possibilité d'intégration avec des systèmes de Point de Vente (POS) existants (selon faisabilité).
     - Modules Avancés : Programme de parrainage sophistiqué, gestion des bons d'achat avancée, intégration e-commerce.
     - Analyse prédictive de la fidélité.
@@ -112,42 +145,31 @@
 
 ## 5. Roadmap Initiale (MVP Essentiel - 8 Semaines)
 
-*Cette roadmap est une estimation et pourra être ajustée après les premiers retours utilisateurs et la phase de développement.*
+*Alignée sur [NEW_PLANING.md](NEW_PLANING.md) et les maquettes `jubelee_design/`. L’état d’avancement détaillé est dans [docs/ROADMAP.md](../docs/ROADMAP.md).*
 
-- **Sprint 1 : Semaines 1-2 - Infrastructure & Enrôlement Basique**
-    - **Objectifs :** Mettre en place l'environnement de développement et de déploiement. Permettre la création de comptes pour les commerçants et les clients.
-    - **Tâches Clés :**
-        - Initialisation des dépôts Git, CI/CD de base.
-        - Mise en place de l'infrastructure Go (backend) et React/Next (frontend) sur Free Tiers (Supabase/PostgreSQL).
-        - Développement des API d'authentification et de gestion utilisateur de base.
-        - Application "Jubely Personnel" (MVP minimal) : Fonctionnalité de création de compte client (nom, téléphone, email), connexion/déconnexion.
-        - Application "Jubely Client" (PWA MVP) : Création de compte client, connexion/déconnexion, affichage d'un QR code client unique personnel.
-        - Définition d'une seule règle simple de cumul de points.
+- **Sprint 1 : Semaines 1-2 — Infrastructure & SuperAdmin** ✅ *largement livré*
+    - Go + Postgres (Supabase) + JWT + RBAC + superadmin/tenants.
+    - Next.js unifié, login par rôle, BFF cookies.
+    - CI lint/test ; **déploiement pilot** : Fly.io (API) + Vercel (web) + Supabase.
 
-- **Sprint 2 : Semaines 3-4 - Attribution de Points & Noyau Fidélité**
-    - **Objectifs :** Implémenter le cœur du système de points et permettre l'attribution.
-    - **Tâches Clés :**
-        - Développement du moteur de points en Event Sourcing (table events PostgreSQL).
-        - Application "Jubely Personnel" : Intégration de la fonctionnalité "Attribuer des points" (scan QR code client, saisie du montant d'achat, affichage des points attribués).
-        - Application "Jubely Client" (PWA) : Affichage dynamique du solde de points du client.
-        - Développement d'une seule récompense générique ("5% de réduction pour X points").
+- **Sprint 2 : Semaines 3-4 — Configuration boutique & personnel** ✅ *largement livré*
+    - Admin : paramètres, branding, QR enrôlement, équipe (invitations).
+    - Staff : login, accueil, liste clients, création client.
+    - *Écart design :* dashboard admin KPIs/charts encore partiels.
 
-- **Sprint 3 : Semaines 5-6 - Réclamation Récompense & Tableau de Bord Minimal**
-    - **Objectifs :** Compléter le cycle de fidélisation côté client et fournir un aperçu au commerçant.
-    - **Tâches Clés :**
-        - Application "Jubely Client" (PWA) : Affichage de la récompense disponible, génération d'un QR code de réclamation temporaire.
-        - Application "Jubely Personnel" : Fonctionnalité "Valider récompense" (scan QR code de réclamation, validation, "cramage" du code).
-        - Développement du tableau de bord administrateur (web/mobile) pour le commerçant : Vue simplifiée (nombre de clients, points distribués, récompenses réclamées).
-        - Mise en place du tracking des métriques clés d'activation des commerçants.
+- **Sprint 3 : Semaines 5-6 — Enrôlement & transactions** 🚧 *code livré, validation en cours*
+    - PWA : `/join/:slug`, wallet, Mon QR, multi-enseignes.
+    - Staff : achat par téléphone + numpad ; **à finaliser :** scan Mon QR → API.
+    - `point_events` append-only ; métriques boutique de base.
+    - OTP : logs en dev/pilot ; Nexah en production publique.
 
-- **Sprint 4 : Semaines 7-8 - Affinement, Tests & Préparation au Lancement**
-    - **Objectifs :** Stabiliser le MVP, améliorer l'expérience et préparer le déploiement initial.
-    - **Tâches Clés :**
-        - Tests complets end-to-end, corrections de bugs critiques.
-        - Amélioration de l'UX/UI du MVP (selon les standards visés comme Max It, en gardant la simplicité).
-        - Préparation du matériel d'onboarding et de documentation pour les commerçants.
-        - Mise en place des canaux de feedback utilisateur pour le groupe pilote.
-        - Déploiement initial auprès d'un groupe de "beta-testeurs" (Monsieur Kamga et quelques autres PME cibles).
+- **Sprint 4 : Semaines 7-8 — Règles, récompenses, pilote** 📋 *à livrer*
+    - Moteur de règles (schéma `SIM_RULES` : rate / mult / flat, simulateur, conflits).
+    - Catalogue récompenses + claim QR + validation staff (flux design complet).
+    - Admin : écrans Règles / Récompenses / Transactions typées earn|redeem|bonus.
+    - Sécurité minimale, déploiement production free tier, pilotes (ex. Chez Mama).
+
+**Critère de bout en bout (aligné architecture) :** Admin publie QR → client s’enrôle → staff scanne Mon QR et crédite points → client réclame une récompense → staff valide le QR réclamation → admin voit KPIs et historique.
 
 ## 6. KPIs Clés (Produit & Business)
 
@@ -168,4 +190,10 @@
 
 ---
 
-Ce document de cadrage est désormais complet et constitue une base solide pour la suite du projet.
+## 7. Correspondance plans commerciaux ↔ maquettes Admin
+
+Les plans **Standard / Growth / Scale** de la maquette ([admin-data.jsx](jubelee_design/admin/admin-data.jsx)) conditionnent l’UI (éditeur visuel, multi-boutiques, campagnes). En **MVP pilot**, toutes les boutiques sont traitées comme **plan unique** sans enforcement backend ; seules les fonctionnalités de la section 3.1 sont requises.
+
+---
+
+Ce document de cadrage constitue la vision produit ; le détail d’implémentation semaine par semaine et les écarts code/design sont maintenus dans [NEW_PLANING.md](NEW_PLANING.md).
