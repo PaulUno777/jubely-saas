@@ -9,6 +9,17 @@ Go API for **Option 2 onboarding**: only a **superadmin** creates tenants; **mer
 - **Go**: projects targets **the latest stable Go** (see `go` / `toolchain` in `go.mod`). CI uses `go-version-file: backend/go.mod`. Upgrade with `go get go@latest` and `go get -u ./...` when you intentionally refresh dependencies.
 - PostgreSQL 14+ (Supabase works)
 
+## Composition root (Wire)
+
+API dependencies are wired in [`internal/app`](internal/app) using [Google Wire](https://github.com/google/wire). `cmd/api/main.go` only starts the process; providers live under `internal/app/providers/` (postgres, infra, use cases by domain, HTTP).
+
+After changing providers or `wire.go`, regenerate and commit `wire_gen.go`:
+
+```bash
+cd backend
+go generate ./internal/app/...
+```
+
 ## Local dev (Docker Compose)
 
 This repository will host multiple projects, so the compose file is at root:

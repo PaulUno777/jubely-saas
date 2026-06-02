@@ -3,12 +3,11 @@
  * Local dev seed for dashboards, store admin, agent, and customer portals.
  *
  * Seeds:
- * - superadmin + merchants (after migration 007/008 each tenant gets HQ store + trialing subscription)
- * - prefer one org with multiple boutiques via POST /organizations/me/stores when extending seed
- * - shared staff (multi-workspace)
- * - points rules + rewards catalog per store
- * - enrolled customers, extra staff-created clients, purchases (ledger / metrics)
- * - primary store: OTP customer session, reward claim + staff validation
+ * - superadmin + organizations (each new org gets HQ store `main` + Growth trialing subscription)
+ * - Chez Mama: activate MoMo subscription, then extra boutiques via POST /organizations/me/stores
+ * - separate single-store orgs for multi-workspace agent demo
+ * - org-wide rules + rewards; purchases tagged per boutique (active_store_id + store QR)
+ * - pooled loyalty: one enrollment per org; OTP claim + staff validation on primary org
  *
  * Requires API running; backend/.env needs BOOTSTRAP_SECRET.
  * For automated customer login: PUBLIC_OTP_DEV_CODE=000000 (see backend/.env.example).
@@ -150,7 +149,7 @@ function pilotRulesForStore(storeSlug) {
       id: `${storeSlug}-hh`,
       name: "Happy hour",
       tag: "Multiplicateur",
-      on: storeSlug === config.tenantSlug,
+      on: storeSlug === "main" || storeSlug === config.tenantSlug,
       trigger: "transaction",
       cond: { days: [0, 1, 2, 3, 4], hours: [17, 19], tier: "all", minAmount: 0 },
       action: { type: "mult", factor: 2 },
@@ -159,7 +158,7 @@ function pilotRulesForStore(storeSlug) {
       id: `${storeSlug}-first`,
       name: "Première visite",
       tag: "Bonus",
-      on: storeSlug === config.tenantSlug,
+      on: storeSlug === "main" || storeSlug === config.tenantSlug,
       trigger: "enroll",
       cond: { days: ALL_DAYS, tier: "new", minAmount: 0 },
       action: { type: "flat", pts: 50 },
@@ -175,7 +174,7 @@ function pilotRewardsForStore(storeSlug) {
     { name: "Dessert gratuit", description: "Dessert du jour", point_cost: 150, min_tier: "bronze" },
     { name: "Réduction 10%", description: "Sur la prochaine note", point_cost: 300, min_tier: "silver" },
   ];
-  if (storeSlug === config.tenantSlug) {
+  if (storeSlug === "main" || storeSlug === config.tenantSlug) {
     base.push({
       name: "Menu découverte",
       description: "Entrée + plat signature",
@@ -187,56 +186,58 @@ function pilotRewardsForStore(storeSlug) {
   return base;
 }
 
-const stores = [
+/** @typedef {{ slug: string; name: string; city?: string; country_code?: string; address_line?: string }} BoutiqueDef */
+
+/** Organizations (tenants) and optional extra boutiques under the same org. */
+const organizations = [
   {
     name: config.tenantName,
     slug: config.tenantSlug,
+    plan: "growth",
     merchantEmail: config.merchantEmail,
     merchantPassword: config.merchantPassword,
     purchaseAmountFcfa: config.purchaseAmountFcfa,
     extraPurchases: [2200, 3100],
     includeSharedAgent: true,
     richDemo: true,
+    /** Trial allows 1 store; confirm MoMo to unlock Growth max_stores (3). */
+    activateBilling: true,
+    boutiques: /** @type {BoutiqueDef[]} */ ([
+      { slug: "akwa", name: "Chez Mama — Akwa", city: "Douala", country_code: "CM", address_line: "Akwa" },
+      {
+        slug: "bonapriso",
+        name: "Chez Mama — Bonapriso",
+        city: "Douala",
+        country_code: "CM",
+        address_line: "Bonapriso",
+      },
+    ]),
   },
   {
     name: "Maison Naka",
     slug: "maison-naka",
+    plan: "starter",
     merchantEmail: "merchant.maison-naka@jubely.local",
     merchantPassword: "MerchantMaison123!",
     purchaseAmountFcfa: 6200,
     extraPurchases: [1500],
     includeSharedAgent: true,
     richDemo: false,
+    activateBilling: false,
+    boutiques: [],
   },
   {
     name: "Bantu Coffee",
     slug: "bantu-coffee",
+    plan: "starter",
     merchantEmail: "merchant.bantu-coffee@jubely.local",
     merchantPassword: "MerchantBantu123!",
     purchaseAmountFcfa: 7800,
     extraPurchases: [],
     includeSharedAgent: true,
     richDemo: false,
-  },
-  {
-    name: "Le Marche",
-    slug: "le-marche",
-    merchantEmail: "merchant.le-marche@jubely.local",
-    merchantPassword: "MerchantMarche123!",
-    purchaseAmountFcfa: 9100,
-    extraPurchases: [4000],
-    includeSharedAgent: true,
-    richDemo: false,
-  },
-  {
-    name: "Atelier Sawa",
-    slug: "atelier-sawa",
-    merchantEmail: "merchant.atelier-sawa@jubely.local",
-    merchantPassword: "MerchantSawa123!",
-    purchaseAmountFcfa: 5400,
-    extraPurchases: [],
-    includeSharedAgent: false,
-    richDemo: false,
+    activateBilling: false,
+    boutiques: [],
   },
 ];
 
@@ -256,6 +257,7 @@ function sleep(ms) {
 /**
  * @typedef {{ data?: unknown; error?: { code?: string; message?: string } }} ApiEnvelope
  * @typedef {{ tenant_id?: string; name?: string; slug?: string }} TenantRow
+ * @typedef {{ id?: string; slug?: string; name?: string; is_hq?: boolean }} OrgStoreRow
  * @typedef {{ membership_id?: string; tenant_slug?: string; tenant_name?: string; role?: string }} WorkspaceRow
  * @typedef {{ enrollment_id?: string; phone?: string; name?: string; points_balance?: number; customer_qr?: string }} StoreCustomerRow
  */
@@ -365,11 +367,12 @@ async function listTenants(superToken) {
   return /** @type {TenantRow[]} */ (asArray(data(list.json)));
 }
 
-async function ensureTenant(superToken, store) {
+async function ensureTenant(superToken, org) {
+  const plan = typeof org.plan === "string" && org.plan ? org.plan : "starter";
   const created = await api("POST", "/v1/superadmin/tenants", {
     allowError: true,
     headers: { authorization: `Bearer ${superToken}` },
-    body: { name: store.name, slug: store.slug, plan: "starter" },
+    body: { name: org.name, slug: org.slug, plan },
   });
   const payload = data(created.json);
   if (payload && typeof payload === "object") {
@@ -378,11 +381,72 @@ async function ensureTenant(superToken, store) {
     if (tenantId) return tenantId;
   }
   const tenants = await listTenants(superToken);
-  const found = tenants.find((row) => row.slug === store.slug);
+  const found = tenants.find((row) => row.slug === org.slug);
   if (!found?.tenant_id) {
-    throw new Error(`Could not resolve tenant id for ${store.slug}`);
+    throw new Error(`Could not resolve tenant id for ${org.slug}`);
   }
   return found.tenant_id;
+}
+
+async function listOrgStores(merchantToken) {
+  const res = await api("GET", "/v1/organizations/me/stores", {
+    headers: { authorization: `Bearer ${merchantToken}` },
+  });
+  const payload = asObject(data(res.json), "org stores");
+  return /** @type {OrgStoreRow[]} */ (asArray(payload.stores));
+}
+
+async function createOrgStore(merchantToken, boutique) {
+  const res = await api("POST", "/v1/organizations/me/stores", {
+    headers: { authorization: `Bearer ${merchantToken}` },
+    body: {
+      slug: boutique.slug,
+      name: boutique.name,
+      country_code: boutique.country_code ?? "CM",
+      city: boutique.city ?? "",
+      address_line: boutique.address_line ?? "",
+      status: "open",
+    },
+  });
+  return asObject(data(res.json), `boutique ${boutique.slug}`);
+}
+
+async function ensureOrgBoutiques(merchantToken, boutiques) {
+  let stores = await listOrgStores(merchantToken);
+  const slugs = new Set(stores.map((row) => row.slug).filter(Boolean));
+  for (const boutique of boutiques) {
+    if (slugs.has(boutique.slug)) continue;
+    log(`Add boutique ${boutique.slug} (${boutique.name})`);
+    const created = await createOrgStore(merchantToken, boutique);
+    stores.push({
+      id: typeof created.id === "string" ? created.id : undefined,
+      slug: typeof created.slug === "string" ? created.slug : boutique.slug,
+      name: typeof created.name === "string" ? created.name : boutique.name,
+      is_hq: created.is_hq === true,
+    });
+    slugs.add(boutique.slug);
+  }
+  return stores;
+}
+
+async function activateOrgSubscription(merchantToken) {
+  const subRes = await api("GET", "/v1/organizations/me/subscription", {
+    headers: { authorization: `Bearer ${merchantToken}` },
+  });
+  const sub = asObject(data(subRes.json), "subscription");
+  if (sub.status === "active") {
+    return;
+  }
+  log("Activate org subscription (dev MoMo confirm)");
+  const invRes = await api("POST", "/v1/organizations/me/subscription/momo-invoice", {
+    headers: { authorization: `Bearer ${merchantToken}` },
+  });
+  const inv = asObject(data(invRes.json), "momo invoice");
+  const payRef = requireString(inv.pay_reference, "pay_reference");
+  await api("POST", "/v1/organizations/me/subscription/confirm-momo", {
+    headers: { authorization: `Bearer ${merchantToken}` },
+    body: { pay_reference: payRef },
+  });
 }
 
 async function login(email, password, preferredTenantSlug = "") {
@@ -419,12 +483,41 @@ async function maybeLogin(email, password) {
   }
 }
 
-async function selectWorkspace(accessToken, membershipId) {
+async function selectWorkspace(accessToken, membershipId, activeStoreId = "") {
+  const body = { membership_id: membershipId };
+  if (activeStoreId) {
+    body.active_store_id = activeStoreId;
+  }
   const res = await api("POST", "/v1/auth/workspace", {
     headers: { authorization: `Bearer ${accessToken}` },
-    body: { membership_id: membershipId },
+    body,
   });
   return asObject(data(res.json), `select workspace ${membershipId}`);
+}
+
+async function loginScopedWithStore(email, password, tenantSlug, activeStoreId = "") {
+  const session = await loginScoped(email, password, tenantSlug);
+  if (!activeStoreId) {
+    return session;
+  }
+  const membershipId =
+    session.membershipId ||
+    (typeof session.payload.membership_id === "string" ? session.payload.membership_id : "");
+  if (!membershipId) {
+    throw new Error(`Cannot scope ${email} to store ${activeStoreId}: missing membership_id`);
+  }
+  const bearer = session.initialAccessToken || session.accessToken;
+  const scoped = await selectWorkspace(bearer, membershipId, activeStoreId);
+  return {
+    ...session,
+    accessToken: requireString(scoped.access_token, `store-scoped token for ${email}`),
+    payload: scoped,
+    membershipId,
+  };
+}
+
+function hqStore(stores) {
+  return stores.find((row) => row.is_hq) ?? stores.find((row) => row.slug === "main") ?? stores[0];
 }
 
 function hasWorkspace(payload, desiredTenantSlug) {
@@ -705,58 +798,83 @@ async function staffValidateRedemption(authToken, claimQr) {
   return asObject(data(res.json), "validate redemption");
 }
 
-async function seedStoreCatalogAndLedger(store, merchantToken, agentToken) {
+async function seedOrgLoyaltyDemo(org, merchantEmail, merchantPassword, orgStores, agentToken) {
+  const hq = hqStore(orgStores);
+  if (!hq?.id) {
+    throw new Error(`No HQ store for org ${org.slug}`);
+  }
+  const hqSession = await loginScopedWithStore(merchantEmail, merchantPassword, org.slug, hq.id);
+  const merchantToken = hqSession.accessToken;
+
   await ensureStaffCanEnrollCustomers(merchantToken);
-  log(`[${store.slug}] Seed rules + rewards`);
-  const ruleCount = await ensureStoreRules(merchantToken, store.slug);
-  const rewards = await ensureStoreRewards(merchantToken, store.slug);
+  log(`[${org.slug}] Seed org-wide rules + rewards (HQ ${hq.slug})`);
+  const ruleCount = await ensureStoreRules(merchantToken, hq.slug ?? "main");
+  const rewards = await ensureStoreRewards(merchantToken, hq.slug ?? "main");
 
-  const storeQr = await getStoreQr(merchantToken);
-  const purchaseAuth = agentToken ?? merchantToken;
+  const hqQr = await getStoreQr(merchantToken);
 
-  log(`[${store.slug}] Enroll main customer ${config.customerPhone}`);
-  const enrolled = await ensurePwaEnrollment(merchantToken, storeQr, {
+  log(`[${org.slug}] Enroll main customer ${config.customerPhone} (pooled loyalty)`);
+  const enrolled = await ensurePwaEnrollment(merchantToken, hqQr, {
     name: config.customerName,
     phone: config.customerPhone,
     email: config.customerEmail,
     phoneVerifyToken: config.customerPhoneVerifyToken || undefined,
   });
 
-  const amounts = [store.purchaseAmountFcfa, ...store.extraPurchases];
-  for (const amount of amounts) {
-    log(`[${store.slug}] Purchase ${amount} FCFA for ${config.customerPhone}`);
-    await recordPurchase(purchaseAuth, { phone: config.customerPhone, amountFcfa: amount });
+  const amounts = [org.purchaseAmountFcfa, ...org.extraPurchases];
+  const boutiqueActivity = [];
+
+  for (const boutique of orgStores) {
+    const storeId = requireString(boutique.id, `store id for ${boutique.slug}`);
+    const storeSlug = boutique.slug ?? "main";
+    const session =
+      storeId === hq.id
+        ? hqSession
+        : await loginScopedWithStore(merchantEmail, merchantPassword, org.slug, storeId);
+    const purchaseAuth = agentToken
+      ? (
+          await loginScopedWithStore(config.agentEmail, config.agentPassword, org.slug, storeId)
+        ).accessToken
+      : session.accessToken;
+
+    for (const amount of amounts) {
+      log(`[${org.slug}/${storeSlug}] Purchase ${amount} FCFA for ${config.customerPhone}`);
+      await recordPurchase(purchaseAuth, { phone: config.customerPhone, amountFcfa: amount });
+    }
+    boutiqueActivity.push({ slug: storeSlug, purchaseCount: amounts.length });
   }
 
-  if (store.richDemo) {
+  if (org.richDemo) {
     for (const extra of extraStaffCustomers) {
-      log(`[${store.slug}] Staff-create ${extra.phone}`);
+      log(`[${org.slug}] Staff-create ${extra.phone}`);
       const created = await staffCreateCustomer(merchantToken, merchantToken, {
         name: extra.name,
         phone: extra.phone,
       });
-      log(`[${store.slug}] Purchase ${extra.amountFcfa} FCFA for ${extra.name}`);
-      await recordPurchase(
-        purchaseAuth,
-        created.customer_qr
-          ? { customerQr: String(created.customer_qr), amountFcfa: extra.amountFcfa }
-          : { phone: extra.phone, amountFcfa: extra.amountFcfa },
-      );
+      log(`[${org.slug}] Purchase ${extra.amountFcfa} FCFA for ${extra.name}`);
+      await recordPurchase(merchantToken, {
+        ...(created.customer_qr
+          ? { customerQr: String(created.customer_qr) }
+          : { phone: extra.phone }),
+        amountFcfa: extra.amountFcfa,
+      });
     }
   }
 
   const metrics = await getStoreMetrics(merchantToken);
+  const pointsPerBoutique = amounts.reduce((sum, a) => sum + pointsForAmount(a), 0);
   return {
-    storeQr,
+    hqQr,
     enrolled,
     rewards,
     ruleCount,
     metrics,
-    totalMainPoints: amounts.reduce((sum, a) => sum + pointsForAmount(a), 0),
+    boutiqueActivity,
+    totalMainPoints: pointsPerBoutique * orgStores.length,
   };
 }
 
-async function seedClaimAndValidateFlow(store, merchantToken, enrollmentId, rewards) {
+async function seedClaimAndValidateFlow(org, merchantToken, enrollmentId, rewards) {
   const affordable = rewards
     .map((r) => asObject(r, "reward"))
     .filter((r) => typeof r.point_cost === "number" && r.point_cost <= 200)
@@ -765,11 +883,11 @@ async function seedClaimAndValidateFlow(store, merchantToken, enrollmentId, rewa
     affordable[0] ??
     rewards.map((r) => asObject(r, "reward")).sort((a, b) => (a.point_cost ?? 0) - (b.point_cost ?? 0))[0];
   if (!pick?.id) {
-    console.warn(`  Skip claim demo for ${store.slug}: no rewards`);
+    console.warn(`  Skip claim demo for ${org.slug}: no rewards`);
     return null;
   }
 
-  log(`[${store.slug}] Customer OTP login + claim reward "${pick.name}"`);
+  log(`[${org.slug}] Customer OTP login + claim reward "${pick.name}"`);
   const proof = await resolvePhoneVerifyToken(config.customerPhone, config.customerPhoneVerifyToken);
   const loginPayload = await customerLogin(proof);
   const access0 = requireString(loginPayload.access_token, "customer access");
@@ -791,7 +909,7 @@ async function seedClaimAndValidateFlow(store, merchantToken, enrollmentId, rewa
   const claimQr = requireString(claim.claim_qr, "claim_qr");
   const displayCode = typeof claim.display_code === "string" ? claim.display_code : "";
 
-  log(`[${store.slug}] Staff validate claim ${displayCode || claimQr.slice(0, 24)}`);
+  log(`[${org.slug}] Staff validate claim ${displayCode || claimQr.slice(0, 24)}`);
   const burned = await staffValidateRedemption(merchantToken, claimQr);
   return { claim, burned, rewardId };
 }
@@ -823,40 +941,51 @@ async function main() {
   const superLogin = await loginScoped(config.superEmail, config.superPassword);
   const superToken = superLogin.accessToken;
 
-  const seededStores = [];
-  for (const store of stores) {
-    log(`Create store ${store.name} (${store.slug})`);
-    const tenantId = await ensureTenant(superToken, store);
+  const seededOrgs = [];
+  for (const org of organizations) {
+    log(`Create organization ${org.name} (${org.slug})`);
+    const tenantId = await ensureTenant(superToken, org);
 
-    log(`Invite merchant admin for ${store.slug}`);
+    log(`Invite merchant admin for ${org.slug}`);
     await ensureWorkspaceAccess(
       superToken,
-      store.merchantEmail,
+      org.merchantEmail,
       "merchant_admin",
-      store.merchantPassword,
+      org.merchantPassword,
       `/v1/superadmin/tenants/${tenantId}/invitations`,
-      store.slug,
+      org.slug,
     );
 
-    log(`Login merchant ${store.merchantEmail}`);
-    const merchantSession = await loginScoped(store.merchantEmail, store.merchantPassword, store.slug);
+    log(`Login merchant ${org.merchantEmail}`);
+    let merchantSession = await loginScoped(org.merchantEmail, org.merchantPassword, org.slug);
 
-    if (store.includeSharedAgent) {
-      log(`Invite shared staff into ${store.slug}`);
+    if (org.activateBilling) {
+      await activateOrgSubscription(merchantSession.accessToken);
+      merchantSession = await loginScoped(org.merchantEmail, org.merchantPassword, org.slug);
+    }
+
+    let orgStores = await listOrgStores(merchantSession.accessToken);
+    if (org.boutiques?.length) {
+      orgStores = await ensureOrgBoutiques(merchantSession.accessToken, org.boutiques);
+    }
+
+    if (org.includeSharedAgent) {
+      log(`Invite shared staff into ${org.slug}`);
       await ensureWorkspaceAccess(
         merchantSession.accessToken,
         config.agentEmail,
         "staff",
         config.agentPassword,
         "/v1/store/invitations",
-        store.slug,
+        org.slug,
       );
     }
 
-    seededStores.push({
-      ...store,
+    seededOrgs.push({
+      ...org,
       tenantId,
       merchantToken: merchantSession.accessToken,
+      orgStores,
     });
   }
 
@@ -864,32 +993,39 @@ async function main() {
   const sharedAgentSession = await loginScoped(config.agentEmail, config.agentPassword);
   const sharedAgentWorkspaces = /** @type {WorkspaceRow[]} */ (sharedAgentSession.workspaces);
 
-  /** @type {Array<{ storeSlug: string; enrollmentId: string; points: number; metrics?: Record<string, unknown> }>} */
+  /** @type {Array<{ orgSlug: string; enrollmentId: string; points: number; boutiques: string[]; metrics?: Record<string, unknown> }>} */
   const mainCustomerPrograms = [];
   /** @type {Record<string, unknown> | null} */
   let claimDemo = null;
 
-  for (const store of seededStores) {
+  for (const org of seededOrgs) {
     let agentToken = "";
-    if (store.includeSharedAgent) {
-      const agentForStore = await loginScoped(config.agentEmail, config.agentPassword, store.slug);
-      agentToken = agentForStore.accessToken;
+    if (org.includeSharedAgent) {
+      const agentForOrg = await loginScoped(config.agentEmail, config.agentPassword, org.slug);
+      agentToken = agentForOrg.accessToken;
     }
 
-    const seeded = await seedStoreCatalogAndLedger(store, store.merchantToken, agentToken || undefined);
+    const seeded = await seedOrgLoyaltyDemo(
+      org,
+      org.merchantEmail,
+      org.merchantPassword,
+      org.orgStores,
+      agentToken || undefined,
+    );
 
     mainCustomerPrograms.push({
-      storeSlug: store.slug,
-      enrollmentId: requireString(seeded.enrolled.enrollment_id, `enrollment id for ${store.slug}`),
+      orgSlug: org.slug,
+      enrollmentId: requireString(seeded.enrolled.enrollment_id, `enrollment id for ${org.slug}`),
       points: seeded.totalMainPoints,
+      boutiques: seeded.boutiqueActivity.map((row) => row.slug),
       metrics: seeded.metrics,
     });
 
-    if (store.richDemo && seeded.rewards.length > 0) {
+    if (org.richDemo && seeded.rewards.length > 0) {
       try {
         claimDemo = await seedClaimAndValidateFlow(
-          store,
-          store.merchantToken,
+          org,
+          org.merchantToken,
           requireString(seeded.enrolled.enrollment_id, "enrollment for claim"),
           seeded.rewards,
         );
@@ -899,21 +1035,29 @@ async function main() {
     }
   }
 
-  const crossTenantStore = seededStores[seededStores.length - 1];
-  log(`Create worker-as-customer case in ${crossTenantStore.slug}`);
-  const crossTenantStoreQr = await getStoreQr(crossTenantStore.merchantToken);
-  const workerCustomerEnrollment = await ensurePwaEnrollment(crossTenantStore.merchantToken, crossTenantStoreQr, {
+  const crossTenantOrg = seededOrgs[seededOrgs.length - 1];
+  log(`Create worker-as-customer case in ${crossTenantOrg.slug}`);
+  const crossHq = hqStore(crossTenantOrg.orgStores);
+  const crossSession = await loginScopedWithStore(
+    crossTenantOrg.merchantEmail,
+    crossTenantOrg.merchantPassword,
+    crossTenantOrg.slug,
+    requireString(crossHq?.id, "cross-tenant HQ id"),
+  );
+  const crossTenantStoreQr = await getStoreQr(crossSession.accessToken);
+  await ensurePwaEnrollment(crossSession.accessToken, crossTenantStoreQr, {
     name: config.workerCustomerName,
     phone: config.workerCustomerPhone,
     email: config.agentEmail,
     phoneVerifyToken: config.workerCustomerPhoneVerifyToken || undefined,
   });
-  await recordPurchase(crossTenantStore.merchantToken, {
+  await recordPurchase(crossSession.accessToken, {
     phone: config.workerCustomerPhone,
     amountFcfa: 3900,
   });
 
-  const primary = mainCustomerPrograms.find((p) => p.storeSlug === config.tenantSlug);
+  const primary = mainCustomerPrograms.find((p) => p.orgSlug === config.tenantSlug);
+  const primaryOrg = seededOrgs.find((o) => o.slug === config.tenantSlug);
 
   console.log("");
   console.log(`Done. Web app (${config.webOrigin}):`);
@@ -922,13 +1066,15 @@ async function main() {
     `  Superadmin:  email=${config.superEmail}  password=${config.superPassword}  -> /root`,
   );
   console.log("");
-  console.log("  Merchant admins (single workspace):");
-  for (const store of seededStores) {
+  console.log("  Merchant admins (organization workspace):");
+  for (const org of seededOrgs) {
+    const boutiqueSlugs = org.orgStores.map((s) => s.slug).filter(Boolean).join(", ");
     console.log(
-      `    ${store.slug}: email=${store.merchantEmail}  password=${store.merchantPassword}  -> /store`,
+      `    ${org.slug}: email=${org.merchantEmail}  password=${org.merchantPassword}  -> /store`,
     );
+    console.log(`      Boutiques (${org.orgStores.length}): ${boutiqueSlugs}`);
     console.log(
-      `      UI: /store  /store/customers  /store/transactions  /store/rewards  /store/points-rules`,
+      `      UI: /store  /store/stores  /store/subscription  /store/customers  /store/rewards`,
     );
   }
   console.log("");
@@ -943,7 +1089,9 @@ async function main() {
   console.log(
     `  Customer: ${config.customerName}  phone=${config.customerPhone}  email=${config.customerEmail}`,
   );
-  console.log(`    Programs: ${mainCustomerPrograms.map((r) => `${r.storeSlug} (~${r.points} pts)`).join(", ")}`);
+  console.log(
+    `    Programs (pooled per org): ${mainCustomerPrograms.map((r) => `${r.orgSlug} (~${r.points} pts, ${r.boutiques.join("+")})`).join("; ")}`,
+  );
   console.log(`    UI: /customer/wallet  /customer/rewards  /customer/qr`);
   if (primary?.metrics) {
     const m = primary.metrics;
@@ -958,18 +1106,29 @@ async function main() {
   }
   console.log("");
   console.log(
-    `  Worker-as-customer: ${config.workerCustomerName}  phone=${config.workerCustomerPhone}  store=${crossTenantStore.slug}`,
+    `  Worker-as-customer: ${config.workerCustomerName}  phone=${config.workerCustomerPhone}  org=${crossTenantOrg.slug}`,
   );
   console.log("");
-  console.log("  Join pages:");
-  for (const store of seededStores) {
-    console.log(`    ${store.slug}: ${config.webOrigin}/join/${store.slug}`);
+  console.log("  Join pages (org slug → HQ enrollment QR):");
+  for (const org of seededOrgs) {
+    console.log(`    ${org.slug}: ${config.webOrigin}/join/${org.slug}`);
+  }
+  if (primaryOrg) {
+    console.log("");
+    console.log(`  ${config.tenantName} boutiques (switch in /store after login):`);
+    for (const st of primaryOrg.orgStores) {
+      console.log(`    - ${st.slug}${st.is_hq ? " (HQ)" : ""}: ${st.name}`);
+    }
   }
   console.log("");
   console.log("API seed summary:");
   console.log(`  Base URL:      ${config.apiBase}`);
-  console.log(`  Stores:        ${seededStores.length} (rules + rewards each)`);
-  console.log(`  Ledger:        multiple earn events per store; 1 redeem on ${config.tenantSlug} when OTP works`);
+  console.log(`  Organizations: ${seededOrgs.length}`);
+  const boutiqueTotal = seededOrgs.reduce((n, o) => n + o.orgStores.length, 0);
+  console.log(`  Boutiques:     ${boutiqueTotal} (HQ main + extras on ${config.tenantSlug} when billing activated)`);
+  console.log(
+    `  Ledger:        earn events per boutique; pooled balance per org; redeem on ${config.tenantSlug} when OTP works`,
+  );
   console.log("");
   console.log("Tips:");
   console.log("  - COOKIE_SECURE=false in apps/web/.env.local for http cookies.");

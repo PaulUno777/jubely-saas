@@ -25,6 +25,9 @@ jobs:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
 
+      - name: Verify Wire codegen
+        run: go generate ./internal/app/... && git diff --exit-code
+
       - name: Test
         run: go test ./...
 

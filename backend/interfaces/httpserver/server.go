@@ -4,7 +4,6 @@ import (
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
 	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/authtoken"
-	"github.com/PaulUno777/jubely-saas/backend/infrastructure/persistence/postgres"
 	"github.com/gin-gonic/gin"
 )
 
@@ -61,12 +60,10 @@ type Server struct {
 	QRCodec               ports.QRCodec
 	AccessSigner          ports.TokenSigner
 
-	Tenants      *postgres.TenantRepository
-	Stores       *postgres.StoreRepository
-	Users        *postgres.UserRepository
-	Invitations  *postgres.InvitationRepository
-	StoreMetrics *postgres.StoreLoyaltyMetrics
-	StoreCatalog *postgres.StoreCatalog
+	Tenants      ports.TenantRepository
+	Stores       ports.StoreRepository
+	Invitations  ports.InvitationRepository
+	StoreMetrics ports.TenantLoyaltyMetrics
 
 	StripeWebhookSecret string
 

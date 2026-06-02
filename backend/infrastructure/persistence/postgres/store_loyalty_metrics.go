@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 
+	"github.com/PaulUno777/jubely-saas/backend/application/ports"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -12,17 +13,8 @@ type StoreLoyaltyMetrics struct {
 	Pool *pgxpool.Pool
 }
 
-type TenantDashboardMetrics struct {
-	PointsDistributed      int64
-	PointEventsThisMonth   int64
-	ClientsServedToday     int64
-	PointsIssuedToday      int64
-	RedemptionsToday       int64
-	NewEnrollmentsToday    int64
-}
-
 // TenantSummary returns dashboard aggregates for merchant admin KPIs.
-func (r *StoreLoyaltyMetrics) TenantSummary(ctx context.Context, tenantID uuid.UUID) (TenantDashboardMetrics, error) {
+func (r *StoreLoyaltyMetrics) TenantSummary(ctx context.Context, tenantID uuid.UUID) (ports.TenantDashboardMetrics, error) {
 	db := pickDB(ctx, r.Pool)
 	const q = `
 SELECT
@@ -41,7 +33,7 @@ SELECT
   )
 FROM point_events
 WHERE tenant_id = $1`
-	var out TenantDashboardMetrics
+	var out ports.TenantDashboardMetrics
 	err := db.QueryRow(ctx, q, tenantID).Scan(
 		&out.PointsDistributed,
 		&out.PointEventsThisMonth,
