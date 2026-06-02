@@ -12,8 +12,9 @@ import (
 )
 
 type CreateTenant struct {
-	Tenants ports.TenantRepository
-	Clock   ports.Clock
+	Tenants   ports.TenantRepository
+	Provision *ProvisionOrganization
+	Clock     ports.Clock
 }
 
 type CreateTenantInput struct {
@@ -72,6 +73,15 @@ func (uc *CreateTenant) Execute(ctx context.Context, in CreateTenantInput) (*Cre
 	}
 	if err := uc.Tenants.Create(ctx, t); err != nil {
 		return nil, err
+	}
+	if uc.Provision != nil {
+		trialPlan := plan
+		if trialPlan == "starter" {
+			trialPlan = "growth"
+		}
+		if err := uc.Provision.Execute(ctx, t.ID, t.Name, t.Slug, trialPlan); err != nil {
+			return nil, err
+		}
 	}
 	return &CreateTenantOutput{Tenant: t}, nil
 }

@@ -68,12 +68,12 @@ func (m *memEnrollmentRepo) FindByTenantAndCustomer(ctx context.Context, tenantI
 
 type stubQRCodec struct{}
 
-func (stubQRCodec) SignStoreQR(ctx context.Context, tenantID uuid.UUID) (string, error) {
-	return "store:" + tenantID.String(), nil
+func (stubQRCodec) SignStoreQR(ctx context.Context, organizationID, storeID uuid.UUID) (string, error) {
+	return "store:" + organizationID.String(), nil
 }
 
-func (stubQRCodec) ParseStoreQR(ctx context.Context, token string) (uuid.UUID, error) {
-	return uuid.New(), nil
+func (stubQRCodec) ParseStoreQR(ctx context.Context, token string) (uuid.UUID, uuid.UUID, error) {
+	return uuid.New(), uuid.Nil, nil
 }
 
 func (stubQRCodec) SignCustomerQR(ctx context.Context, tenantID, customerID uuid.UUID) (string, error) {

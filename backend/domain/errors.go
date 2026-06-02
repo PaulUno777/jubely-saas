@@ -13,4 +13,6 @@ var (
 	ErrEmailTaken        = errors.New("email_taken")
 	ErrPhoneTaken        = errors.New("phone_taken")
 	ErrSelfEnrollmentForbidden = errors.New("self_enrollment_forbidden")
+	ErrQuotaExceeded           = errors.New("quota_exceeded")
+	ErrSubscriptionInactive    = errors.New("subscription_inactive")
 )

@@ -1,4 +1,4 @@
-# Jubely HTTP API (`/v1`)
+# Jubelee HTTP API (`/v1`)
 
 Base URL is configured per environment (e.g. `http://localhost:8082/v1`). Responses use JSON envelopes: success `{ "data": ..., "meta": ... }`, errors `{ "error": { "code", "message", "details?" }, "meta": ... }`.
 
@@ -13,7 +13,8 @@ Base URL is configured per environment (e.g. `http://localhost:8082/v1`). Respon
 | GET    | `/public/tenant/:slug`       | Public tenant card: name, slug, logo, `store_qr` token for enrollment                            |
 | POST   | `/public/otp/send`           | Request SMS-style OTP (in-memory MVP; use `PUBLIC_OTP_LOG_CODE=true` on API to log codes in dev) |
 | POST   | `/public/otp/verify`         | Verify OTP; returns `phone_verify_token` JWT for optional `phone_verify_token` on enroll         |
-| POST   | `/public/enrollments`        | Enroll customer via signed `store_qr` + phone + name                                             |
+| POST   | `/public/enrollments`        | Enroll customer via signed `store_qr` (org + store) + phone + name                             |
+| GET    | `/public/plans`              | Plan catalog (Standard / Growth / Scale)                                                         |
 | POST   | `/auth/login`                | Email + password; optional `tenant_slug` for tenant-scoped users                                 |
 | POST   | `/auth/customer/login`       | Customer login after OTP verify (`phone_verify_token`)                                           |
 | POST   | `/auth/refresh`              | Refresh access token                                                                             |
@@ -48,9 +49,21 @@ Group `/v1/superadmin`.
 | GET    | `/superadmin/stats`                         | Dashboard stats                                                |
 | POST   | `/superadmin/uploads/tenant-logo`           | Multipart tenant logo upload                                   |
 
-## Authenticated — merchant admin (`tenant_id` claim, role `merchant_admin`)
+## Authenticated — merchant admin (`tenant_id` = organization, optional `active_store_id`)
 
-Group `/v1/store`.
+Group `/v1/organizations/me` (org-wide billing & boutiques).
+
+| Method | Path                                      | Description                                      |
+| ------ | ----------------------------------------- | ------------------------------------------------ |
+| GET    | `/organizations/me/stores`                | List boutiques                                   |
+| POST   | `/organizations/me/stores`                  | Create boutique (quota-enforced)                 |
+| GET    | `/organizations/me/subscription`          | Subscription + plan limits                       |
+| POST   | `/organizations/me/subscription/momo-invoice` | MoMo pay-by-reference (`JBE-PAY-*`)          |
+| POST   | `/organizations/me/subscription/confirm-momo` | Mark invoice paid (MVP manual confirm)       |
+
+JWT may include `active_store_id` (staff counter context) and `subscription_status` (`active`, `trialing`, `frozen`, …). Writes are blocked when status is not `active` or `trialing`.
+
+Group `/v1/store` (operations; purchase attribution uses `active_store_id`).
 
 | Method | Path                 | Description                                                    |
 | ------ | -------------------- | -------------------------------------------------------------- |
@@ -70,7 +83,8 @@ Group `/v1/staff`.
 | Method | Path               | Description                                                         |
 | ------ | ------------------ | ------------------------------------------------------------------- |
 | POST   | `/staff/customers` | Create customer identity + enrollment + customer QR                 |
-| POST   | `/staff/purchases` | Record purchase amount; awards points (MVP rule: 1 pt per 500 FCFA) |
+| POST   | `/staff/purchases` | Record purchase amount; awards points (rules engine; `store_id` on ledger) |
+| POST   | `/staff/redemptions/validate` | Burn claim QR (org-wide; no store gate on reward pickup) |
 
 `POST /staff/purchases` requires permission `record_transaction` on the JWT (merchant admins implicitly have all store permissions).
 

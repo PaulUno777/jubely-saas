@@ -267,7 +267,8 @@ func (s *Server) AuthLogout(c *gin.Context) {
 }
 
 type selectWorkspaceBody struct {
-	MembershipID string `json:"membership_id"`
+	MembershipID  string `json:"membership_id"`
+	ActiveStoreID string `json:"active_store_id"`
 }
 
 func (s *Server) AuthSelectWorkspace(c *gin.Context) {
@@ -286,10 +287,20 @@ func (s *Server) AuthSelectWorkspace(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_membership_id"})
 		return
 	}
+	var activeStoreID *uuid.UUID
+	if body.ActiveStoreID != "" {
+		id, err := uuid.Parse(body.ActiveStoreID)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_store_id"})
+			return
+		}
+		activeStoreID = &id
+	}
 	out, err := s.SelectWorkspaceUC.Execute(c.Request.Context(), usecase.SelectWorkspaceInput{
 		UserID:             claims.UserID,
 		MembershipID:       membershipID,
 		ActiveEnrollmentID: claims.ActiveEnrollmentID,
+		ActiveStoreID:      activeStoreID,
 		UserAgent:          c.GetHeader("User-Agent"),
 	})
 	if err != nil {

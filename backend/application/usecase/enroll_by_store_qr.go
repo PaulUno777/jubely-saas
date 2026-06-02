@@ -21,6 +21,8 @@ type EnrollByStoreQR struct {
 	Memberships              ports.TenantMembershipRepository
 	Customers                ports.CustomerIdentityRepository
 	Enrollments              ports.LoyaltyEnrollmentRepository
+	Stores                   ports.StoreRepository
+	Subscriptions            ports.SubscriptionRepository
 	QRCodec                  ports.QRCodec
 	PhoneProofParser         ports.PhoneEnrollmentProofParser
 	RequirePhoneVerification bool
@@ -73,13 +75,38 @@ func (uc *EnrollByStoreQR) Execute(ctx context.Context, in EnrollByStoreQRInput)
 		}
 	}
 
-	tenantID, err := uc.QRCodec.ParseStoreQR(ctx, storeQR)
+	tenantID, storeID, err := uc.QRCodec.ParseStoreQR(ctx, storeQR)
 	if err != nil {
 		return nil, fmt.Errorf("%w", domain.ErrInvalid)
 	}
 	tenant, err := uc.Tenants.FindByID(ctx, tenantID)
 	if err != nil {
 		return nil, err
+	}
+	if uc.Subscriptions != nil && uc.Clock != nil {
+		sub, err := uc.Subscriptions.FindByOrganization(ctx, tenantID)
+		if err != nil {
+			return nil, err
+		}
+		if !SubscriptionAllowsWrites(sub, uc.Clock.Now().UTC()) {
+			return nil, fmt.Errorf("%w", domain.ErrSubscriptionInactive)
+		}
+	}
+	if storeID == uuid.Nil && uc.Stores != nil {
+		hq, err := uc.Stores.FindHQ(ctx, tenantID)
+		if err != nil {
+			return nil, err
+		}
+		storeID = hq.ID
+	}
+	if uc.Stores != nil && storeID != uuid.Nil {
+		st, err := uc.Stores.FindByID(ctx, tenantID, storeID)
+		if err != nil {
+			return nil, err
+		}
+		if st.Status != domain.StoreStatusOpen {
+			return nil, fmt.Errorf("%w", domain.ErrInvalid)
+		}
 	}
 
 	var out EnrollByStoreQROutput
@@ -142,12 +169,17 @@ func (uc *EnrollByStoreQR) Execute(ctx context.Context, in EnrollByStoreQRInput)
 			return fmt.Errorf("%w", domain.ErrConflict)
 		}
 
+		var homeStoreID *uuid.UUID
+		if storeID != uuid.Nil {
+			homeStoreID = &storeID
+		}
 		e := &domain.LoyaltyEnrollment{
-			ID:         uuid.New(),
-			TenantID:   tenantID,
-			CustomerID: ci.ID,
-			Tier:       "bronze",
-			CreatedAt:  now,
+			ID:          uuid.New(),
+			TenantID:    tenantID,
+			CustomerID:  ci.ID,
+			Tier:        "bronze",
+			HomeStoreID: homeStoreID,
+			CreatedAt:   now,
 		}
 		if err := uc.Enrollments.Create(ctx, e); err != nil {
 			return err

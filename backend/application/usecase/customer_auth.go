@@ -114,7 +114,7 @@ func (uc *CustomerLogin) Execute(ctx context.Context, in CustomerLoginInput) (*C
 		Catalog:       uc.Catalog,
 		Clock:         uc.Clock,
 		RefreshTTL:    uc.RefreshTTL,
-	}, state, nil, nil, true, in.UserAgent, in.IP)
+	}, state, nil, nil, nil, true, in.UserAgent, in.IP)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ func (uc *SelectCustomerContext) Execute(ctx context.Context, in SelectCustomerC
 		Catalog:       uc.Catalog,
 		Clock:         uc.Clock,
 		RefreshTTL:    uc.RefreshTTL,
-	}, state, nil, &in.EnrollmentID, true, in.UserAgent, in.IP)
+	}, state, nil, &in.EnrollmentID, nil, true, in.UserAgent, in.IP)
 	if err != nil {
 		return nil, err
 	}

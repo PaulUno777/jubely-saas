@@ -25,6 +25,7 @@ type StaffRecordPurchase struct {
 
 type StaffRecordPurchaseInput struct {
 	TenantID    uuid.UUID
+	StoreID     *uuid.UUID
 	PhoneE164   string
 	CustomerQR  string
 	AmountFcfa  int64
@@ -76,7 +77,7 @@ func (uc *StaffRecordPurchase) Execute(ctx context.Context, in StaffRecordPurcha
 		"event_type":  "earn",
 		"rules_eval":  evalOut,
 	})
-	if err := uc.Points.Append(ctx, in.TenantID, &enr.ID, "earn", delta, payload); err != nil {
+	if err := uc.Points.Append(ctx, in.TenantID, in.StoreID, &enr.ID, "earn", delta, payload); err != nil {
 		return nil, err
 	}
 	return &StaffRecordPurchaseOutput{

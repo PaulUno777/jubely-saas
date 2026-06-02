@@ -67,6 +67,7 @@ func (s *Server) StaffRecordPurchase(c *gin.Context) {
 	}
 	out, err := s.StaffRecordPurchaseUC.Execute(c.Request.Context(), usecase.StaffRecordPurchaseInput{
 		TenantID:    *claims.TenantID,
+		StoreID:     claims.ActiveStoreID,
 		PhoneE164:   body.PhoneE164,
 		CustomerQR:  body.CustomerQR,
 		AmountFcfa:  body.AmountFcfa,

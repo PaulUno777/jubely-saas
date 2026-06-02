@@ -17,6 +17,7 @@ import (
 type StoreSignup struct {
 	Tx          ports.TxManager
 	Tenants     ports.TenantRepository
+	Provision   *ProvisionOrganization
 	Users       ports.UserRepository
 	Memberships ports.TenantMembershipRepository
 	Customers   ports.CustomerIdentityRepository
@@ -109,6 +110,15 @@ func (uc *StoreSignup) Execute(ctx context.Context, in StoreSignupInput) (*Store
 	err := uc.Tx.WithinTx(ctx, func(ctx context.Context) error {
 		if err := uc.Tenants.Create(ctx, t); err != nil {
 			return err
+		}
+		if uc.Provision != nil {
+			trialPlan := plan
+			if trialPlan == "starter" {
+				trialPlan = "growth"
+			}
+			if err := uc.Provision.Execute(ctx, t.ID, t.Name, t.Slug, trialPlan); err != nil {
+				return err
+			}
 		}
 
 		_, err := uc.Users.FindByEmail(ctx, email)

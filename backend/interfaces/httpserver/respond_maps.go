@@ -51,6 +51,10 @@ func mapTenantError(err error) MappedError {
 		return MappedError{http.StatusBadRequest, i18n.CodeValidationInvalid, map[string]any{"reason": "invalid_input"}}
 	case errors.Is(err, domain.ErrNotFound):
 		return MappedError{http.StatusNotFound, i18n.CodeTenantNotFound, map[string]any{"reason": "not_found"}}
+	case errors.Is(err, domain.ErrQuotaExceeded):
+		return MappedError{http.StatusPaymentRequired, i18n.CodeQuotaExceeded, map[string]any{"reason": "quota_exceeded"}}
+	case errors.Is(err, domain.ErrSubscriptionInactive):
+		return MappedError{http.StatusPaymentRequired, i18n.CodeSubscriptionInactive, map[string]any{"reason": "subscription_inactive"}}
 	default:
 		return MappedError{http.StatusInternalServerError, i18n.CodeInternal, nil}
 	}
@@ -87,6 +91,8 @@ func mapCustomerError(err error) MappedError {
 		return MappedError{http.StatusForbidden, i18n.CodeCustomerSelfEnrollmentDisabled, map[string]any{"reason": "self_enrollment_disabled"}}
 	case errors.Is(err, domain.ErrConflict):
 		return MappedError{http.StatusConflict, i18n.CodeCustomerEnrollmentActive, map[string]any{"reason": "already_enrolled"}}
+	case errors.Is(err, domain.ErrSubscriptionInactive):
+		return MappedError{http.StatusPaymentRequired, i18n.CodeSubscriptionInactive, map[string]any{"reason": "subscription_inactive"}}
 	default:
 		return MappedError{http.StatusInternalServerError, i18n.CodeInternal, nil}
 	}

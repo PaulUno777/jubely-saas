@@ -31,7 +31,7 @@ type memPointAppend struct {
 	lastType  string
 }
 
-func (m *memPointAppend) Append(ctx context.Context, tenantID uuid.UUID, enrollmentID *uuid.UUID, eventType string, delta int, payload json.RawMessage) error {
+func (m *memPointAppend) Append(ctx context.Context, tenantID uuid.UUID, storeID *uuid.UUID, enrollmentID *uuid.UUID, eventType string, delta int, payload json.RawMessage) error {
 	m.lastDelta = delta
 	m.lastType = eventType
 	_ = tenantID

@@ -49,6 +49,12 @@ func (s *JWTSigner) SignAccessToken(_ context.Context, c ports.TokenClaims) (str
 	if c.ActiveEnrollmentID != nil {
 		claims["active_enrollment_id"] = c.ActiveEnrollmentID.String()
 	}
+	if c.ActiveStoreID != nil {
+		claims["active_store_id"] = c.ActiveStoreID.String()
+	}
+	if c.SubscriptionStatus != "" {
+		claims["subscription_status"] = c.SubscriptionStatus
+	}
 	if len(c.Workspaces) > 0 {
 		items := make([]any, 0, len(c.Workspaces))
 		for _, ws := range c.Workspaces {
@@ -273,6 +279,21 @@ func (s *JWTSigner) ParseAccessToken(_ context.Context, token string) (ports.Tok
 		}
 	}
 
+	var activeStoreID *uuid.UUID
+	switch v := mc["active_store_id"].(type) {
+	case string:
+		id, err := uuid.Parse(v)
+		if err != nil {
+			return ports.TokenClaims{}, domain.ErrUnauthorized
+		}
+		activeStoreID = &id
+	case nil:
+	default:
+		return ports.TokenClaims{}, domain.ErrUnauthorized
+	}
+
+	subscriptionStatus, _ := mc["subscription_status"].(string)
+
 	return ports.TokenClaims{
 		UserID:             uid,
 		MembershipID:       membershipID,
@@ -286,6 +307,8 @@ func (s *JWTSigner) ParseAccessToken(_ context.Context, token string) (ports.Tok
 		CustomerID:         customerID,
 		ActiveEnrollmentID: activeEnrollmentID,
 		Enrollments:        enrollments,
+		ActiveStoreID:      activeStoreID,
+		SubscriptionStatus: subscriptionStatus,
 	}, nil
 }
 

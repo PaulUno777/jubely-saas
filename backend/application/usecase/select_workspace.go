@@ -16,6 +16,9 @@ type SelectWorkspace struct {
 	Memberships   ports.TenantMembershipRepository
 	Customers     ports.CustomerIdentityRepository
 	Catalog       *postgres.StoreCatalog
+	Stores        ports.StoreRepository
+	StoreMembers  ports.StoreMembershipRepository
+	Subscriptions ports.SubscriptionRepository
 	RefreshTokens ports.RefreshTokenRepository
 	Signer        ports.TokenSigner
 	Clock         ports.Clock
@@ -26,6 +29,7 @@ type SelectWorkspaceInput struct {
 	UserID             uuid.UUID
 	MembershipID       uuid.UUID
 	ActiveEnrollmentID *uuid.UUID
+	ActiveStoreID      *uuid.UUID
 	UserAgent          string
 	IP                 *string
 }
@@ -64,15 +68,19 @@ func (uc *SelectWorkspace) Execute(ctx context.Context, in SelectWorkspaceInput)
 	if err != nil {
 		return nil, err
 	}
-	access, refresh, claims, err := issueAuthSession(ctx, authSessionDependencies{
+	deps := authSessionDependencies{
 		Signer:        uc.Signer,
 		RefreshTokens: uc.RefreshTokens,
 		Memberships:   uc.Memberships,
 		Customers:     uc.Customers,
 		Catalog:       uc.Catalog,
+		Stores:        uc.Stores,
+		StoreMembers:  uc.StoreMembers,
+		Subscriptions: uc.Subscriptions,
 		Clock:         uc.Clock,
 		RefreshTTL:    uc.RefreshTTL,
-	}, state, &membership.ID, in.ActiveEnrollmentID, false, in.UserAgent, in.IP)
+	}
+	access, refresh, claims, err := issueAuthSession(ctx, deps, state, &membership.ID, in.ActiveEnrollmentID, in.ActiveStoreID, false, in.UserAgent, in.IP)
 	if err != nil {
 		return nil, err
 	}

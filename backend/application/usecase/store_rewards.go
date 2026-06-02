@@ -19,8 +19,9 @@ func (uc *ListStoreRewards) Execute(ctx context.Context, tenantID uuid.UUID, act
 }
 
 type CreateStoreReward struct {
-	Rewards ports.RewardRepository
-	Clock   ports.Clock
+	Rewards      ports.RewardRepository
+	RewardStores ports.RewardStoreAvailabilityRepository
+	Clock        ports.Clock
 }
 
 type CreateStoreRewardInput struct {
@@ -31,6 +32,7 @@ type CreateStoreRewardInput struct {
 	MinTier     string
 	Active      bool
 	StockLimit  *int
+	StoreIDs    []uuid.UUID
 }
 
 func (uc *CreateStoreReward) Execute(ctx context.Context, in CreateStoreRewardInput) (*domain.Reward, error) {
@@ -58,12 +60,18 @@ func (uc *CreateStoreReward) Execute(ctx context.Context, in CreateStoreRewardIn
 	if err := uc.Rewards.Create(ctx, rw); err != nil {
 		return nil, err
 	}
+	if uc.RewardStores != nil && len(in.StoreIDs) > 0 {
+		if err := uc.RewardStores.SetForReward(ctx, rw.ID, in.StoreIDs); err != nil {
+			return nil, err
+		}
+	}
 	return rw, nil
 }
 
 type PatchStoreReward struct {
-	Rewards ports.RewardRepository
-	Clock   ports.Clock
+	Rewards      ports.RewardRepository
+	RewardStores ports.RewardStoreAvailabilityRepository
+	Clock        ports.Clock
 }
 
 type PatchStoreRewardInput struct {
@@ -75,6 +83,8 @@ type PatchStoreRewardInput struct {
 	MinTier     *string
 	Active      *bool
 	StockLimit  *int
+	StoreIDs    []uuid.UUID
+	SetStoreIDs bool
 }
 
 func (uc *PatchStoreReward) Execute(ctx context.Context, in PatchStoreRewardInput) (*domain.Reward, error) {
@@ -103,6 +113,11 @@ func (uc *PatchStoreReward) Execute(ctx context.Context, in PatchStoreRewardInpu
 	rw.UpdatedAt = uc.Clock.Now().UTC()
 	if err := uc.Rewards.Update(ctx, rw); err != nil {
 		return nil, err
+	}
+	if in.SetStoreIDs && uc.RewardStores != nil {
+		if err := uc.RewardStores.SetForReward(ctx, rw.ID, in.StoreIDs); err != nil {
+			return nil, err
+		}
 	}
 	return rw, nil
 }

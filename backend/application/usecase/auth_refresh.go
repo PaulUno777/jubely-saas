@@ -116,7 +116,7 @@ func (uc *RefreshAuth) Execute(ctx context.Context, in RefreshAuthInput) (*Refre
 		Catalog:       uc.Catalog,
 		Clock:         uc.Clock,
 		RefreshTTL:    uc.TTL,
-	}, state, existing.ActiveMembershipID, existing.ActiveEnrollmentID, true, in.UserAgent, in.IP)
+	}, state, existing.ActiveMembershipID, existing.ActiveEnrollmentID, nil, true, in.UserAgent, in.IP)
 	if err != nil {
 		return nil, err
 	}

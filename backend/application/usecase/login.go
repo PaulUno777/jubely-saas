@@ -120,7 +120,7 @@ func (uc *Login) Execute(ctx context.Context, in LoginInput) (*LoginOutput, erro
 		Catalog:       uc.Catalog,
 		Clock:         uc.Clock,
 		RefreshTTL:    uc.RefreshTTL,
-	}, state, preferredMembershipID, nil, false, in.UserAgent, in.IP)
+	}, state, preferredMembershipID, nil, nil, false, in.UserAgent, in.IP)
 	if err != nil {
 		return nil, err
 	}

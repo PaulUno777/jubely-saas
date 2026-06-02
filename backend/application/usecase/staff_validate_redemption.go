@@ -25,12 +25,13 @@ type StaffValidateRedemptionInput struct {
 }
 
 type StaffValidateRedemptionOutput struct {
-	RedemptionID uuid.UUID
-	RewardName   string
-	PointsSpent  int
-	DisplayCode  string
-	CustomerName string
-	CustomerID   uuid.UUID
+	RedemptionID      uuid.UUID
+	RewardName        string
+	PointsSpent       int
+	DisplayCode       string
+	CustomerName      string
+	CustomerID        uuid.UUID
+	FulfillmentStores []domain.FulfillmentStore
 }
 
 func (uc *StaffValidateRedemption) Execute(ctx context.Context, in StaffValidateRedemptionInput) (*StaffValidateRedemptionOutput, error) {
@@ -72,11 +73,12 @@ func (uc *StaffValidateRedemption) Execute(ctx context.Context, in StaffValidate
 		return nil, err
 	}
 	return &StaffValidateRedemptionOutput{
-		RedemptionID: rd.ID,
-		RewardName:   rw.Name,
-		PointsSpent:  rd.PointsSpent,
-		DisplayCode:  rd.DisplayCode,
-		CustomerName: ci.Name,
-		CustomerID:   ci.ID,
+		RedemptionID:      rd.ID,
+		RewardName:        rw.Name,
+		PointsSpent:       rd.PointsSpent,
+		DisplayCode:       rd.DisplayCode,
+		CustomerName:      ci.Name,
+		CustomerID:        ci.ID,
+		FulfillmentStores: rd.FulfillmentStores,
 	}, nil
 }

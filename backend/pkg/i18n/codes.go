@@ -22,4 +22,6 @@ const (
 	CodeCustomerSelfEnrollmentDisabled = "error.customer.self_enrollment_disabled"
 	CodeInternal                  = "error.internal"
 	CodeRateLimit                 = "error.rate_limit"
+	CodeSubscriptionInactive      = "error.subscription.inactive"
+	CodeQuotaExceeded             = "error.quota.exceeded"
 )

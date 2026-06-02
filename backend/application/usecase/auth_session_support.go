@@ -17,6 +17,9 @@ type authSessionDependencies struct {
 	Memberships   ports.TenantMembershipRepository
 	Customers     ports.CustomerIdentityRepository
 	Catalog       *postgres.StoreCatalog
+	Stores        ports.StoreRepository
+	StoreMembers  ports.StoreMembershipRepository
+	Subscriptions ports.SubscriptionRepository
 	Clock         ports.Clock
 	RefreshTTL    time.Duration
 }
@@ -154,11 +157,13 @@ func issueAuthSession(
 	deps authSessionDependencies,
 	state *authSessionState,
 	activeMembershipID, activeEnrollmentID *uuid.UUID,
+	preferredStoreID *uuid.UUID,
 	includeCustomerRole bool,
 	userAgent string,
 	ip *string,
 ) (access string, refresh string, claims ports.TokenClaims, err error) {
 	claims = state.tokenClaims(activeMembershipID, activeEnrollmentID, includeCustomerRole)
+	enrichMerchantSessionClaims(ctx, &claims, deps, preferredStoreID)
 	access, err = deps.Signer.SignAccessToken(ctx, claims)
 	if err != nil {
 		return "", "", ports.TokenClaims{}, err
@@ -187,4 +192,18 @@ func issueAuthSession(
 
 func makePlaceholderCustomerEmail(customerID uuid.UUID) string {
 	return "customer+" + uuid.NewSHA1(uuid.Nil, []byte(customerID.String())).String() + "@jubely.local"
+}
+
+func enrichMerchantSessionClaims(ctx context.Context, claims *ports.TokenClaims, deps authSessionDependencies, preferredStoreID *uuid.UUID) {
+	if claims.TenantID == nil || claims.Role == nil || deps.Subscriptions == nil {
+		return
+	}
+	claims.SubscriptionStatus = LoadSubscriptionStatus(ctx, deps.Subscriptions, *claims.TenantID, deps.Clock)
+	if deps.Stores == nil {
+		return
+	}
+	storeID, err := ResolveActiveStore(ctx, deps.Stores, deps.StoreMembers, *claims.TenantID, claims.UserID, *claims.Role, preferredStoreID)
+	if err == nil {
+		claims.ActiveStoreID = storeID
+	}
 }

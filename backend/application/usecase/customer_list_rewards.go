@@ -9,15 +9,17 @@ import (
 )
 
 type ListCustomerRewards struct {
-	Rewards     ports.RewardRepository
-	Enrollments ports.LoyaltyEnrollmentRepository
-	Balances    ports.EnrollmentBalanceReader
+	Rewards      ports.RewardRepository
+	RewardStores ports.RewardStoreAvailabilityRepository
+	Enrollments  ports.LoyaltyEnrollmentRepository
+	Balances     ports.EnrollmentBalanceReader
 }
 
 type CustomerRewardItem struct {
-	Reward       domain.Reward
-	Affordable   bool
-	PointsNeeded int
+	Reward             domain.Reward
+	Affordable         bool
+	PointsNeeded       int
+	FulfillmentStores  []domain.FulfillmentStore
 }
 
 func (uc *ListCustomerRewards) Execute(ctx context.Context, enrollmentID uuid.UUID, tenantID *uuid.UUID) ([]CustomerRewardItem, int64, string, error) {
@@ -43,10 +45,15 @@ func (uc *ListCustomerRewards) Execute(ctx context.Context, enrollmentID uuid.UU
 			continue
 		}
 		affordable := balance >= int64(rw.PointCost)
+		var fs []domain.FulfillmentStore
+		if uc.RewardStores != nil {
+			fs, _ = uc.RewardStores.ListFulfillmentStoresForReward(ctx, rw.ID)
+		}
 		out = append(out, CustomerRewardItem{
-			Reward:       rw,
-			Affordable:   affordable,
-			PointsNeeded: rw.PointCost,
+			Reward:            rw,
+			Affordable:        affordable,
+			PointsNeeded:      rw.PointCost,
+			FulfillmentStores: fs,
 		})
 	}
 	return out, balance, enr.Tier, nil

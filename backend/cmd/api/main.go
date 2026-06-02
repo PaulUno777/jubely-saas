@@ -50,6 +50,17 @@ func main() {
 	hasher := security.BcryptHasher{}
 
 	tenantRepo := &postgres.TenantRepository{Pool: pool}
+	storeRepo := &postgres.StoreRepository{Pool: pool}
+	storeMembershipRepo := &postgres.StoreMembershipRepository{Pool: pool}
+	rewardStoreAvailRepo := &postgres.RewardStoreAvailabilityRepository{Pool: pool}
+	planCatalogRepo := &postgres.PlanCatalogRepository{Pool: pool}
+	subscriptionRepo := &postgres.SubscriptionRepository{Pool: pool}
+	invoiceRepo := &postgres.SubscriptionInvoiceRepository{Pool: pool}
+	provisionOrg := &usecase.ProvisionOrganization{
+		Stores:        storeRepo,
+		Subscriptions: subscriptionRepo,
+		Clock:         clock,
+	}
 	storeLoyaltyMetrics := &postgres.StoreLoyaltyMetrics{Pool: pool}
 	storeCatalog := &postgres.StoreCatalog{Pool: pool}
 	listStoreCustomers := &usecase.ListStoreCustomers{Catalog: storeCatalog}
@@ -63,6 +74,13 @@ func main() {
 	txManager := &postgres.TxManager{Pool: pool}
 	customerRepo := &postgres.CustomerRepository{Pool: pool}
 	enrollmentRepo := &postgres.EnrollmentRepository{Pool: pool}
+	quotaChecker := &usecase.QuotaChecker{
+		Plans:         planCatalogRepo,
+		Subscriptions: subscriptionRepo,
+		Stores:        storeRepo,
+		StoreMembers:  storeMembershipRepo,
+		Enrollments:   enrollmentRepo,
+	}
 
 	if cfg.BootstrapAutoSeed {
 		n, err := userRepo.CountSuperadmins(ctx)
@@ -213,8 +231,9 @@ func main() {
 		Hasher: hasher,
 	}
 	createTenant := &usecase.CreateTenant{
-		Tenants: tenantRepo,
-		Clock:   clock,
+		Tenants:   tenantRepo,
+		Provision: provisionOrg,
+		Clock:     clock,
 	}
 	listTenants := &usecase.ListTenants{Tenants: tenantRepo}
 	updateTenant := &usecase.UpdateTenant{Tenants: tenantRepo, Clock: clock}
@@ -266,6 +285,8 @@ func main() {
 		Memberships:              membershipRepo,
 		Customers:                customerRepo,
 		Enrollments:              enrollmentRepo,
+		Stores:                   storeRepo,
+		Subscriptions:            subscriptionRepo,
 		QRCodec:                  qrCodec,
 		PhoneProofParser:         signer,
 		RequirePhoneVerification: cfg.PublicEnrollRequirePhoneVerify,
@@ -275,6 +296,9 @@ func main() {
 		Memberships:   membershipRepo,
 		Customers:     customerRepo,
 		Catalog:       storeCatalog,
+		Stores:        storeRepo,
+		StoreMembers:  storeMembershipRepo,
+		Subscriptions: subscriptionRepo,
 		RefreshTokens: refreshRepo,
 		Signer:        signer,
 		Clock:         clock,
@@ -314,22 +338,24 @@ func main() {
 	rewardRepo := &postgres.RewardRepository{Pool: pool}
 	redemptionRepo := &postgres.RedemptionRepository{Pool: pool}
 	listStoreRewards := &usecase.ListStoreRewards{Rewards: rewardRepo}
-	createStoreReward := &usecase.CreateStoreReward{Rewards: rewardRepo, Clock: clock}
-	patchStoreReward := &usecase.PatchStoreReward{Rewards: rewardRepo, Clock: clock}
+	createStoreReward := &usecase.CreateStoreReward{Rewards: rewardRepo, RewardStores: rewardStoreAvailRepo, Clock: clock}
+	patchStoreReward := &usecase.PatchStoreReward{Rewards: rewardRepo, RewardStores: rewardStoreAvailRepo, Clock: clock}
 	listCustomerRewards := &usecase.ListCustomerRewards{
-		Rewards:     rewardRepo,
-		Enrollments: enrollmentRepo,
-		Balances:    storeCatalog,
+		Rewards:      rewardRepo,
+		RewardStores: rewardStoreAvailRepo,
+		Enrollments:  enrollmentRepo,
+		Balances:     storeCatalog,
 	}
 	customerClaimReward := &usecase.CustomerClaimReward{
-		Tx:          txManager,
-		QRCodec:     qrCodec,
-		Rewards:     rewardRepo,
-		Redemptions: redemptionRepo,
-		Enrollments: enrollmentRepo,
-		Balances:    storeCatalog,
-		Points:      pointEvents,
-		Clock:       clock,
+		Tx:           txManager,
+		QRCodec:      qrCodec,
+		Rewards:      rewardRepo,
+		RewardStores: rewardStoreAvailRepo,
+		Redemptions:  redemptionRepo,
+		Enrollments:  enrollmentRepo,
+		Balances:     storeCatalog,
+		Points:       pointEvents,
+		Clock:        clock,
 	}
 	staffValidateRedemption := &usecase.StaffValidateRedemption{
 		QRCodec:     qrCodec,
@@ -358,6 +384,7 @@ func main() {
 	storeSignup := &usecase.StoreSignup{
 		Tx:          txManager,
 		Tenants:     tenantRepo,
+		Provision:   provisionOrg,
 		Users:       userRepo,
 		Memberships: membershipRepo,
 		Customers:   customerRepo,
@@ -365,6 +392,12 @@ func main() {
 		Signer:      signer,
 		Clock:       clock,
 	}
+	listOrgStores := &usecase.ListOrgStores{Stores: storeRepo}
+	createOrgStore := &usecase.CreateOrgStore{Stores: storeRepo, Quota: quotaChecker, Clock: clock}
+	getOrgSubscription := &usecase.GetOrgSubscription{Subscriptions: subscriptionRepo, Plans: planCatalogRepo}
+	createMoMoInvoice := &usecase.CreateMoMoInvoice{Subscriptions: subscriptionRepo, Plans: planCatalogRepo, Invoices: invoiceRepo, Clock: clock}
+	confirmMoMoInvoice := &usecase.ConfirmMoMoInvoice{Invoices: invoiceRepo, Subscriptions: subscriptionRepo, Clock: clock}
+	listPlans := &usecase.ListPlans{Plans: planCatalogRepo}
 
 	var objStorage ports.ObjectStorage
 	switch cfg.FileStorageDriver {
@@ -449,12 +482,20 @@ func main() {
 		SimulateStoreRulesUC:        simulateStoreRules,
 		ListStoreCustomersUC:   listStoreCustomers,
 		ListStorePointEventsUC: listStorePointEvents,
+		ListOrgStoresUC:        listOrgStores,
+		CreateOrgStoreUC:       createOrgStore,
+		GetOrgSubscriptionUC:   getOrgSubscription,
+		CreateMoMoInvoiceUC:    createMoMoInvoice,
+		ConfirmMoMoInvoiceUC:   confirmMoMoInvoice,
+		ListPlansUC:            listPlans,
 		PublicCustomerOTP:     publicCustomerOTP,
 		QRCodec:               qrCodec,
 		AccessSigner:          signer,
 		Tenants:               tenantRepo,
+		Stores:                storeRepo,
 		Users:                 userRepo,
 		Invitations:           invRepo,
+		StripeWebhookSecret:   cfg.StripeWebhookSecret,
 		CORSAllowAll:          cfg.CORSAllowAll,
 		AssetUploadDir:        cfg.AssetUploadDir,
 		UploadTenantLogoUC:    uploadTenantLogo,

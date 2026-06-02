@@ -97,7 +97,17 @@ func (s *Server) StoreGetStoreQR(c *gin.Context) {
 		respondMapped(c, mapTenantError(err))
 		return
 	}
-	token, err := s.QRCodec.SignStoreQR(c.Request.Context(), *claims.TenantID)
+	storeID := claims.ActiveStoreID
+	if storeID == nil && s.Stores != nil {
+		if hq, err := s.Stores.FindHQ(c.Request.Context(), *claims.TenantID); err == nil {
+			storeID = &hq.ID
+		}
+	}
+	if storeID == nil {
+		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
+		return
+	}
+	token, err := s.QRCodec.SignStoreQR(c.Request.Context(), *claims.TenantID, *storeID)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
 		return

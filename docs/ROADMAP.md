@@ -1,10 +1,23 @@
-# Jubely MVP roadmap
+# Jubelee MVP roadmap
 
 Living tracker aligned with [context/NEW_PLANING.md](../context/NEW_PLANING.md), [Jubely Document de Cadrage](../context/Jubely%20Document%20de%20Cadrage%20Projet.md), and UX maquettes in [context/jubelee_design/](../context/jubelee_design/) (Customer / Staff / Admin HTML + [Jubelee_Architecture.png](../context/Jubelee_Architecture.png)).
 
 **Legend:** ✅ Done · 🚧 In progress · 📋 Planned · ⏸ Out of MVP scope
 
 **Validation docs:** [phase1-validation.md](./phase1-validation.md) · [phase3-validation.md](./phase3-validation.md) · [api.md](./api.md)
+
+---
+
+## Multi-store & billing (org model)
+
+| Item | Status | Notes |
+|------|--------|-------|
+| `stores`, `store_memberships`, HQ backfill | ✅ | migrations `007`, `008` |
+| Pooled loyalty + `reward_store_availability` pickup hints | ✅ | claim/validate org-wide |
+| `plan_catalog`, `subscriptions`, MoMo `JBE-PAY-*` | ✅ | 30-day Growth trial on org create |
+| Org freeze on lapse (`frozen`) | ✅ | middleware + enrollment gate |
+| Merchant UI: boutiques, abonnement, store switcher | ✅ | `/store/stores`, `/store/subscription` |
+| Stripe Checkout / webhooks | 📋 | `POST /v1/webhooks/stripe` stub; env in `.env.example` |
 
 ---
 

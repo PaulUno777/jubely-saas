@@ -24,7 +24,7 @@ func (s *Server) PublicGetTenantBySlug(c *gin.Context) {
 		respondError(c, http.StatusNotFound, i18n.CodeTenantNotFound, nil)
 		return
 	}
-	token, err := s.QRCodec.SignStoreQR(c.Request.Context(), t.ID)
+	token, err := s.signEnrollmentStoreQR(c, t.ID)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
 		return

@@ -38,12 +38,13 @@ func (s *Server) StoreListRewards(c *gin.Context) {
 }
 
 type storeCreateRewardBody struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	PointCost   int    `json:"point_cost"`
-	MinTier     string `json:"min_tier"`
-	Active      bool   `json:"active"`
-	StockLimit  *int   `json:"stock_limit"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	PointCost   int      `json:"point_cost"`
+	MinTier     string   `json:"min_tier"`
+	Active      bool     `json:"active"`
+	StockLimit  *int     `json:"stock_limit"`
+	StoreIDs    []string `json:"store_ids"`
 }
 
 func (s *Server) StoreCreateReward(c *gin.Context) {
@@ -57,6 +58,11 @@ func (s *Server) StoreCreateReward(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
+	storeIDs, err := parseUUIDList(body.StoreIDs)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_store_ids"})
+		return
+	}
 	rw, err := s.CreateStoreRewardUC.Execute(c.Request.Context(), usecase.CreateStoreRewardInput{
 		TenantID:    *claims.TenantID,
 		Name:        body.Name,
@@ -65,6 +71,7 @@ func (s *Server) StoreCreateReward(c *gin.Context) {
 		MinTier:     body.MinTier,
 		Active:      body.Active,
 		StockLimit:  body.StockLimit,
+		StoreIDs:    storeIDs,
 	})
 	if err != nil {
 		respondMapped(c, mapCustomerError(err))
@@ -82,12 +89,13 @@ func (s *Server) StoreCreateReward(c *gin.Context) {
 }
 
 type storePatchRewardBody struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
-	PointCost   *int    `json:"point_cost"`
-	MinTier     *string `json:"min_tier"`
-	Active      *bool   `json:"active"`
-	StockLimit  *int    `json:"stock_limit"`
+	Name        *string  `json:"name"`
+	Description *string  `json:"description"`
+	PointCost   *int     `json:"point_cost"`
+	MinTier     *string  `json:"min_tier"`
+	Active      *bool    `json:"active"`
+	StockLimit  *int     `json:"stock_limit"`
+	StoreIDs    []string `json:"store_ids"`
 }
 
 func (s *Server) StorePatchReward(c *gin.Context) {
@@ -106,7 +114,7 @@ func (s *Server) StorePatchReward(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
-	rw, err := s.PatchStoreRewardUC.Execute(c.Request.Context(), usecase.PatchStoreRewardInput{
+	patchIn := usecase.PatchStoreRewardInput{
 		TenantID:    *claims.TenantID,
 		RewardID:    rewardID,
 		Name:        body.Name,
@@ -115,7 +123,17 @@ func (s *Server) StorePatchReward(c *gin.Context) {
 		MinTier:     body.MinTier,
 		Active:      body.Active,
 		StockLimit:  body.StockLimit,
-	})
+	}
+	if body.StoreIDs != nil {
+		storeIDs, err := parseUUIDList(body.StoreIDs)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_store_ids"})
+			return
+		}
+		patchIn.StoreIDs = storeIDs
+		patchIn.SetStoreIDs = true
+	}
+	rw, err := s.PatchStoreRewardUC.Execute(c.Request.Context(), patchIn)
 	if err != nil {
 		respondMapped(c, mapCustomerError(err))
 		return
@@ -153,14 +171,19 @@ func (s *Server) CustomerListRewards(c *gin.Context) {
 	}
 	rewards := make([]gin.H, 0, len(items))
 	for _, it := range items {
+		fs := make([]gin.H, 0, len(it.FulfillmentStores))
+		for _, st := range it.FulfillmentStores {
+			fs = append(fs, gin.H{"id": st.ID.String(), "name": st.Name, "short": st.Short})
+		}
 		rewards = append(rewards, gin.H{
-			"id":            it.Reward.ID.String(),
-			"name":          it.Reward.Name,
-			"description":   it.Reward.Description,
-			"point_cost":    it.Reward.PointCost,
-			"min_tier":      it.Reward.MinTier,
-			"affordable":    it.Affordable,
-			"points_needed": it.PointsNeeded,
+			"id":                  it.Reward.ID.String(),
+			"name":                it.Reward.Name,
+			"description":         it.Reward.Description,
+			"point_cost":          it.Reward.PointCost,
+			"min_tier":            it.Reward.MinTier,
+			"affordable":          it.Affordable,
+			"points_needed":       it.PointsNeeded,
+			"fulfillment_stores":  fs,
 		})
 	}
 	respondOK(c, gin.H{
@@ -189,15 +212,43 @@ func (s *Server) CustomerClaimReward(c *gin.Context) {
 		respondMapped(c, mapCustomerError(err))
 		return
 	}
+	fs := make([]gin.H, 0, len(out.FulfillmentStores))
+	for _, st := range out.FulfillmentStores {
+		fs = append(fs, gin.H{
+			"id":           st.ID.String(),
+			"name":         st.Name,
+			"short":        st.Short,
+			"address_line": st.AddressLine,
+			"city":         st.City,
+			"country_code": st.CountryCode,
+		})
+	}
 	respondCreated(c, gin.H{
-		"redemption_id":  out.RedemptionID.String(),
-		"claim_qr":       out.ClaimQR,
-		"display_code":   out.DisplayCode,
-		"expires_at":     out.ExpiresAt,
-		"points_spent":   out.PointsSpent,
-		"balance_after":  out.BalanceAfter,
-		"reward_name":    out.RewardName,
+		"redemption_id":        out.RedemptionID.String(),
+		"claim_qr":             out.ClaimQR,
+		"display_code":         out.DisplayCode,
+		"expires_at":           out.ExpiresAt,
+		"points_spent":         out.PointsSpent,
+		"balance_after":        out.BalanceAfter,
+		"reward_name":          out.RewardName,
+		"fulfillment_stores":   fs,
 	})
+}
+
+func parseUUIDList(ids []string) ([]uuid.UUID, error) {
+	out := make([]uuid.UUID, 0, len(ids))
+	for _, s := range ids {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		id, err := uuid.Parse(s)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, nil
 }
 
 type staffValidateRedemptionBody struct {
@@ -223,12 +274,17 @@ func (s *Server) StaffValidateRedemption(c *gin.Context) {
 		respondMapped(c, mapCustomerError(err))
 		return
 	}
+	fs := make([]gin.H, 0, len(out.FulfillmentStores))
+	for _, st := range out.FulfillmentStores {
+		fs = append(fs, gin.H{"id": st.ID.String(), "name": st.Name, "short": st.Short})
+	}
 	respondOK(c, gin.H{
-		"redemption_id": out.RedemptionID.String(),
-		"reward_name":   out.RewardName,
-		"points_spent":  out.PointsSpent,
-		"display_code":  out.DisplayCode,
-		"customer_name": out.CustomerName,
-		"customer_id":   out.CustomerID.String(),
+		"redemption_id":      out.RedemptionID.String(),
+		"reward_name":        out.RewardName,
+		"points_spent":       out.PointsSpent,
+		"display_code":       out.DisplayCode,
+		"customer_name":      out.CustomerName,
+		"customer_id":        out.CustomerID.String(),
+		"fulfillment_stores": fs,
 	})
 }

@@ -13,14 +13,14 @@ type PointEventRepository struct {
 }
 
 // Append inserts a single point event (append-only ledger).
-func (r *PointEventRepository) Append(ctx context.Context, tenantID uuid.UUID, enrollmentID *uuid.UUID, eventType string, delta int, payload json.RawMessage) error {
+func (r *PointEventRepository) Append(ctx context.Context, tenantID uuid.UUID, storeID *uuid.UUID, enrollmentID *uuid.UUID, eventType string, delta int, payload json.RawMessage) error {
 	db := pickDB(ctx, r.Pool)
 	if len(payload) == 0 {
 		payload = json.RawMessage(`{}`)
 	}
 	const q = `
-INSERT INTO point_events (id, tenant_id, enrollment_id, event_type, delta, payload, created_at)
-VALUES ($1,$2,$3,$4,$5,$6::jsonb, now())`
-	_, err := db.Exec(ctx, q, uuid.New(), tenantID, enrollmentID, eventType, delta, []byte(payload))
+INSERT INTO point_events (id, tenant_id, store_id, enrollment_id, event_type, delta, payload, created_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb, now())`
+	_, err := db.Exec(ctx, q, uuid.New(), tenantID, storeID, enrollmentID, eventType, delta, []byte(payload))
 	return err
 }

@@ -111,7 +111,7 @@ func (uc *VerifyLoginTOTP) Execute(ctx context.Context, in VerifyLoginTOTPInput)
 		Catalog:       uc.Catalog,
 		Clock:         uc.Clock,
 		RefreshTTL:    uc.RefreshTTL,
-	}, state, nil, nil, false, in.UserAgent, in.IP)
+	}, state, nil, nil, nil, false, in.UserAgent, in.IP)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func (uc *FinishLoginPasskey) Execute(ctx context.Context, in FinishLoginPasskey
 		Catalog:       uc.Catalog,
 		Clock:         uc.Clock,
 		RefreshTTL:    uc.RefreshTTL,
-	}, state, nil, nil, false, in.UserAgent, in.IP)
+	}, state, nil, nil, nil, false, in.UserAgent, in.IP)
 	if err != nil {
 		return nil, err
 	}

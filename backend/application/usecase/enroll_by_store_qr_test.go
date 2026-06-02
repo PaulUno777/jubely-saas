@@ -68,12 +68,12 @@ type stubQRCodecForTenant struct {
 	tid uuid.UUID
 }
 
-func (s stubQRCodecForTenant) SignStoreQR(ctx context.Context, tenantID uuid.UUID) (string, error) {
+func (s stubQRCodecForTenant) SignStoreQR(ctx context.Context, organizationID, storeID uuid.UUID) (string, error) {
 	return "qr", nil
 }
 
-func (s stubQRCodecForTenant) ParseStoreQR(ctx context.Context, token string) (uuid.UUID, error) {
-	return s.tid, nil
+func (s stubQRCodecForTenant) ParseStoreQR(ctx context.Context, token string) (uuid.UUID, uuid.UUID, error) {
+	return s.tid, uuid.Nil, nil
 }
 
 func (s stubQRCodecForTenant) SignCustomerQR(ctx context.Context, tenantID, customerID uuid.UUID) (string, error) {

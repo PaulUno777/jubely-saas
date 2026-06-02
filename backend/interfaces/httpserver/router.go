@@ -23,8 +23,11 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		public.POST("/otp/send", GinRateLimit(rateLimitPublicOTPSend), s.PublicOTPSend)
 		public.POST("/otp/verify", GinRateLimit(rateLimitPublicOTPVerify), s.PublicOTPVerify)
 		public.POST("/enrollments", GinRateLimit(rateLimitPublicEnroll), s.PublicCreateEnrollment)
+		public.GET("/plans", s.PublicListPlans)
 		public.POST("/store/signup", GinRateLimit(rateLimitPublicSignup), s.PublicStoreSignup)
 		public.GET("/files/*filepath", s.PublicServeUpload)
+
+		v1.POST("/webhooks/stripe", s.StripeWebhook)
 
 		v1.POST("/bootstrap/superadmin", GinRateLimit(rateLimitBootstrap), s.BootstrapSuperadmin)
 		v1.POST("/auth/login", GinRateLimit(rateLimitLogin), s.AuthLogin)
@@ -59,7 +62,15 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		customersMe.Use(AuthMiddleware(signer))
 		customersMe.GET("/wallet", s.CustomerGetMyWallet)
 		customersMe.GET("/rewards", s.CustomerListRewards)
-		customersMe.POST("/rewards/:rewardId/claims", s.CustomerClaimReward)
+		customersMe.POST("/rewards/:rewardId/claims", RequireWritableSubscription(), s.CustomerClaimReward)
+
+		org := v1.Group("/organizations/me")
+		org.Use(AuthMiddleware(signer), RequireMerchantAdmin(), RequireWritableSubscription())
+		org.GET("/stores", s.OrgListStores)
+		org.POST("/stores", s.OrgCreateStore)
+		org.GET("/subscription", s.OrgGetSubscription)
+		org.POST("/subscription/momo-invoice", s.OrgCreateMoMoInvoice)
+		org.POST("/subscription/confirm-momo", s.OrgConfirmMoMoInvoice)
 
 		store := v1.Group("/store")
 		store.Use(AuthMiddleware(signer), RequireMerchantAdmin())
@@ -80,7 +91,7 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		store.POST("/invitations", s.StoreCreateInvitation)
 
 		staff := v1.Group("/staff")
-		staff.Use(AuthMiddleware(signer), RequireStaffOrMerchantAdmin())
+		staff.Use(AuthMiddleware(signer), RequireStaffOrMerchantAdmin(), RequireWritableSubscription())
 		staff.POST("/customers", RequirePermission(domain.PermEnrollCustomer), s.StaffCreateCustomer)
 		staff.POST("/purchases", RequirePermission(domain.PermRecordTransaction), s.StaffRecordPurchase)
 		staff.POST("/redemptions/validate", RequirePermission(domain.PermRecordTransaction), s.StaffValidateRedemption)

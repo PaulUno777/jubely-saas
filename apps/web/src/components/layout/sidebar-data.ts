@@ -80,6 +80,8 @@ export function navGroupsForRole(
             icon: Megaphone,
           },
           { title: "items.settings", url: "/store/settings", icon: Settings },
+          { title: "Boutiques", url: "/store/stores", icon: Building2 },
+          { title: "Abonnement", url: "/store/subscription", icon: Wallet },
         ],
       },
     ];

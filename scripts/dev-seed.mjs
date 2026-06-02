@@ -3,7 +3,8 @@
  * Local dev seed for dashboards, store admin, agent, and customer portals.
  *
  * Seeds:
- * - superadmin + 5 stores + merchant admins
+ * - superadmin + merchants (after migration 007/008 each tenant gets HQ store + trialing subscription)
+ * - prefer one org with multiple boutiques via POST /organizations/me/stores when extending seed
  * - shared staff (multi-workspace)
  * - points rules + rewards catalog per store
  * - enrolled customers, extra staff-created clients, purchases (ledger / metrics)

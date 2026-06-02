@@ -17,14 +17,15 @@ import (
 const claimTTL = 15 * time.Minute
 
 type CustomerClaimReward struct {
-	Tx          ports.TxManager
-	QRCodec     ports.QRCodec
-	Rewards     ports.RewardRepository
-	Redemptions ports.RedemptionRepository
-	Enrollments ports.LoyaltyEnrollmentRepository
-	Balances    ports.EnrollmentBalanceReader
-	Points      ports.PointEventWriter
-	Clock       ports.Clock
+	Tx              ports.TxManager
+	QRCodec         ports.QRCodec
+	Rewards         ports.RewardRepository
+	RewardStores    ports.RewardStoreAvailabilityRepository
+	Redemptions     ports.RedemptionRepository
+	Enrollments     ports.LoyaltyEnrollmentRepository
+	Balances        ports.EnrollmentBalanceReader
+	Points          ports.PointEventWriter
+	Clock           ports.Clock
 }
 
 type CustomerClaimRewardInput struct {
@@ -33,13 +34,14 @@ type CustomerClaimRewardInput struct {
 }
 
 type CustomerClaimRewardOutput struct {
-	RedemptionID uuid.UUID
-	ClaimQR      string
-	DisplayCode  string
-	ExpiresAt    time.Time
-	PointsSpent  int
-	BalanceAfter int64
-	RewardName   string
+	RedemptionID       uuid.UUID
+	ClaimQR            string
+	DisplayCode        string
+	ExpiresAt          time.Time
+	PointsSpent        int
+	BalanceAfter       int64
+	RewardName         string
+	FulfillmentStores  []domain.FulfillmentStore
 }
 
 func (uc *CustomerClaimReward) Execute(ctx context.Context, in CustomerClaimRewardInput) (*CustomerClaimRewardOutput, error) {
@@ -84,17 +86,25 @@ func (uc *CustomerClaimReward) Execute(ctx context.Context, in CustomerClaimRewa
 			return err
 		}
 		expires := now.Add(claimTTL)
+		var fulfillment []domain.FulfillmentStore
+		if uc.RewardStores != nil {
+			fulfillment, err = uc.RewardStores.ListFulfillmentStoresForReward(txCtx, rw.ID)
+			if err != nil {
+				return err
+			}
+		}
 		rd := &domain.Redemption{
-			ID:           rdID,
-			TenantID:     enr.TenantID,
-			EnrollmentID: enr.ID,
-			RewardID:     rw.ID,
-			PointsSpent:  rw.PointCost,
-			Status:       domain.RedemptionPending,
-			ClaimQR:      claimQR,
-			DisplayCode:  displayCode,
-			ExpiresAt:    expires,
-			CreatedAt:    now,
+			ID:                rdID,
+			TenantID:          enr.TenantID,
+			EnrollmentID:      enr.ID,
+			RewardID:          rw.ID,
+			PointsSpent:       rw.PointCost,
+			Status:            domain.RedemptionPending,
+			ClaimQR:           claimQR,
+			DisplayCode:       displayCode,
+			ExpiresAt:         expires,
+			FulfillmentStores: fulfillment,
+			CreatedAt:         now,
 		}
 		if err := uc.Redemptions.Create(txCtx, rd); err != nil {
 			return err
@@ -104,17 +114,18 @@ func (uc *CustomerClaimReward) Execute(ctx context.Context, in CustomerClaimRewa
 			"reward_name":  rw.Name,
 			"display_code": displayCode,
 		})
-		if err := uc.Points.Append(txCtx, enr.TenantID, &enr.ID, "redeem", -rw.PointCost, payload); err != nil {
+		if err := uc.Points.Append(txCtx, enr.TenantID, nil, &enr.ID, "redeem", -rw.PointCost, payload); err != nil {
 			return err
 		}
 		out = &CustomerClaimRewardOutput{
-			RedemptionID: rdID,
-			ClaimQR:      claimQR,
-			DisplayCode:  displayCode,
-			ExpiresAt:    expires,
-			PointsSpent:  rw.PointCost,
-			BalanceAfter: balance - int64(rw.PointCost),
-			RewardName:   rw.Name,
+			RedemptionID:      rdID,
+			ClaimQR:           claimQR,
+			DisplayCode:       displayCode,
+			ExpiresAt:         expires,
+			PointsSpent:       rw.PointCost,
+			BalanceAfter:      balance - int64(rw.PointCost),
+			RewardName:        rw.Name,
+			FulfillmentStores: fulfillment,
 		}
 		return nil
 	})

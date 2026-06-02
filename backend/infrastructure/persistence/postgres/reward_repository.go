@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -89,11 +90,15 @@ type RedemptionRepository struct {
 func (r *RedemptionRepository) Create(ctx context.Context, rd *domain.Redemption) error {
 	db := pickDB(ctx, r.Pool)
 	const q = `
-INSERT INTO redemptions (id, tenant_id, enrollment_id, reward_id, points_spent, status, claim_qr, display_code, expires_at, burned_at, created_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`
+INSERT INTO redemptions (id, tenant_id, enrollment_id, reward_id, points_spent, status, claim_qr, display_code, expires_at, burned_at, fulfillment_stores, created_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12)`
+	fs, _ := json.Marshal(rd.FulfillmentStores)
+	if len(fs) == 0 {
+		fs = []byte("[]")
+	}
 	_, err := db.Exec(ctx, q,
 		rd.ID, rd.TenantID, rd.EnrollmentID, rd.RewardID, rd.PointsSpent, string(rd.Status),
-		rd.ClaimQR, rd.DisplayCode, rd.ExpiresAt, rd.BurnedAt, rd.CreatedAt,
+		rd.ClaimQR, rd.DisplayCode, rd.ExpiresAt, rd.BurnedAt, fs, rd.CreatedAt,
 	)
 	return err
 }
@@ -101,14 +106,18 @@ VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`
 func (r *RedemptionRepository) FindByClaimQR(ctx context.Context, claimQR string) (*domain.Redemption, error) {
 	db := pickDB(ctx, r.Pool)
 	const q = `
-SELECT id, tenant_id, enrollment_id, reward_id, points_spent, status, claim_qr, display_code, expires_at, burned_at, created_at
+SELECT id, tenant_id, enrollment_id, reward_id, points_spent, status, claim_qr, display_code, expires_at, burned_at, fulfillment_stores, created_at
 FROM redemptions WHERE claim_qr=$1`
 	var rd domain.Redemption
 	var status string
+	var fsJSON []byte
 	err := db.QueryRow(ctx, q, claimQR).Scan(
 		&rd.ID, &rd.TenantID, &rd.EnrollmentID, &rd.RewardID, &rd.PointsSpent, &status,
-		&rd.ClaimQR, &rd.DisplayCode, &rd.ExpiresAt, &rd.BurnedAt, &rd.CreatedAt,
+		&rd.ClaimQR, &rd.DisplayCode, &rd.ExpiresAt, &rd.BurnedAt, &fsJSON, &rd.CreatedAt,
 	)
+	if err == nil && len(fsJSON) > 0 {
+		_ = json.Unmarshal(fsJSON, &rd.FulfillmentStores)
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrNotFound
 	}

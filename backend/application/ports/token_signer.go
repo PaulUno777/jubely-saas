@@ -22,6 +22,10 @@ type TokenClaims struct {
 	CustomerID         *uuid.UUID
 	ActiveEnrollmentID *uuid.UUID
 	Enrollments        []domain.CustomerEnrollmentSummary
+	// ActiveStoreID is the boutique context for staff/merchant operations.
+	ActiveStoreID *uuid.UUID
+	// SubscriptionStatus mirrors subscriptions.status for the active org (empty when N/A).
+	SubscriptionStatus string
 }
 
 type TokenSigner interface {

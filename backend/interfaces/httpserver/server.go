@@ -41,6 +41,12 @@ type Server struct {
 	SimulateStoreRulesUC    *usecase.SimulateStoreRules
 	ListStoreCustomersUC  *usecase.ListStoreCustomers
 	ListStorePointEventsUC *usecase.ListStorePointEvents
+	ListOrgStoresUC        *usecase.ListOrgStores
+	CreateOrgStoreUC       *usecase.CreateOrgStore
+	GetOrgSubscriptionUC   *usecase.GetOrgSubscription
+	CreateMoMoInvoiceUC    *usecase.CreateMoMoInvoice
+	ConfirmMoMoInvoiceUC   *usecase.ConfirmMoMoInvoice
+	ListPlansUC            *usecase.ListPlans
 	PublicCustomerOTP     *usecase.PublicCustomerOTP
 	SetupTOTPUC           *usecase.SetupTOTP
 	ConfirmTOTPUC         *usecase.ConfirmTOTP
@@ -56,10 +62,13 @@ type Server struct {
 	AccessSigner          ports.TokenSigner
 
 	Tenants      *postgres.TenantRepository
+	Stores       *postgres.StoreRepository
 	Users        *postgres.UserRepository
 	Invitations  *postgres.InvitationRepository
 	StoreMetrics *postgres.StoreLoyaltyMetrics
 	StoreCatalog *postgres.StoreCatalog
+
+	StripeWebhookSecret string
 
 	// CORSAllowAll enables permissive CORS for local dev.
 	CORSAllowAll bool

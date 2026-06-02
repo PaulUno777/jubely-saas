@@ -155,7 +155,25 @@ Manual QA order and UI targets for this iteration are documented under [`context
 
 ## Migrations
 
-Embedded SQL runs on startup (`internal/migrate`). For rapid iteration, use a fresh database if you change `001_init.sql` (idempotent upgrades come in a later iteration).
+Embedded goose SQL runs on API startup ([`internal/migrate`](internal/migrate)). The baseline is **four files** (concern order):
+
+| File | Domain |
+|------|--------|
+| `001_core_auth.sql` | Organizations (`tenants`), users, memberships, MFA, refresh tokens |
+| `002_stores.sql` | Boutiques (`stores`), staff store scope |
+| `003_loyalty.sql` | `customer_identities`, `loyalty_enrollments`, `point_events`, `points_rules` |
+| `004_rewards_billing.sql` | Rewards, redemptions, `plan_catalog`, subscriptions, invoices |
+
+Legacy tables `customers` / `enrollments` from early prototypes are **not** created. HQ stores and trial subscriptions are created by the app (`ProvisionOrganization` on org signup), not by migration backfills.
+
+**After changing migration files**, reset the database (pre-production):
+
+```bash
+dropdb jubely && createdb jubely
+# or: psql -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+```
+
+Then start the API or run `go run ./cmd/migrate` from `backend/`. Do not rely on goose Down across squashed files—prefer a fresh DB.
 
 ## CI
 

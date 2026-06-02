@@ -28,15 +28,16 @@ const (
 )
 
 type Redemption struct {
-	ID           uuid.UUID
-	TenantID     uuid.UUID
-	EnrollmentID uuid.UUID
-	RewardID     uuid.UUID
-	PointsSpent  int
-	Status       RedemptionStatus
-	ClaimQR      string
-	DisplayCode  string
-	ExpiresAt    time.Time
-	BurnedAt     *time.Time
-	CreatedAt    time.Time
+	ID                 uuid.UUID
+	TenantID           uuid.UUID
+	EnrollmentID       uuid.UUID
+	RewardID           uuid.UUID
+	PointsSpent        int
+	Status             RedemptionStatus
+	ClaimQR            string
+	DisplayCode        string
+	ExpiresAt          time.Time
+	BurnedAt           *time.Time
+	FulfillmentStores  []FulfillmentStore
+	CreatedAt          time.Time
 }
