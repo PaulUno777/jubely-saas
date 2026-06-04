@@ -6,6 +6,7 @@ export type AccessJwtPayload = {
   role?: string | null;
   membership_id?: string;
   tenant_id?: string;
+  active_store_id?: string;
   workspaces?: Array<{
     membership_id?: string;
     tenant_id?: string;

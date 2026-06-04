@@ -25,8 +25,8 @@ func (p *ProvisionOrganization) Execute(ctx context.Context, orgID uuid.UUID, or
 		planCode = "growth"
 	}
 	store := &domain.Store{
-		ID:             uuid.New(),
-		OrganizationID: orgID,
+		ID:          uuid.New(),
+		TenantID:    orgID,
 		Slug:           "main",
 		Name:           orgName,
 		CountryCode:    "CM",
@@ -45,7 +45,7 @@ func (p *ProvisionOrganization) Execute(ctx context.Context, orgID uuid.UUID, or
 	trialEnd := now.Add(defaultTrialDays * 24 * time.Hour)
 	sub := &domain.Subscription{
 		ID:                 uuid.New(),
-		OrganizationID:     orgID,
+		TenantID:           orgID,
 		PlanCode:           planCode,
 		Status:             domain.SubscriptionTrialing,
 		BillingPeriod:      "monthly",

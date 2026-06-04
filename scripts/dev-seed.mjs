@@ -186,7 +186,7 @@ function pilotRewardsForStore(storeSlug) {
   return base;
 }
 
-/** @typedef {{ slug: string; name: string; city?: string; country_code?: string; address_line?: string }} BoutiqueDef */
+/** @typedef {{ slug: string; name: string; city?: string; country_code?: string; address_line?: string; lat?: number; lng?: number }} BoutiqueDef */
 
 /** Organizations (tenants) and optional extra boutiques under the same org. */
 const organizations = [
@@ -203,13 +203,23 @@ const organizations = [
     /** Trial allows 1 store; confirm MoMo to unlock Growth max_stores (3). */
     activateBilling: true,
     boutiques: /** @type {BoutiqueDef[]} */ ([
-      { slug: "akwa", name: "Chez Mama — Akwa", city: "Douala", country_code: "CM", address_line: "Akwa" },
+      {
+        slug: "akwa",
+        name: "Chez Mama — Akwa",
+        city: "Douala",
+        country_code: "CM",
+        address_line: "Akwa",
+        lat: 4.0511,
+        lng: 9.7085,
+      },
       {
         slug: "bonapriso",
         name: "Chez Mama — Bonapriso",
         city: "Douala",
         country_code: "CM",
         address_line: "Bonapriso",
+        lat: 4.0483,
+        lng: 9.7044,
       },
     ]),
   },
@@ -405,6 +415,8 @@ async function createOrgStore(merchantToken, boutique) {
       country_code: boutique.country_code ?? "CM",
       city: boutique.city ?? "",
       address_line: boutique.address_line ?? "",
+      lat: boutique.lat,
+      lng: boutique.lng,
       status: "open",
     },
   });
@@ -1074,7 +1086,7 @@ async function main() {
     );
     console.log(`      Boutiques (${org.orgStores.length}): ${boutiqueSlugs}`);
     console.log(
-      `      UI: /store  /store/stores  /store/subscription  /store/customers  /store/rewards`,
+      `      UI: /store  /store/locations  /store/subscription  /store/customers  /store/rewards`,
     );
   }
   console.log("");

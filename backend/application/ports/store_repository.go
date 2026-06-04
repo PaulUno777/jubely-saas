@@ -10,6 +10,7 @@ import (
 type StoreRepository interface {
 	Create(ctx context.Context, s *domain.Store) error
 	Update(ctx context.Context, s *domain.Store) error
+	SetAsHQ(ctx context.Context, tenantID, locationID uuid.UUID) (*domain.Store, error)
 	FindByID(ctx context.Context, organizationID, storeID uuid.UUID) (*domain.Store, error)
 	FindHQ(ctx context.Context, organizationID uuid.UUID) (*domain.Store, error)
 	ListByOrganization(ctx context.Context, organizationID uuid.UUID) ([]domain.Store, error)

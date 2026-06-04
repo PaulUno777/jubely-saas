@@ -73,7 +73,7 @@ func (uc *CreateMoMoInvoice) Execute(ctx context.Context, orgID uuid.UUID) (*Cre
 	inv := &domain.SubscriptionInvoice{
 		ID:             uuid.New(),
 		SubscriptionID: sub.ID,
-		OrganizationID: orgID,
+		TenantID:       orgID,
 		AmountFCFA:     amount,
 		Currency:       "XAF",
 		Provider:       "momo",
@@ -109,7 +109,7 @@ func (uc *ConfirmMoMoInvoice) Execute(ctx context.Context, payReference string) 
 	if err := uc.Invoices.MarkPaid(ctx, inv.ID, now); err != nil {
 		return err
 	}
-	sub, err := uc.Subscriptions.FindByOrganization(ctx, inv.OrganizationID)
+	sub, err := uc.Subscriptions.FindByOrganization(ctx, inv.TenantID)
 	if err != nil {
 		return err
 	}
@@ -154,14 +154,14 @@ type PatchOrgSubscription struct {
 }
 
 type PatchOrgSubscriptionInput struct {
-	OrganizationID uuid.UUID
+	TenantID      uuid.UUID
 	PlanCode       *string
 	Status         *domain.SubscriptionStatus
 	BillingPeriod  *string
 }
 
 func (uc *PatchOrgSubscription) Execute(ctx context.Context, in PatchOrgSubscriptionInput) (*domain.Subscription, error) {
-	sub, err := uc.Subscriptions.FindByOrganization(ctx, in.OrganizationID)
+	sub, err := uc.Subscriptions.FindByOrganization(ctx, in.TenantID)
 	if err != nil {
 		return nil, err
 	}

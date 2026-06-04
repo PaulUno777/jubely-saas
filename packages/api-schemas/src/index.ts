@@ -7,4 +7,5 @@ export * from "./public";
 export * from "./store";
 export * from "./rewards";
 export * from "./rules";
+export * from "./tenant-metrics";
 export * from "./parse";

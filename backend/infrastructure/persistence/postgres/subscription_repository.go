@@ -65,12 +65,12 @@ func (r *SubscriptionRepository) Create(ctx context.Context, sub *domain.Subscri
 	db := pickDB(ctx, r.Pool)
 	const q = `
 INSERT INTO subscriptions (
-    id, organization_id, plan_code, status, billing_period, trial_ends_at,
+    id, tenant_id, plan_code, status, billing_period, trial_ends_at,
     current_period_start, current_period_end, cancel_at_period_end, paused_at,
     payment_method_preference, stripe_customer_id, stripe_subscription_id, created_at, updated_at
 ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`
 	_, err := db.Exec(ctx, q,
-		sub.ID, sub.OrganizationID, sub.PlanCode, string(sub.Status), sub.BillingPeriod,
+		sub.ID, sub.TenantID, sub.PlanCode, string(sub.Status), sub.BillingPeriod,
 		sub.TrialEndsAt, sub.CurrentPeriodStart, sub.CurrentPeriodEnd, sub.CancelAtPeriodEnd, sub.PausedAt,
 		sub.PaymentMethodPref, sub.StripeCustomerID, sub.StripeSubscriptionID, sub.CreatedAt, sub.UpdatedAt,
 	)
@@ -101,16 +101,16 @@ WHERE id=$1`
 func (r *SubscriptionRepository) FindByOrganization(ctx context.Context, organizationID uuid.UUID) (*domain.Subscription, error) {
 	db := pickDB(ctx, r.Pool)
 	return scanSubscription(db.QueryRow(ctx, `
-SELECT id, organization_id, plan_code, status, billing_period, trial_ends_at,
+SELECT id, tenant_id, plan_code, status, billing_period, trial_ends_at,
     current_period_start, current_period_end, cancel_at_period_end, paused_at,
     payment_method_preference, stripe_customer_id, stripe_subscription_id, created_at, updated_at
-FROM subscriptions WHERE organization_id=$1`, organizationID))
+FROM subscriptions WHERE tenant_id=$1`, organizationID))
 }
 
 func (r *SubscriptionRepository) FindByStripeSubscriptionID(ctx context.Context, stripeSubID string) (*domain.Subscription, error) {
 	db := pickDB(ctx, r.Pool)
 	return scanSubscription(db.QueryRow(ctx, `
-SELECT id, organization_id, plan_code, status, billing_period, trial_ends_at,
+SELECT id, tenant_id, plan_code, status, billing_period, trial_ends_at,
     current_period_start, current_period_end, cancel_at_period_end, paused_at,
     payment_method_preference, stripe_customer_id, stripe_subscription_id, created_at, updated_at
 FROM subscriptions WHERE stripe_subscription_id=$1`, stripeSubID))
@@ -120,7 +120,7 @@ func scanSubscription(row pgx.Row) (*domain.Subscription, error) {
 	var sub domain.Subscription
 	var status string
 	err := row.Scan(
-		&sub.ID, &sub.OrganizationID, &sub.PlanCode, &status, &sub.BillingPeriod, &sub.TrialEndsAt,
+		&sub.ID, &sub.TenantID, &sub.PlanCode, &status, &sub.BillingPeriod, &sub.TrialEndsAt,
 		&sub.CurrentPeriodStart, &sub.CurrentPeriodEnd, &sub.CancelAtPeriodEnd, &sub.PausedAt,
 		&sub.PaymentMethodPref, &sub.StripeCustomerID, &sub.StripeSubscriptionID, &sub.CreatedAt, &sub.UpdatedAt,
 	)
@@ -142,11 +142,11 @@ func (r *SubscriptionInvoiceRepository) Create(ctx context.Context, inv *domain.
 	db := pickDB(ctx, r.Pool)
 	const q = `
 INSERT INTO subscription_invoices (
-    id, subscription_id, organization_id, amount_fcfa, currency, provider, pay_reference,
+    id, subscription_id, tenant_id, amount_fcfa, currency, provider, pay_reference,
     status, period_start, period_end, expires_at, paid_at, created_at
 ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`
 	_, err := db.Exec(ctx, q,
-		inv.ID, inv.SubscriptionID, inv.OrganizationID, inv.AmountFCFA, inv.Currency, inv.Provider,
+		inv.ID, inv.SubscriptionID, inv.TenantID, inv.AmountFCFA, inv.Currency, inv.Provider,
 		inv.PayReference, inv.Status, inv.PeriodStart, inv.PeriodEnd, inv.ExpiresAt, inv.PaidAt, inv.CreatedAt,
 	)
 	return err
@@ -155,12 +155,12 @@ INSERT INTO subscription_invoices (
 func (r *SubscriptionInvoiceRepository) FindByPayReference(ctx context.Context, payReference string) (*domain.SubscriptionInvoice, error) {
 	db := pickDB(ctx, r.Pool)
 	const q = `
-SELECT id, subscription_id, organization_id, amount_fcfa, currency, provider, pay_reference,
+SELECT id, subscription_id, tenant_id, amount_fcfa, currency, provider, pay_reference,
     status, period_start, period_end, expires_at, paid_at, created_at
 FROM subscription_invoices WHERE pay_reference=$1`
 	var inv domain.SubscriptionInvoice
 	err := db.QueryRow(ctx, q, payReference).Scan(
-		&inv.ID, &inv.SubscriptionID, &inv.OrganizationID, &inv.AmountFCFA, &inv.Currency, &inv.Provider,
+		&inv.ID, &inv.SubscriptionID, &inv.TenantID, &inv.AmountFCFA, &inv.Currency, &inv.Provider,
 		&inv.PayReference, &inv.Status, &inv.PeriodStart, &inv.PeriodEnd, &inv.ExpiresAt, &inv.PaidAt, &inv.CreatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -191,9 +191,9 @@ func (r *SubscriptionInvoiceRepository) ListByOrganization(ctx context.Context, 
 	}
 	db := pickDB(ctx, r.Pool)
 	rows, err := db.Query(ctx, `
-SELECT id, subscription_id, organization_id, amount_fcfa, currency, provider, pay_reference,
+SELECT id, subscription_id, tenant_id, amount_fcfa, currency, provider, pay_reference,
     status, period_start, period_end, expires_at, paid_at, created_at
-FROM subscription_invoices WHERE organization_id=$1 ORDER BY created_at DESC LIMIT $2`, organizationID, limit)
+FROM subscription_invoices WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT $2`, organizationID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ FROM subscription_invoices WHERE organization_id=$1 ORDER BY created_at DESC LIM
 	for rows.Next() {
 		var inv domain.SubscriptionInvoice
 		if err := rows.Scan(
-			&inv.ID, &inv.SubscriptionID, &inv.OrganizationID, &inv.AmountFCFA, &inv.Currency, &inv.Provider,
+			&inv.ID, &inv.SubscriptionID, &inv.TenantID, &inv.AmountFCFA, &inv.Currency, &inv.Provider,
 			&inv.PayReference, &inv.Status, &inv.PeriodStart, &inv.PeriodEnd, &inv.ExpiresAt, &inv.PaidAt, &inv.CreatedAt,
 		); err != nil {
 			return nil, err

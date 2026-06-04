@@ -33,7 +33,13 @@ export function NavGroup({ title, items }: NavGroup) {
         {items.map((item) => {
           const key = item.title;
           if (!("items" in item) || !item.items) {
-            return <NavMenuLink key={key} item={item as NavLink} pathname={pathname} />;
+            return (
+              <NavMenuLink
+                key={key}
+                item={item as NavLink}
+                pathname={pathname}
+              />
+            );
           }
           if (state === "collapsed") {
             return (
@@ -49,7 +55,13 @@ export function NavGroup({ title, items }: NavGroup) {
               />
             );
           }
-          return <NavMenuCollapsible key={key} item={item as NavCollapsible} pathname={pathname} />;
+          return (
+            <NavMenuCollapsible
+              key={key}
+              item={item as NavCollapsible}
+              pathname={pathname}
+            />
+          );
         })}
       </SidebarMenu>
     </SidebarGroup>
@@ -77,12 +89,20 @@ function NavMenuLink({ item, pathname }: { item: NavLink; pathname: string }) {
           <span>{label}</span>
         </Link>
       </SidebarMenuButton>
-      {item.badge !== undefined ? <SidebarMenuBadge>{item.badge}</SidebarMenuBadge> : null}
+      {item.badge !== undefined ? (
+        <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
+      ) : null}
     </SidebarMenuItem>
   );
 }
 
-function NavMenuCollapsible({ item, pathname }: { item: NavCollapsible; pathname: string }) {
+function NavMenuCollapsible({
+  item,
+  pathname,
+}: {
+  item: NavCollapsible;
+  pathname: string;
+}) {
   const t = useTranslations("navigation");
   const label = t(item.title);
   const active = item.items.some((it) => isActive(pathname, it.url));
@@ -97,7 +117,9 @@ function NavMenuCollapsible({ item, pathname }: { item: NavCollapsible; pathname
             <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
           </SidebarMenuButton>
         </CollapsibleTrigger>
-        {item.badge !== undefined ? <SidebarMenuBadge>{item.badge}</SidebarMenuBadge> : null}
+        {item.badge !== undefined ? (
+          <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
+        ) : null}
         <CollapsibleContent>
           <SidebarMenuSub>
             {item.items.map((sub) => {

@@ -3,11 +3,33 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { customerSelectContext, customerGetWallet } from "@/lib/customerApi";
 import { IconStore, IconChevronRight, IconSearch } from "@/components/agent/icons";
 import { IconPin } from "@/components/customer/icons";
 import { useSession } from "@/hooks/useSession";
 import { bootstrapAuthFromServer } from "@/lib/session";
+import { publicListNearbyLocations } from "@/lib/tenantApi";
+
+function useNearbyOrigin() {
+  const [origin, setOrigin] = useState<{
+    lat?: number;
+    lng?: number;
+    country_code?: string;
+    city?: string;
+  }>({ country_code: "CM", city: "Douala" });
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { timeout: 8000, maximumAge: 300_000 },
+    );
+  }, []);
+
+  return origin;
+}
 
 function EnrolledStoreCard({
   name,
@@ -50,6 +72,7 @@ function EnrolledStoreCard({
 export default function StoresPage() {
   const t = useTranslations("customer.stores");
   const { session } = useSession();
+  const nearbyOrigin = useNearbyOrigin();
   const { data } = useQuery({
     queryKey: ["pwa", "wallet", session?.activeEnrollmentId],
     enabled: Boolean(session?.activeEnrollmentId),
@@ -60,6 +83,11 @@ export default function StoresPage() {
       await customerSelectContext(enrollmentId);
       await bootstrapAuthFromServer();
     },
+  });
+  const nearbyQuery = useQuery({
+    queryKey: ["public", "locations", "nearby", nearbyOrigin],
+    queryFn: () => publicListNearbyLocations(nearbyOrigin),
+    staleTime: 120_000,
   });
 
   return (
@@ -109,9 +137,41 @@ export default function StoresPage() {
         {/* Discover section */}
         <div style={{ marginTop: 16 }}>
           <div style={{ fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--c-ink-mut)", fontWeight: 600, marginBottom: 8 }}>{t("nearby")}</div>
-          <div style={{ background: "var(--c-cream-2)", borderRadius: 18, padding: "20px", textAlign: "center" }}>
-            <IconPin size={24} color="var(--c-ink-mut)" />
-            <p style={{ fontSize: 13, color: "var(--c-ink-mut)", marginTop: 8, lineHeight: 1.5 }}>{t("nearbyHint")}</p>
+          <div style={{ background: "var(--c-cream-2)", borderRadius: 18, padding: "16px" }}>
+            {nearbyQuery.isLoading ? (
+              <p style={{ fontSize: 13, color: "var(--c-ink-mut)", textAlign: "center" }}>{t("nearbyLoading")}</p>
+            ) : nearbyQuery.data?.locations.length ? (
+              <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                {nearbyQuery.data.locations.map((loc) => (
+                  <li
+                    key={loc.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "10px 0",
+                      borderBottom: "0.5px solid rgba(26,24,20,0.06)",
+                    }}
+                  >
+                    <IconPin size={18} color="var(--c-green)" />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--c-ink)" }}>{loc.tenant_name}</div>
+                      <div style={{ fontSize: 12, color: "var(--c-ink-mut)" }}>
+                        {loc.name} · {loc.city}
+                        {loc.distance_km != null
+                          ? ` · ${t("nearbyDistance", { km: loc.distance_km.toFixed(1) })}`
+                          : ""}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div style={{ textAlign: "center" }}>
+                <IconPin size={24} color="var(--c-ink-mut)" />
+                <p style={{ fontSize: 13, color: "var(--c-ink-mut)", marginTop: 8, lineHeight: 1.5 }}>{t("nearbyEmpty")}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

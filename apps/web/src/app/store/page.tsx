@@ -1,57 +1,77 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, StatCard } from "@jubely/ui";
-import { useLocale, useTranslations } from "next-intl";
-import { useMemo } from "react";
+import { defaultDateRangeValue } from "@jubely/ui";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
+import { useDateRangeSubtitle } from "@/components/shared/date-range-selector-i18n";
 import { Main } from "@/components/layout/main";
 import { MfaEnrollBanner } from "@/components/root/mfa-enroll-banner";
+import { MerchantCard } from "@/components/store/merchant-card";
+import {
+  MerchantDashboardChartSection,
+  MerchantDashboardKpiSection,
+  MerchantDashboardSidebar,
+  MerchantDashboardTeamSection,
+  MerchantDashboardWelcomeRow,
+} from "@/components/store/merchant-dashboard-sections";
 import { StorePageHeader } from "@/components/store/store-page-header";
+import { useMerchantLocationScope } from "@/hooks/useMerchantLocationScope";
 import { useSession } from "@/hooks/useSession";
-import { useStoreMetrics } from "@/hooks/useStoreMetrics";
+import {
+  useTenantLoyaltyActivity,
+  useTenantMetrics,
+} from "@/hooks/useTenantMetrics";
+import { toLegacyMetricsPeriod } from "@/lib/dateRangeQuery";
 
 export default function StoreHome() {
   const t = useTranslations("store.home");
-  const locale = useLocale();
   const { session } = useSession();
-  const metricsQuery = useStoreMetrics();
-  const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
+  const { headerContext, activeStoreId } = useMerchantLocationScope();
+  const [dateRange, setDateRange] = useState(() => defaultDateRangeValue("last_7_days"));
+  const periodLabel = useDateRangeSubtitle(dateRange);
+  const legacyPeriod = toLegacyMetricsPeriod(dateRange) ?? "7d";
+  const metricsQuery = useTenantMetrics({
+    period: legacyPeriod,
+    locationId: activeStoreId,
+  });
+  const activityQuery = useTenantLoyaltyActivity({
+    period: legacyPeriod,
+    locationId: activeStoreId,
+  });
 
-  const m = metricsQuery.data;
-  const pointsValue = m?.points_distributed === undefined ? "—" : nf.format(m.points_distributed);
-  const eventsValue = m?.point_events_this_month === undefined ? "—" : nf.format(m.point_events_this_month);
-  const clientsToday = m?.clients_served_today === undefined ? "—" : nf.format(m.clients_served_today);
-  const redemptionsToday = m?.redemptions_today === undefined ? "—" : nf.format(m.redemptions_today);
+  const dashboardData = {
+    metrics: metricsQuery.data,
+    activity: activityQuery.data,
+    metricsLoading: metricsQuery.isLoading,
+    activityLoading: activityQuery.isLoading,
+  };
 
   return (
     <>
-      <StorePageHeader title={t("title")} actionLabel={t("newTransaction")} />
-      <Main className="space-y-6">
+      <StorePageHeader title={t("title")} context={headerContext} />
+      <Main className="merchant-portal-main space-y-6">
         {session ? <MfaEnrollBanner /> : null}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label={t("kpis.activeCustomers")} value={clientsToday} trend="neutral" />
-          <StatCard label={t("kpis.pointsDistributed")} value={pointsValue} trend="neutral" />
-          <StatCard label={t("kpis.pointEventsMonth")} value={eventsValue} trend="neutral" />
-          <StatCard label={t("kpis.rewardsClaimed")} value={redemptionsToday} trend="neutral" />
-        </div>
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-base">{t("panels.pointsChart")}</CardTitle>
-              <CardDescription>{t("panels.pointsChartHint")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-48 rounded-xl border border-dashed border-border bg-growth-surface/30" />
-            </CardContent>
-          </Card>
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-base">{t("panels.tiers")}</CardTitle>
-              <CardDescription>{t("panels.tiersHint")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-48 rounded-xl border border-dashed border-border bg-secondary/40" />
-            </CardContent>
-          </Card>
+        <div className="flex flex-col gap-5">
+          <MerchantDashboardWelcomeRow
+            metrics={dashboardData.metrics}
+            periodLabel={periodLabel}
+          />
+          <MerchantDashboardKpiSection {...dashboardData} periodLabel={periodLabel} />
+          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <div className="flex min-w-0 flex-col gap-5">
+              <MerchantCard>
+                <MerchantDashboardChartSection
+                  {...dashboardData}
+                  dateRange={dateRange}
+                  onDateRangeChange={setDateRange}
+                />
+              </MerchantCard>
+              <MerchantCard>
+                <MerchantDashboardTeamSection />
+              </MerchantCard>
+            </div>
+            <MerchantDashboardSidebar />
+          </div>
         </div>
       </Main>
     </>

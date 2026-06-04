@@ -16,13 +16,13 @@ CREATE TABLE IF NOT EXISTS rewards (
 
 CREATE INDEX IF NOT EXISTS idx_rewards_tenant_active ON rewards(tenant_id, active);
 
-CREATE TABLE IF NOT EXISTS reward_store_availability (
+CREATE TABLE IF NOT EXISTS reward_location_availability (
     reward_id UUID NOT NULL REFERENCES rewards(id) ON DELETE CASCADE,
-    store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
-    PRIMARY KEY (reward_id, store_id)
+    location_id UUID NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+    PRIMARY KEY (reward_id, location_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_reward_store_availability_store ON reward_store_availability(store_id);
+CREATE INDEX IF NOT EXISTS idx_reward_location_availability_location ON reward_location_availability(location_id);
 
 CREATE TABLE IF NOT EXISTS redemptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -71,7 +71,7 @@ ON CONFLICT (code) DO UPDATE SET
 
 CREATE TABLE IF NOT EXISTS subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
     plan_code TEXT NOT NULL REFERENCES plan_catalog(code),
     status TEXT NOT NULL DEFAULT 'trialing',
     billing_period TEXT NOT NULL DEFAULT 'monthly' CHECK (billing_period IN ('monthly', 'yearly')),
@@ -95,7 +95,7 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
 CREATE TABLE IF NOT EXISTS subscription_invoices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     subscription_id UUID NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
-    organization_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     amount_fcfa INT NOT NULL CHECK (amount_fcfa > 0),
     currency TEXT NOT NULL DEFAULT 'XAF',
     provider TEXT NOT NULL CHECK (provider IN ('stripe', 'momo')),
@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS subscription_invoices (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_subscription_invoices_org ON subscription_invoices(organization_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_subscription_invoices_tenant ON subscription_invoices(tenant_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS payment_attempts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -126,5 +126,5 @@ DROP TABLE IF EXISTS subscription_invoices;
 DROP TABLE IF EXISTS subscriptions;
 DROP TABLE IF EXISTS plan_catalog;
 DROP TABLE IF EXISTS redemptions;
-DROP TABLE IF EXISTS reward_store_availability;
+DROP TABLE IF EXISTS reward_location_availability;
 DROP TABLE IF EXISTS rewards;

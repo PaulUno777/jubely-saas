@@ -109,6 +109,7 @@ func Initialize(ctx context.Context) (*App, func(), error) {
 	finishLoginPasskey := providers.ProvideFinishLoginPasskey(userRepository, mfaFactorRepository, refreshTokenRepository, tenantMembershipRepository, customerRepository, storeCatalog, jwtSigner, jwtSigner, systemClock, timing, finishPasskeyAuthentication)
 	changePassword := providers.ProvideChangePassword(userRepository, bcryptHasher)
 	storeLoyaltyMetrics := providers.NewStoreLoyaltyMetrics(pool)
+	locationDiscoveryRepository := providers.NewLocationDiscoveryRepository(pool)
 	objectStorage, err := providers.ProvideObjectStorage(config)
 	if err != nil {
 		cleanup()
@@ -171,6 +172,7 @@ func Initialize(ctx context.Context) (*App, func(), error) {
 		Stores:                    storeRepository,
 		Invitations:               invitationRepository,
 		StoreMetrics:              storeLoyaltyMetrics,
+		LocationDiscovery:         locationDiscoveryRepository,
 		UploadTenantLogoUC:        uploadTenantLogo,
 	}
 	server := providers.ProvideHTTPServer(config, httpServerParams)

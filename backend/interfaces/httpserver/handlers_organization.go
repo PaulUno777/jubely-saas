@@ -37,18 +37,22 @@ func (s *Server) OrgListStores(c *gin.Context) {
 	}
 	items := make([]gin.H, 0, len(stores))
 	for _, st := range stores {
-		items = append(items, storeToJSON(st))
+		items = append(items, locationToJSON(st))
 	}
 	respondOK(c, gin.H{"stores": items})
 }
 
 type createStoreBody struct {
-	Slug        string `json:"slug"`
-	Name        string `json:"name"`
-	CountryCode string `json:"country_code"`
-	City        string `json:"city"`
-	AddressLine string `json:"address_line"`
-	Status      string `json:"status"`
+	Slug        string   `json:"slug"`
+	Name        string   `json:"name"`
+	CountryCode string   `json:"country_code"`
+	StateCode   string   `json:"state_code"`
+	City        string   `json:"city"`
+	AddressLine string   `json:"address_line"`
+	Lat         *float64 `json:"lat"`
+	Lng         *float64 `json:"lng"`
+	Status      string   `json:"status"`
+	Timezone    string   `json:"timezone"`
 }
 
 func (s *Server) OrgCreateStore(c *gin.Context) {
@@ -62,33 +66,27 @@ func (s *Server) OrgCreateStore(c *gin.Context) {
 		return
 	}
 	st, err := s.CreateOrgStoreUC.Execute(c.Request.Context(), usecase.CreateOrgStoreInput{
-		OrganizationID: orgID,
-		Slug:           body.Slug,
-		Name:           body.Name,
-		CountryCode:    body.CountryCode,
-		City:           body.City,
-		AddressLine:    body.AddressLine,
-		Status:         domain.StoreStatus(body.Status),
+		TenantID:    orgID,
+		Slug:        body.Slug,
+		Name:        body.Name,
+		CountryCode: body.CountryCode,
+		StateCode:   body.StateCode,
+		City:        body.City,
+		AddressLine: body.AddressLine,
+		Lat:         body.Lat,
+		Lng:         body.Lng,
+		Status:      domain.StoreStatus(body.Status),
+		Timezone:    body.Timezone,
 	})
 	if err != nil {
 		respondMapped(c, mapTenantError(err))
 		return
 	}
-	respondCreated(c, storeToJSON(*st))
+	respondCreated(c, locationToJSON(*st))
 }
 
 func storeToJSON(st domain.Store) gin.H {
-	return gin.H{
-		"id":           st.ID.String(),
-		"slug":         st.Slug,
-		"name":         st.Name,
-		"country_code": st.CountryCode,
-		"city":         st.City,
-		"address_line": st.AddressLine,
-		"status":       string(st.Status),
-		"is_hq":        st.IsHQ,
-		"timezone":     st.Timezone,
-	}
+	return locationToJSON(st)
 }
 
 func (s *Server) OrgGetSubscription(c *gin.Context) {

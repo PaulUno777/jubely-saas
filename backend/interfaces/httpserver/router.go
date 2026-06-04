@@ -25,6 +25,7 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		public.POST("/enrollments", GinRateLimit(rateLimitPublicEnroll), s.PublicCreateEnrollment)
 		public.GET("/plans", s.PublicListPlans)
 		public.POST("/store/signup", GinRateLimit(rateLimitPublicSignup), s.PublicStoreSignup)
+		public.GET("/locations/nearby", GinRateLimit(rateLimitPublicTenant), s.PublicListNearbyLocations)
 		public.GET("/files/*filepath", s.PublicServeUpload)
 
 		v1.POST("/webhooks/stripe", s.StripeWebhook)
@@ -89,6 +90,15 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		store.PATCH("/rules/:ruleId", s.StorePatchRule)
 		store.POST("/rules/simulate", s.StoreSimulateRules)
 		store.POST("/invitations", s.StoreCreateInvitation)
+
+		tenants := v1.Group("/tenants/:tenantId")
+		tenants.Use(AuthMiddleware(signer), RequireMerchantAdmin(), RequireTenantScope())
+		tenants.GET("/metrics", s.TenantGetMetrics)
+		tenants.GET("/metrics/loyalty-activity", s.TenantGetLoyaltyActivity)
+		tenants.GET("/stats", s.TenantGetStats)
+		tenants.GET("/locations", s.TenantListLocations)
+		tenants.POST("/locations", s.TenantCreateLocation)
+		tenants.PATCH("/locations/:locationId", s.TenantPatchLocation)
 
 		staff := v1.Group("/staff")
 		staff.Use(AuthMiddleware(signer), RequireStaffOrMerchantAdmin(), RequireWritableSubscription())

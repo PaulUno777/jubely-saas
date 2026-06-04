@@ -37,6 +37,8 @@ const navigation = {
     enrollmentQr: "Enrollment QR",
     campaigns: "Campaigns",
     settings: "Settings",
+    locations: "Locations",
+    subscription: "Subscription",
   },
   userMenu: {
     account: "Account",

@@ -16,21 +16,22 @@ const (
 )
 
 type Store struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	Slug           string
-	Name           string
-	CountryCode    string
-	City           string
-	AddressLine    string
-	Lat            *float64
-	Lng            *float64
-	Status         StoreStatus
-	IsHQ           bool
-	Timezone       string
-	Settings       json.RawMessage
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	Slug        string
+	Name        string
+	CountryCode string
+	StateCode   string
+	City        string
+	AddressLine string
+	Lat         *float64
+	Lng         *float64
+	Status      StoreStatus
+	IsHQ        bool
+	Timezone    string
+	Settings    json.RawMessage
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type FulfillmentStore struct {

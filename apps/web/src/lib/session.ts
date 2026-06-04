@@ -32,6 +32,7 @@ export type Session = {
   role?: Role;
   tenantId?: string;
   membershipId?: string;
+  activeStoreId?: string;
   email?: string;
   mustChangePassword?: boolean;
   userId?: string;
@@ -63,6 +64,7 @@ export function applyAuthSession(data: {
   user_id: string;
   membership_id?: string | null;
   tenant_id?: string | null;
+  active_store_id?: string | null;
   role?: string | null;
   email?: string;
   must_change_password?: boolean;
@@ -90,6 +92,7 @@ export function applyAuthSession(data: {
     role: data.role ? (data.role as Role) : undefined,
     tenantId: data.tenant_id ?? undefined,
     membershipId: data.membership_id ?? undefined,
+    activeStoreId: data.active_store_id ?? undefined,
     email: data.email,
     mustChangePassword: Boolean(data.must_change_password),
     userId: data.user_id,
@@ -129,6 +132,7 @@ export async function bootstrapAuthFromServer(): Promise<boolean> {
         user_id: string;
         membership_id?: string | null;
         tenant_id?: string | null;
+        active_store_id?: string | null;
         role?: string | null;
         email?: string;
         must_change_password?: boolean;

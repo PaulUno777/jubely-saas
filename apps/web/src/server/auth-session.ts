@@ -15,6 +15,7 @@ export type SessionMeData = {
   user_id: string;
   membership_id: string | null;
   tenant_id: string | null;
+  active_store_id: string | null;
   role: string | null;
   email: string;
   must_change_password: boolean;
@@ -68,6 +69,7 @@ export function sessionDataFromPayload(payload: AccessJwtPayload): SessionMeData
     user_id: payload.sub!,
     membership_id: payload.membership_id ?? null,
     tenant_id: payload.tenant_id ?? null,
+    active_store_id: payload.active_store_id ?? null,
     role: payload.role ?? null,
     email: payload.email ?? "",
     must_change_password: Boolean(payload.mcp),

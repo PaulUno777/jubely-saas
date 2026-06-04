@@ -19,7 +19,7 @@ func (r *PointEventRepository) Append(ctx context.Context, tenantID uuid.UUID, s
 		payload = json.RawMessage(`{}`)
 	}
 	const q = `
-INSERT INTO point_events (id, tenant_id, store_id, enrollment_id, event_type, delta, payload, created_at)
+INSERT INTO point_events (id, tenant_id, location_id, enrollment_id, event_type, delta, payload, created_at)
 VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb, now())`
 	_, err := db.Exec(ctx, q, uuid.New(), tenantID, storeID, enrollmentID, eventType, delta, []byte(payload))
 	return err

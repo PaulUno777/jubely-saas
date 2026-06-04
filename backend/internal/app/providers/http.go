@@ -78,6 +78,7 @@ type HTTPServerParams struct {
 	Stores                    ports.StoreRepository
 	Invitations               ports.InvitationRepository
 	StoreMetrics              ports.TenantLoyaltyMetrics
+	LocationDiscovery         ports.LocationDiscoveryRepository
 	UploadTenantLogoUC        *usecase.UploadTenantLogo
 }
 
@@ -139,6 +140,7 @@ func ProvideHTTPServer(cfg config.Config, p HTTPServerParams) *httpserver.Server
 		Stores:                    p.Stores,
 		Invitations:               p.Invitations,
 		StoreMetrics:              p.StoreMetrics,
+		LocationDiscovery:         p.LocationDiscovery,
 		StripeWebhookSecret:       cfg.StripeWebhookSecret,
 		CORSAllowAll:              cfg.CORSAllowAll,
 		AssetUploadDir:            cfg.AssetUploadDir,

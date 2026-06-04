@@ -2,7 +2,6 @@ import {
   Activity,
   Building2,
   Gift,
-  ImageIcon,
   LayoutDashboard,
   Layers,
   Megaphone,
@@ -31,8 +30,18 @@ export type SuperadminNavStats = {
   alertsCount: number;
 };
 
+/** Optional live counts for merchant sidebar badges (from `GET /v1/tenants/:id/stats`). */
+export type MerchantNavStats = {
+  customers: number;
+  locations: number;
+  teamMembers: number;
+  rulesActive: number;
+  rewardsActive: number;
+};
+
 export type NavGroupsOptions = {
   superadminStats?: SuperadminNavStats | null;
+  merchantStats?: MerchantNavStats | null;
 };
 
 export function navGroupsForRole(
@@ -40,35 +49,57 @@ export function navGroupsForRole(
   opts?: NavGroupsOptions,
 ): NavGroup[] {
   if (role === "merchant_admin") {
+    const ms = opts?.merchantStats;
     return [
       {
         title: "groups.dashboard",
         items: [
           { title: "items.overview", url: "/store", icon: LayoutDashboard },
-          { title: "items.customers", url: "/store/customers", icon: Users },
+          {
+            title: "items.customers",
+            url: "/store/customers",
+            icon: Users,
+            badge: ms?.customers,
+          },
           {
             title: "items.transactions",
             url: "/store/transactions",
             icon: Receipt,
+          },
+          {
+            title: "items.locations",
+            url: "/store/locations",
+            icon: Building2,
+            badge: ms?.locations,
           },
         ],
       },
       {
         title: "groups.configuration",
         items: [
-          { title: "items.teamAgents", url: "/store/agents", icon: Users },
+          {
+            title: "items.teamAgents",
+            url: "/store/agents",
+            icon: Users,
+            badge: ms?.teamMembers,
+          },
           {
             title: "items.pointsRules",
             url: "/store/points-rules",
             icon: SlidersHorizontal,
+            badge: ms?.rulesActive,
           },
-          { title: "items.rewards", url: "/store/rewards", icon: Gift },
+          {
+            title: "items.rewards",
+            url: "/store/rewards",
+            icon: Gift,
+            badge: ms?.rewardsActive,
+          },
           {
             title: "items.enrollmentQr",
             url: "/store/enrollment-qr",
             icon: QrCode,
           },
-          { title: "items.branding", url: "/store/branding", icon: ImageIcon },
         ],
       },
       {
@@ -80,8 +111,11 @@ export function navGroupsForRole(
             icon: Megaphone,
           },
           { title: "items.settings", url: "/store/settings", icon: Settings },
-          { title: "Boutiques", url: "/store/stores", icon: Building2 },
-          { title: "Abonnement", url: "/store/subscription", icon: Wallet },
+          {
+            title: "items.subscription",
+            url: "/store/subscription",
+            icon: Wallet,
+          },
         ],
       },
     ];
@@ -156,7 +190,11 @@ export function navGroupsForRole(
         items: [
           { title: "items.home", url: "/agent", icon: LayoutDashboard },
           { title: "items.customers", url: "/agent/customers", icon: Users },
-          { title: "items.recordPurchase", url: "/agent/purchase", icon: Receipt },
+          {
+            title: "items.recordPurchase",
+            url: "/agent/purchase",
+            icon: Receipt,
+          },
         ],
       },
     ];

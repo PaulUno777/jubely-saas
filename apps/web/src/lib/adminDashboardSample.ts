@@ -1,4 +1,6 @@
-export type AdminKpiTone = "emerald" | "teal" | "gold" | "danger";
+import type { AdminKpiTone } from "@/components/dashboard/admin-kpi-card";
+
+export type { AdminKpiTone };
 
 export type AdminKpiLabelKey = "mrrTotal" | "tenantsActive" | "endCustomers" | "systemAlerts";
 

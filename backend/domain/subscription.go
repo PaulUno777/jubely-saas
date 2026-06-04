@@ -34,8 +34,8 @@ type PlanCatalog struct {
 }
 
 type Subscription struct {
-	ID                     uuid.UUID
-	OrganizationID         uuid.UUID
+	ID                   uuid.UUID
+	TenantID             uuid.UUID
 	PlanCode               string
 	Status                 SubscriptionStatus
 	BillingPeriod          string
@@ -54,7 +54,7 @@ type Subscription struct {
 type SubscriptionInvoice struct {
 	ID             uuid.UUID
 	SubscriptionID uuid.UUID
-	OrganizationID uuid.UUID
+	TenantID       uuid.UUID
 	AmountFCFA     int
 	Currency       string
 	Provider       string

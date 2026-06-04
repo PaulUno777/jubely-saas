@@ -20,6 +20,32 @@ const common = {
       qr: "Client QR (demo)",
     },
   },
+  dateRange: {
+    sectionTitle: "Period",
+    presets: {
+      today: "Today",
+      last7Days: "Last 7 days",
+      last30Days: "Last 30 days",
+      thisMonth: "This month",
+      thisQuarter: "This quarter",
+      yearToDate: "Since January",
+    },
+    customRange: "Custom range…",
+    customTitle: "Custom date range",
+    startLabel: "Start date",
+    endLabel: "End date",
+    apply: "Apply",
+    cancel: "Cancel",
+    invalidRange: "End date must be on or after the start date.",
+    formats: {
+      singleDay: "__date__",
+      sameMonth: "__start__ – __end__",
+      sameYear: "__start__ – __end__",
+      crossYear: "__start__ – __end__",
+      monthYear: "__date__",
+      quarterYear: "__start__ – __end__ __year__",
+    },
+  },
 } as const;
 
 export default common;

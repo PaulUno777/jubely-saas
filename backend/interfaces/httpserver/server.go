@@ -64,6 +64,7 @@ type Server struct {
 	Stores       ports.StoreRepository
 	Invitations  ports.InvitationRepository
 	StoreMetrics ports.TenantLoyaltyMetrics
+	LocationDiscovery ports.LocationDiscoveryRepository
 
 	StripeWebhookSecret string
 

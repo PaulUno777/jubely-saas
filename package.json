@@ -5,6 +5,7 @@
   "scripts": {
     "dev:web": "pnpm --dir apps/web dev",
     "dev:seed": "node scripts/dev-seed.mjs",
+    "dev:simulate": "node scripts/simulate-loyalty.mjs",
     "test:backend": "cd backend && go test ./...",
     "test:web": "pnpm --dir apps/web exec tsc --noEmit && pnpm --dir apps/web lint",
     "build:web": "pnpm -r --filter \"@jubely/*\" build",

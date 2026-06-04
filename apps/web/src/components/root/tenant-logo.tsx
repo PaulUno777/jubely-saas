@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage, cn } from "@jubely/ui";
 import { tenantInitials, tenantLogoUrl, type TenantLogoSource } from "@/lib/tenantLogo";
 
 const sizeClasses = {
+  xs: "h-8 w-8 text-[9px]",
   sm: "h-9 w-9 text-[10px]",
   md: "h-12 w-12 text-xs",
   lg: "h-20 w-20 text-lg",

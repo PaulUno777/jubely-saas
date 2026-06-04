@@ -2,6 +2,7 @@ const preferences = {
   language: {
     label: "Language",
     short: "Lang",
+    menuTitle: "Interface language",
     fr: "French",
     en: "English",
   },

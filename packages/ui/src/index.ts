@@ -1,6 +1,23 @@
 // Utilities
 export { cn } from "./cn";
 
+// Date range (presets, resolve, format)
+export {
+  createRangeFormatters,
+  DATE_RANGE_PRESETS,
+  defaultDateRangeValue,
+  formatQuarterYear,
+  formatTriggerSubtitle,
+  parseDateInputValue,
+  resolveDateRange,
+  toDateInputValue,
+  type DateRangeFormatLabels,
+  type DateRangeFormatters,
+  type DateRangePreset,
+  type DateRangeValue,
+  type ResolveDateRangeOptions,
+} from "./date-range";
+
 // shadcn/ui primitives
 export { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
 export { Badge, badgeVariants, type BadgeProps } from "./components/ui/badge";
@@ -141,6 +158,11 @@ export { JubelyLogo } from "./components/jubely/logo";
 export { MethodCard } from "./components/jubely/method-card";
 export { OtpInput } from "./components/jubely/otp-input";
 export { StatCard } from "./components/jubely/stat-card";
+export {
+  DateRangeSelector,
+  type DateRangeSelectorLabels,
+  type DateRangeSelectorProps,
+} from "./components/jubely/date-range-selector";
 export { WizardSteps } from "./components/jubely/wizard-steps";
 
 // Layout

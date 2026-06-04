@@ -1,44 +1,55 @@
 "use client";
 
-import { Button, Input } from "@jubely/ui";
-import { Bell, Plus, Search } from "lucide-react";
-import { useFormatter, useTranslations } from "next-intl";
-import { Header } from "@/components/layout/header";
+import { Button, cn } from "@jubely/ui";
+import { Bell, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { PortalPageHeader } from "@/components/layout/portal-page-header";
 
 type StorePageHeaderProps = {
   title: string;
-  actionLabel?: string;
-  onAction?: () => void;
+  context?: string;
 };
 
-export function StorePageHeader({ title, actionLabel, onAction }: StorePageHeaderProps) {
+export function StorePageHeader({ title, context }: StorePageHeaderProps) {
   const t = useTranslations("store.home");
-  const format = useFormatter();
-  const today = format.dateTime(new Date(), { dateStyle: "full" });
+  const queryClient = useQueryClient();
+
+  const refreshDashboard = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["tenant"] });
+  }, [queryClient]);
 
   return (
-    <Header fixed>
-      <div className="flex min-w-0 flex-1 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <h1 className="truncate text-base font-semibold">{title}</h1>
-          <p className="truncate text-xs text-muted-foreground">{today}</p>
-        </div>
-        <div className="flex flex-1 items-center gap-2 lg:max-w-xl lg:justify-end">
-          <div className="relative hidden min-w-0 flex-1 md:block">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input className="h-9 bg-background/80 pl-9" placeholder={t("searchPlaceholder")} aria-label={t("searchPlaceholder")} />
-          </div>
-          <Button type="button" variant="outline" size="icon" className="shrink-0" aria-label={t("notifications")}>
-            <Bell className="size-4" />
+    <PortalPageHeader
+      title={title}
+      context={context}
+      searchPlaceholder={t("searchPlaceholder")}
+      className="merchant-portal-header"
+      actions={
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="jb-icon-btn size-9 rounded-[10px] bg-secondary"
+            aria-label={t("refresh")}
+            onClick={refreshDashboard}
+          >
+            <RefreshCw className="size-4" />
           </Button>
-          {actionLabel ? (
-            <Button type="button" size="sm" className="shrink-0 gap-1.5" onClick={onAction}>
-              <Plus className="size-4" />
-              <span className="hidden sm:inline">{actionLabel}</span>
-            </Button>
-          ) : null}
-        </div>
-      </div>
-    </Header>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className={cn("jb-icon-btn relative size-9 rounded-[10px] bg-secondary")}
+            aria-label={t("notifications")}
+          >
+            <Bell className="size-4" />
+            <span className="absolute top-2 right-2 size-1.5 rounded-full bg-destructive ring-2 ring-background" />
+          </Button>
+        </>
+      }
+    />
   );
 }

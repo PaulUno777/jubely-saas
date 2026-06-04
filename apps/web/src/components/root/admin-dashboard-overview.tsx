@@ -94,6 +94,7 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
         {kpis.map((kpi) => (
           <AdminKpiCard
             key={kpi.labelKey}
+            portal="admin"
             label={t(kpi.labelKey)}
             value={kpi.value}
             delta={kpi.delta}
@@ -107,7 +108,7 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Card className="border-border bg-card xl:col-span-2">
+        <Card className="portal-card border-border bg-card xl:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">{t("mrrEvolution")}</CardTitle>
             <CardDescription>{t("mrrEvolutionHint")}</CardDescription>
@@ -129,22 +130,22 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-xl border border-border bg-background/40 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{t("currentMrr")}</p>
-                <p className="mt-1 font-mono text-lg font-semibold text-(--status-active)">{ts("mrrSummary.current")}</p>
+                <p className="jb-label tracking-[0.14em]">{t("currentMrr")}</p>
+                <p className="jb-numeric mt-1 text-lg font-semibold text-(--status-active)">{ts("mrrSummary.current")}</p>
               </div>
               <div className="rounded-xl border border-border bg-background/40 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{t("growth30d")}</p>
-                <p className="mt-1 font-mono text-lg font-semibold text-(--status-late)">{ts("mrrSummary.growth30d")}</p>
+                <p className="jb-label tracking-[0.14em]">{t("growth30d")}</p>
+                <p className="jb-numeric mt-1 text-lg font-semibold text-(--status-late)">{ts("mrrSummary.growth30d")}</p>
               </div>
               <div className="rounded-xl border border-border bg-background/40 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{t("projectedArr")}</p>
-                <p className="mt-1 font-mono text-lg font-semibold text-(--status-trial)">{ts("mrrSummary.projectedArr")}</p>
+                <p className="jb-label tracking-[0.14em]">{t("projectedArr")}</p>
+                <p className="jb-numeric mt-1 text-lg font-semibold text-(--status-trial)">{ts("mrrSummary.projectedArr")}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-border bg-card">
+        <Card className="portal-card border-border bg-card">
           <CardHeader>
             <CardTitle className="text-base">{t("planSplit")}</CardTitle>
           </CardHeader>
@@ -155,7 +156,7 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
                   <p className="text-sm font-medium text-foreground">{ts(`planNames.${plan.planKey}` as "planNames.business")}</p>
                   <p className="text-xs text-muted-foreground">{t("planTenantCount", { count: String(plan.count) })}</p>
                 </div>
-                <p className="font-mono text-sm font-semibold text-foreground">{plan.revenue}</p>
+                <p className="jb-numeric text-sm font-semibold text-foreground">{plan.revenue}</p>
               </div>
             ))}
           </CardContent>
@@ -163,7 +164,7 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Card className="border-border bg-card xl:col-span-2">
+        <Card className="portal-card border-border bg-card xl:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
             <div>
               <CardTitle className="text-base">{t("activeStores")}</CardTitle>
@@ -233,7 +234,7 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
           </CardContent>
         </Card>
 
-        <Card className="border-border bg-card">
+        <Card className="portal-card border-border bg-card">
           <CardHeader>
             <CardTitle className="text-base">{t("alertsTitle")}</CardTitle>
           </CardHeader>
@@ -254,7 +255,7 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Card className="border-border bg-card xl:col-span-2">
+        <Card className="portal-card border-border bg-card xl:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">{t("infrastructure")}</CardTitle>
           </CardHeader>
@@ -274,7 +275,7 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
           </CardContent>
         </Card>
 
-        <Card className="border-border bg-card">
+        <Card className="portal-card border-border bg-card">
           <CardHeader>
             <CardTitle className="text-base">{t("auditLog")}</CardTitle>
           </CardHeader>
@@ -297,7 +298,7 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
         </Card>
       </div>
 
-      <Card className="border-border bg-card">
+      <Card className="portal-card border-border bg-card">
         <CardHeader>
           <CardTitle className="text-base">{t("mrrByPlan")}</CardTitle>
         </CardHeader>

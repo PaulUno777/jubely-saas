@@ -164,6 +164,27 @@ All JSON responses use a stable envelope. **`error.message` is localized** from 
 
 Manual QA order and UI targets for this iteration are documented under [`context/phase1/`](../context/phase1/) (see `recommandation.md` and screenshots).
 
+## Tenant-scoped merchant API (REST)
+
+Merchant admin routes are scoped under **`/v1/tenants/:tenantId/*`**. The JWT `tenant_id` must match `:tenantId`.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/v1/tenants/:tenantId/metrics?period=7d\|30d&location_id=` | KPI cards + sparklines |
+| `GET` | `/v1/tenants/:tenantId/metrics/loyalty-activity` | Daily distributed vs rewarded series |
+| `GET` | `/v1/tenants/:tenantId/stats` | Sidebar resource counts |
+| `GET` | `/v1/tenants/:tenantId/locations` | List physical locations |
+| `POST` | `/v1/tenants/:tenantId/locations` | Create location (address + optional coordinates) |
+| `PATCH` | `/v1/tenants/:tenantId/locations/:locationId` | Mark location as headquarters (`{ "is_hq": true }`) |
+
+Public discovery (no auth):
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/v1/public/locations/nearby` | Precise (`lat`+`lng`) or coarse (`country_code`+`city`) |
+
+**Naming:** SaaS account = **tenant**; physical boutique = **location** (Postgres `locations`, French UI **boutique**). The merchant portal path prefix `/store/*` is the admin shell only—not the domain resource. Legacy `/v1/store/*` and `/v1/organizations/me/*` remain until clients migrate. Merchant UI route for boutiques: **`/store/locations`**.
+
 ## Migrations
 
 Embedded goose SQL runs on API startup ([`internal/migrate`](internal/migrate)). The baseline is **four files** (concern order):
@@ -171,7 +192,7 @@ Embedded goose SQL runs on API startup ([`internal/migrate`](internal/migrate)).
 | File | Domain |
 |------|--------|
 | `001_core_auth.sql` | Organizations (`tenants`), users, memberships, MFA, refresh tokens |
-| `002_stores.sql` | Boutiques (`stores`), staff store scope |
+| `002_locations.sql` | Physical locations (`locations`), `location_memberships`, HQ flag, geo index |
 | `003_loyalty.sql` | `customer_identities`, `loyalty_enrollments`, `point_events`, `points_rules` |
 | `004_rewards_billing.sql` | Rewards, redemptions, `plan_catalog`, subscriptions, invoices |
 

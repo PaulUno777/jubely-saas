@@ -23,6 +23,7 @@ var PostgresSet = wire.NewSet(
 	NewSubscriptionRepository,
 	NewSubscriptionInvoiceRepository,
 	NewStoreLoyaltyMetrics,
+	NewLocationDiscoveryRepository,
 	NewStoreCatalog,
 	NewUserRepository,
 	NewTenantMembershipRepository,
@@ -58,6 +59,7 @@ var PostgresSet = wire.NewSet(
 	wire.Bind(new(ports.RedemptionRepository), new(*postgres.RedemptionRepository)),
 	wire.Bind(new(ports.PointsRuleRepository), new(*postgres.PointsRuleRepository)),
 	wire.Bind(new(ports.TenantLoyaltyMetrics), new(*postgres.StoreLoyaltyMetrics)),
+	wire.Bind(new(ports.LocationDiscoveryRepository), new(*postgres.LocationDiscoveryRepository)),
 )
 
 // ProvidePool runs migrations, opens the DB pool, and returns a close function for shutdown.
@@ -102,6 +104,10 @@ func NewSubscriptionInvoiceRepository(pool *pgxpool.Pool) *postgres.Subscription
 
 func NewStoreLoyaltyMetrics(pool *pgxpool.Pool) *postgres.StoreLoyaltyMetrics {
 	return &postgres.StoreLoyaltyMetrics{Pool: pool}
+}
+
+func NewLocationDiscoveryRepository(pool *pgxpool.Pool) *postgres.LocationDiscoveryRepository {
+	return &postgres.LocationDiscoveryRepository{Pool: pool}
 }
 
 func NewStoreCatalog(pool *pgxpool.Pool) *postgres.StoreCatalog {
