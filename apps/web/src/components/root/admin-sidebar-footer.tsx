@@ -12,8 +12,8 @@ export function AdminSidebarFooter() {
   const { session } = useSession();
   const statsQuery = useQuery({
     queryKey: ["superadminStats"],
-    enabled: Boolean(session?.accessToken),
-    queryFn: () => adminSuperadminStats(session!.accessToken),
+    enabled: Boolean(session),
+    queryFn: () => adminSuperadminStats(),
     staleTime: 60_000,
   });
 

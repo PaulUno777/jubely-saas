@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LanguageSelector } from "@/components/preferences/language-selector";
 import { ThemeSelector } from "@/components/preferences/theme-selector";
-import { detectProfile, preferencesProfile } from "@/lib/profile";
+import { detectProfile } from "@/lib/profile";
 
 type HeaderProps = React.HTMLAttributes<HTMLElement> & {
   fixed?: boolean;
@@ -14,7 +14,6 @@ type HeaderProps = React.HTMLAttributes<HTMLElement> & {
 export function Header({ className, fixed, children, ...props }: HeaderProps) {
   const pathname = usePathname();
   const profile = detectProfile(pathname);
-  const preferenceProfile = preferencesProfile(profile);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -28,8 +27,8 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
   return (
     <header
       className={cn(
-        "z-50 h-16 flex items-center gap-3 border-b border-border px-4 bg-background/80 backdrop-blur-sm",
-        fixed && "sticky top-0 w-full",
+        "z-50 m-0 flex h-16 w-full items-center gap-3 border-b border-border bg-background px-4",
+        fixed && "sticky top-0",
         scrolled && fixed && "shadow-sm",
         className,
       )}
@@ -39,9 +38,9 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
       <Separator orientation="vertical" className="h-6" />
       {children}
       {showPreferences ? (
-        <div className="ml-auto flex items-center gap-2">
-          <LanguageSelector profile={preferenceProfile} />
-          <ThemeSelector profile={preferenceProfile} />
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {profile ? <LanguageSelector profile={profile} /> : null}
+          {profile && profile !== "merchant" ? <ThemeSelector profile={profile} /> : null}
         </div>
       ) : null}
     </header>

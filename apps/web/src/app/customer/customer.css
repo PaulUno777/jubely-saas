@@ -1,0 +1,233 @@
+/* Customer portal design tokens — scoped to [data-portal="customer"] */
+/* Identity: warm amber-gold chrome — agent now uses sage-green (swapped) */
+
+[data-portal="customer"] {
+  /* Base cream — warm amber-tinted (swapped from agent) */
+  --c-cream:    #f6f4ef;
+  --c-cream-2:  #efece5;
+  --c-cream-3:  #e3ddd0;
+  /* Ink */
+  --c-ink:      #1a1814;
+  --c-ink-mut:  #6b6457;
+  --c-ink-soft: #908871;
+  /* Card — charcoal (swapped from agent) */
+  --c-card:     #29261b;
+  /* Green accent — the customer identity colour */
+  --c-green:    #2a6b46;
+  --c-green-2:  #3d9966;
+  --c-green-3:  #1c4e32;
+  --c-green-bg: rgba(42, 107, 70, 0.12);
+  --c-mint:     #d4eadb;
+  /* Gold — kept for loyalty card (brand constant across portals) */
+  --c-gold:     #b8924a;
+  --c-gold-2:   #d4ae6c;
+  --c-gold-3:   #8a6e38;
+  --c-gold-bg:  rgba(184, 146, 74, 0.14);
+  /* Utility */
+  --c-red-bg:   #f3d8cb;
+  --c-red:      #a23e1a;
+  --c-line:     rgba(26, 30, 27, 0.08);
+  --c-line-d:   rgba(255, 255, 255, 0.08);
+
+  background: var(--c-cream);
+  color: var(--c-ink);
+}
+
+/* Animations */
+@keyframes c-pop-in {
+  0%   { opacity: 0; transform: scale(0.6); }
+  60%  { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes c-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50%       { opacity: 1;  transform: scale(1.1); }
+}
+
+@keyframes c-scan-line {
+  0%   { transform: translateY(0);     opacity: 0.95; }
+  50%  {                               opacity: 1;    }
+  100% { transform: translateY(220px); opacity: 0.4;  }
+}
+
+/* Tab bar */
+[data-portal="customer"] .c-tabbar {
+  height: 78px;
+  background: rgba(246, 244, 239, 0.92);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-top: 0.5px solid rgba(26, 30, 27, 0.08);
+  display: grid;
+  grid-template-columns: 1fr 1fr 88px 1fr 1fr;
+  align-items: start;
+  padding: 8px 12px 0;
+  flex-shrink: 0;
+}
+
+[data-portal="customer"] .c-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-top: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-ink-mut);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+}
+
+[data-portal="customer"] .c-tab[data-active="true"] {
+  color: var(--c-gold-3);
+}
+
+[data-portal="customer"] .c-tab-fab {
+  width: 64px;
+  height: 64px;
+  margin: -14px auto 0;
+  background: var(--c-card);
+  color: var(--c-gold-2);
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 0 0 4px var(--c-cream),
+    0 12px 24px rgba(26, 24, 20, 0.28),
+    0 4px 8px rgba(26, 24, 20, 0.16);
+  cursor: pointer;
+  transition: transform 0.12s ease;
+  text-decoration: none;
+  border: 0;
+}
+
+[data-portal="customer"] .c-tab-fab:active {
+  transform: scale(0.96);
+}
+
+/* Cards */
+[data-portal="customer"] .c-card-dark {
+  background: var(--c-card);
+  border-radius: 24px;
+  padding: 20px;
+  color: var(--c-cream);
+}
+
+[data-portal="customer"] .c-card-cream {
+  background: var(--c-cream-2);
+  border-radius: 20px;
+  padding: 16px;
+  border: 1px solid var(--c-line);
+}
+
+/* Loyalty card tier bar — green gradient for customer */
+[data-portal="customer"] .c-tier-bar-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.10);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+[data-portal="customer"] .c-tier-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--c-gold-3), var(--c-gold-2));
+  border-radius: 99px;
+}
+
+/* Move / transaction row */
+[data-portal="customer"] .c-move-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 0.5px solid var(--c-line);
+}
+
+[data-portal="customer"] .c-move-row:last-child {
+  border-bottom: none;
+}
+
+/* Action tile (2×2 grid on wallet page) */
+[data-portal="customer"] .c-action-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Pop-in */
+[data-portal="customer"] .c-pop-in {
+  animation: c-pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Pulse */
+[data-portal="customer"] .c-pulse {
+  animation: c-pulse 1.8s ease-in-out infinite;
+}
+
+/* Scanner viewfinder — green tint for customer (join-store mode) */
+[data-portal="customer"] .c-vf-corner {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--c-green-2);
+}
+
+[data-portal="customer"] .c-vf-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--c-green-2), transparent);
+  border-radius: 99px;
+  animation: c-scan-line 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Screen top bar (reused for detail screens) */
+[data-portal="customer"] .c-scr-top {
+  padding: 16px 20px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+[data-portal="customer"] .c-scr-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--c-cream-2);
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-portal="customer"] .c-scr-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* Menu row (settings page) */
+[data-portal="customer"] .c-menu-row {
+  padding: 14px 16px;
+  border-bottom: 0.5px solid var(--c-line);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+[data-portal="customer"] .c-menu-row:last-child {
+  border-bottom: none;
+}

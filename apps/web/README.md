@@ -21,5 +21,6 @@ Default: `http://localhost:3003`.
 - Root admin tenants: `GET /v1/admin/tenants`
 - Store admin agents/users: `GET /v1/store/users`, `POST /v1/store/invitations`
 - Agent create customer: `POST /v1/staff/customers`
-- Customer enroll: `POST /v1/pwa/enrollments/scan`
+- Store admin metrics: `GET /v1/store/metrics` (points issued, point events this calendar month)
 
+See [Phase 1 validation checklist](../../docs/phase1-validation.md). Optional E2E: from `apps/web` run `pnpm test:e2e` with `PLAYWRIGHT_BASE_URL` pointing at a running dev server.

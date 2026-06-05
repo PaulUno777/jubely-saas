@@ -1,4 +1,6 @@
 :root {
+  --brand-white: #ffffff;
+
   --brand-n0: #fdfaf5;
   --brand-n1: #f5f0e8;
   --brand-n2: #eae3d8;
@@ -64,13 +66,13 @@
 
   --background: var(--brand-n0);
   --foreground: var(--brand-n8);
-  --card: var(--brand-n0);
+  --card: var(--brand-white);
   --card-foreground: var(--brand-n8);
   --popover: var(--brand-n0);
   --popover-foreground: var(--brand-n8);
   --primary: var(--brand-e2);
   --primary-foreground: #ffffff;
-  --secondary: var(--brand-n1);
+  --secondary: var(--brand-n2);
   --secondary-foreground: var(--brand-n8);
   --muted: var(--brand-n1);
   --muted-foreground: var(--brand-n6);
@@ -100,16 +102,34 @@
   --status-suspended-bg: color-mix(in srgb, #c05050 14%, transparent);
   --status-trial: var(--brand-tl2);
   --status-trial-bg: color-mix(in srgb, var(--brand-tl2) 14%, transparent);
+
+  --portal-card-bg: #ffffff;
+  --portal-card-border: #211c1414;
 }
 
 :root[data-profile="merchant"] {
+  --background: var(--brand-n0);
+  --card: var(--brand-white);
+  --secondary: var(--brand-n2);
   --muted: var(--brand-n1);
+  --muted-foreground: var(--brand-n6);
+  --accent: color-mix(in srgb, var(--brand-g2) 12%, var(--brand-n1));
+  --accent-foreground: var(--brand-n8);
+  --primary: var(--brand-e2);
+  --primary-foreground: #ffffff;
+  --ring: var(--brand-e2);
   --sidebar: var(--brand-n1);
   --sidebar-foreground: var(--brand-n8);
   --sidebar-accent: color-mix(in srgb, var(--brand-g2) 14%, var(--brand-n1));
   --sidebar-accent-foreground: var(--brand-n8);
   --sidebar-primary: var(--brand-e2);
   --sidebar-border: color-mix(in srgb, var(--brand-n8) 10%, transparent);
+  --growth: var(--brand-e2);
+  --growth-surface: var(--brand-e0);
+  --growth-foreground: var(--brand-e3);
+  --reward: var(--brand-g2);
+  --reward-surface: var(--brand-g0);
+  --reward-foreground: var(--brand-g3);
 }
 
 :root[data-profile="agent"] {
@@ -222,6 +242,9 @@
   --status-suspended-bg: color-mix(in srgb, #e07070 16%, transparent);
   --status-trial: #90d0cc;
   --status-trial-bg: color-mix(in srgb, #0f766e 18%, transparent);
+
+  --portal-card-bg: var(--card);
+  --portal-card-border: var(--border);
 }
 
 .dark[data-profile="customer"] {
@@ -288,4 +311,7 @@
   --status-suspended-bg: color-mix(in srgb, #e07070 18%, transparent);
   --status-trial: #90d0cc;
   --status-trial-bg: color-mix(in srgb, var(--brand-tl2) 18%, transparent);
+
+  --portal-card-bg: var(--card);
+  --portal-card-border: var(--border);
 }

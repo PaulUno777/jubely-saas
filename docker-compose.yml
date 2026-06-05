@@ -7,7 +7,7 @@ services:
       dockerfile: backend/Dockerfile.dev
     container_name: jubely-backend
     working_dir: /workspace/backend
-    command: sh -c "go mod download && go run ./cmd/api"
+    command: sh -c "/usr/local/go/bin/go run ./cmd/api"
     ports:
       - "8082:8080"
     env_file:

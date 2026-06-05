@@ -9,6 +9,17 @@ Go API for **Option 2 onboarding**: only a **superadmin** creates tenants; **mer
 - **Go**: projects targets **the latest stable Go** (see `go` / `toolchain` in `go.mod`). CI uses `go-version-file: backend/go.mod`. Upgrade with `go get go@latest` and `go get -u ./...` when you intentionally refresh dependencies.
 - PostgreSQL 14+ (Supabase works)
 
+## Composition root (Wire)
+
+API dependencies are wired in [`internal/app`](internal/app) using [Google Wire](https://github.com/google/wire). `cmd/api/main.go` only starts the process; providers live under `internal/app/providers/` (postgres, infra, use cases by domain, HTTP).
+
+After changing providers or `wire.go`, regenerate and commit `wire_gen.go`:
+
+```bash
+cd backend
+go generate ./internal/app/...
+```
+
 ## Local dev (Docker Compose)
 
 This repository will host multiple projects, so the compose file is at root:
@@ -70,7 +81,7 @@ POST /v1/auth/login
 5. Create a tenant (`self_serve` is forced to `false` in the HTTP layer for MVP):
 
 ```http
-POST /v1/admin/tenants
+POST /v1/superadmin/tenants
 Authorization: Bearer <token>
 {"name":"Chez Mama","slug":"chez-mama"}
 ```
@@ -78,7 +89,7 @@ Authorization: Bearer <token>
 6. Invite a merchant admin:
 
 ```http
-POST /v1/admin/tenants/<tenantId>/invitations
+POST /v1/superadmin/tenants/<tenantId>/invitations
 Authorization: Bearer <token>
 {"email":"merchant@example.com","role":"merchant_admin"}
 ```
@@ -102,14 +113,14 @@ Response includes `customer_qr` (HMAC token string) for client display in early 
 9. Generate a store QR (superadmin token required). This token can be printed/displayed in the store for self-enrollment.
 
 ```http
-GET /v1/admin/tenants/<tenantId>/store-qr
+GET /v1/superadmin/tenants/<tenantId>/store-qr
 Authorization: Bearer <token>
 ```
 
-10. Enroll by scanning a store QR (PWA flow):
+10. Enroll by scanning a store QR:
 
 ```http
-POST /v1/pwa/enrollments/scan
+POST /v1/public/enrollments
 Content-Type: application/json
 
 {"store_qr":"<storeQrToken>","phone_e164":"+221771234567","name":"Awa Diop"}
@@ -153,9 +164,48 @@ All JSON responses use a stable envelope. **`error.message` is localized** from 
 
 Manual QA order and UI targets for this iteration are documented under [`context/phase1/`](../context/phase1/) (see `recommandation.md` and screenshots).
 
+## Tenant-scoped merchant API (REST)
+
+Merchant admin routes are scoped under **`/v1/tenants/:tenantId/*`**. The JWT `tenant_id` must match `:tenantId`.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/v1/tenants/:tenantId/metrics?period=7d\|30d&location_id=` | KPI cards + sparklines |
+| `GET` | `/v1/tenants/:tenantId/metrics/loyalty-activity` | Daily distributed vs rewarded series |
+| `GET` | `/v1/tenants/:tenantId/stats` | Sidebar resource counts |
+| `GET` | `/v1/tenants/:tenantId/locations` | List physical locations |
+| `POST` | `/v1/tenants/:tenantId/locations` | Create location (address + optional coordinates) |
+| `PATCH` | `/v1/tenants/:tenantId/locations/:locationId` | Mark location as headquarters (`{ "is_hq": true }`) |
+
+Public discovery (no auth):
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/v1/public/locations/nearby` | Precise (`lat`+`lng`) or coarse (`country_code`+`city`) |
+
+**Naming:** SaaS account = **tenant**; physical boutique = **location** (Postgres `locations`, French UI **boutique**). The merchant portal path prefix `/store/*` is the admin shell only—not the domain resource. Legacy `/v1/store/*` and `/v1/organizations/me/*` remain until clients migrate. Merchant UI route for boutiques: **`/store/locations`**.
+
 ## Migrations
 
-Embedded SQL runs on startup (`internal/migrate`). For rapid iteration, use a fresh database if you change `001_init.sql` (idempotent upgrades come in a later iteration).
+Embedded goose SQL runs on API startup ([`internal/migrate`](internal/migrate)). The baseline is **four files** (concern order):
+
+| File | Domain |
+|------|--------|
+| `001_core_auth.sql` | Organizations (`tenants`), users, memberships, MFA, refresh tokens |
+| `002_locations.sql` | Physical locations (`locations`), `location_memberships`, HQ flag, geo index |
+| `003_loyalty.sql` | `customer_identities`, `loyalty_enrollments`, `point_events`, `points_rules` |
+| `004_rewards_billing.sql` | Rewards, redemptions, `plan_catalog`, subscriptions, invoices |
+
+Legacy tables `customers` / `enrollments` from early prototypes are **not** created. HQ stores and trial subscriptions are created by the app (`ProvisionOrganization` on org signup), not by migration backfills.
+
+**After changing migration files**, reset the database (pre-production):
+
+```bash
+dropdb jubely && createdb jubely
+# or: psql -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+```
+
+Then start the API or run `go run ./cmd/migrate` from `backend/`. Do not rely on goose Down across squashed files—prefer a fresh DB.
 
 ## CI
 

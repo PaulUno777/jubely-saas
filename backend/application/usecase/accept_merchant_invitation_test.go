@@ -59,7 +59,7 @@ func (m *memUserRepo) FindSuperadminByEmail(ctx context.Context, email string) (
 
 func (m *memUserRepo) FindByTenantAndEmail(ctx context.Context, tenantID uuid.UUID, email string) (*domain.User, error) {
 	for _, u := range m.users {
-		if u.TenantID != nil && *u.TenantID == tenantID && u.Email == email {
+		if u.Email == email {
 			return u, nil
 		}
 	}
@@ -99,6 +99,7 @@ func TestAcceptMerchantInvitation_expired(t *testing.T) {
 	uc := &AcceptMerchantInvitation{
 		Tx:          noopTx{},
 		Users:       &memUserRepo{},
+		Memberships: &stubMembershipRepo{},
 		Invitations: invRepo,
 		Hasher:      stubHasher{},
 		Clock:       stubClock{t: now},

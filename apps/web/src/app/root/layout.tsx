@@ -5,7 +5,7 @@ export default function RootAdminLayout({ children }: { children: React.ReactNod
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>{children}</SidebarInset>
+      <SidebarInset className="admin-portal-inset m-0 p-0">{children}</SidebarInset>
     </SidebarProvider>
   );
 }

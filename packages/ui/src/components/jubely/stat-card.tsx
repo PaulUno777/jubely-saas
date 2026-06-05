@@ -11,8 +11,8 @@ type StatCardProps = {
 export function StatCard({ label, value, sub, trend, className }: StatCardProps) {
   return (
     <div className={cn("rounded-xl border border-border bg-card p-5", className)}>
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="mt-2 font-mono text-2xl font-semibold text-foreground">{value}</p>
+      <p className="jb-label tracking-wider">{label}</p>
+      <p className="jb-stat-value mt-2 text-4xl">{value}</p>
       {sub && (
         <p
           className={cn(

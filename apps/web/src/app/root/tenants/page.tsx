@@ -44,22 +44,21 @@ export default function RootTenantsPage() {
   const t = useTranslations("admin.tenants");
   const tErrors = useTranslations("errors");
   const { session } = useSession();
-  const token = session?.accessToken;
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("all");
   const [wizardOpen, setWizardOpen] = useState(false);
 
   const q = useQuery({
     queryKey: ["admin", "tenants"],
-    enabled: Boolean(token),
-    queryFn: () => adminListTenants({ accessToken: token!, limit: 200, offset: 0 }),
+    enabled: Boolean(session),
+    queryFn: () => adminListTenants({ limit: 200, offset: 0 }),
   });
 
   const rows = useMemo(() => filterTenants(q.data ?? [], tab), [q.data, tab]);
 
   const patchMut = useMutation({
     mutationFn: async (input: { tenantId: string; active: boolean }) => {
-      return adminPatchTenant({ accessToken: token!, tenantId: input.tenantId, body: { active: input.active } });
+      return adminPatchTenant({ tenantId: input.tenantId, body: { active: input.active } });
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin", "tenants"] });
@@ -179,11 +178,10 @@ export default function RootTenantsPage() {
         </Card>
       </Main>
 
-      {token ? (
+      {session ? (
         <CreateTenantWizard
           open={wizardOpen}
           onOpenChange={setWizardOpen}
-          accessToken={token}
           onFinished={() => void qc.invalidateQueries({ queryKey: ["admin", "tenants"] })}
         />
       ) : null}

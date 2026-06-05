@@ -13,8 +13,8 @@ import (
 
 // LocalFS stores objects under RootDir and reports URLs under PublicBaseURL (no trailing slash).
 type LocalFS struct {
-	RootDir         string
-	PublicBaseURL   string
+	RootDir       string
+	PublicBaseURL string
 }
 
 func NewLocalFS(rootDir, publicBaseURL string) *LocalFS {

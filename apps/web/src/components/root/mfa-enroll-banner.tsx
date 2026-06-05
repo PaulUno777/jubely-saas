@@ -6,15 +6,18 @@ import { Button } from "@jubely/ui";
 import { ShieldAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { authedJson } from "@/lib/http";
+import { useSession } from "@/hooks/useSession";
 
 type MfaList = { items: { enabled_at?: string | null }[] };
 
-export function MfaEnrollBanner(props: { accessToken: string }) {
+export function MfaEnrollBanner() {
   const t = useTranslations("security.mfaBanner");
+  const { session } = useSession();
+  const adminPortal = session?.role === "superadmin" || session?.role === "merchant_admin";
   const q = useQuery({
     queryKey: ["me", "mfa", "banner"],
-    enabled: Boolean(props.accessToken),
-    queryFn: () => authedJson<MfaList>("/v1/me/mfa", props.accessToken, { method: "GET" }),
+    enabled: Boolean(adminPortal),
+    queryFn: () => authedJson<MfaList>("/v1/me/mfa", { method: "GET" }),
   });
 
   const hasEnabled = Boolean(q.data?.items?.some((f) => f.enabled_at));

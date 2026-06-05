@@ -38,6 +38,14 @@ type Config struct {
 	AssetUploadDir string
 	// PublicFileBaseURL is the public URL prefix for uploaded assets (local API path or R2 custom domain).
 	PublicFileBaseURL string
+	// PublicEnrollRequirePhoneVerify when true requires a valid phone_verify_token on PWA enrollment (after OTP verify).
+	PublicEnrollRequirePhoneVerify bool
+
+	StripeSecretKey       string
+	StripeWebhookSecret   string
+	StripePriceStarter    string
+	StripePriceGrowth     string
+	StripePriceBusiness   string
 }
 
 func Load() (Config, error) {
@@ -113,6 +121,14 @@ func Load() (Config, error) {
 	cfg.R2AccessKeyID = strings.TrimSpace(os.Getenv("R2_ACCESS_KEY_ID"))
 	cfg.R2SecretAccessKey = strings.TrimSpace(os.Getenv("R2_SECRET_ACCESS_KEY"))
 	cfg.R2Bucket = strings.TrimSpace(os.Getenv("R2_BUCKET"))
+
+	cfg.PublicEnrollRequirePhoneVerify = strings.TrimSpace(os.Getenv("PUBLIC_ENROLL_REQUIRE_PHONE_VERIFY")) == "true"
+
+	cfg.StripeSecretKey = strings.TrimSpace(os.Getenv("STRIPE_SECRET_KEY"))
+	cfg.StripeWebhookSecret = strings.TrimSpace(os.Getenv("STRIPE_WEBHOOK_SECRET"))
+	cfg.StripePriceStarter = strings.TrimSpace(os.Getenv("STRIPE_PRICE_STARTER"))
+	cfg.StripePriceGrowth = strings.TrimSpace(os.Getenv("STRIPE_PRICE_GROWTH"))
+	cfg.StripePriceBusiness = strings.TrimSpace(os.Getenv("STRIPE_PRICE_BUSINESS"))
 
 	return cfg, nil
 }

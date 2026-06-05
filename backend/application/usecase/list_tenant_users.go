@@ -9,8 +9,8 @@ import (
 )
 
 type ListTenantUsers struct {
-	Tenants ports.TenantRepository
-	Users   ports.UserRepository
+	Tenants     ports.TenantRepository
+	Memberships ports.TenantMembershipRepository
 }
 
 type ListTenantUsersInput struct {
@@ -31,11 +31,11 @@ func (uc *ListTenantUsers) Execute(ctx context.Context, in ListTenantUsersInput)
 		return nil, err
 	}
 	offset, limit := clampTenantPage(in.Offset, in.Limit)
-	total, err := uc.Users.CountByTenant(ctx, in.TenantID)
+	total, err := uc.Memberships.CountByTenant(ctx, in.TenantID)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := uc.Users.ListPublicByTenant(ctx, in.TenantID, offset, limit)
+	rows, err := uc.Memberships.ListPublicByTenant(ctx, in.TenantID, offset, limit)
 	if err != nil {
 		return nil, err
 	}

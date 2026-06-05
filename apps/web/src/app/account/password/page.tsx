@@ -17,12 +17,12 @@ export default function PasswordPage() {
 
   if (!session) return <div className="p-6">Session requise.</div>;
 
+  const sess = session;
+
   async function submit() {
-    const at = session?.accessToken;
-    if (!at) return;
     setLoading(true);
     try {
-      const res = await authedFetch("/v1/me/password", at, {
+      const res = await authedFetch("/v1/me/password", {
         method: "POST",
         body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
       });
@@ -32,9 +32,9 @@ export default function PasswordPage() {
         throw new Error(typeof j?.error?.message === "string" ? j.error.message : "Erreur");
       }
       toast.success("Mot de passe mis à jour");
-      if (session.role === "superadmin") router.push("/root");
-      else if (session.role === "merchant_admin") router.push("/store");
-      else if (session.role === "staff") router.push("/agent");
+      if (sess.role === "superadmin") router.push("/root");
+      else if (sess.role === "merchant_admin") router.push("/store");
+      else if (sess.role === "staff") router.push("/agent");
       else router.push("/customer");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");

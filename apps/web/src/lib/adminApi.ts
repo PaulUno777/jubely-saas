@@ -9,18 +9,15 @@ import {
   type SuperadminStats,
   type Tenant,
 } from "@jubely/api-schemas";
-import { authedFetch, authedJson, joinUrl } from "./http";
+import { authedFetch, authedJson, joinUrl, joinUrlWithQuery } from "./http";
 
-// Backend docs (and the router) expose root-admin endpoints under `/v1/admin`
-// (with `/v1/superadmin` as an internal/alternate namespace).
-const SUPER = "/v1/admin";
+const SUPER = "/v1/superadmin";
 
-export async function adminListTenants(input: { accessToken: string; offset?: number; limit?: number }): Promise<Tenant[]> {
-  const url = new URL(joinUrl(`${SUPER}/tenants`));
-  if (input.offset !== undefined) url.searchParams.set("offset", String(input.offset));
-  if (input.limit !== undefined) url.searchParams.set("limit", String(input.limit));
-
-  const res = await authedFetch(url.toString(), input.accessToken, { method: "GET" });
+export async function adminListTenants(input: { offset?: number; limit?: number } = {}): Promise<Tenant[]> {
+  const res = await authedFetch(
+    joinUrlWithQuery(`${SUPER}/tenants`, { offset: input.offset, limit: input.limit }),
+    { method: "GET" },
+  );
   const text = await res.text();
   const json = parseJsonUnknown(text);
   if (!res.ok) {
@@ -29,8 +26,8 @@ export async function adminListTenants(input: { accessToken: string; offset?: nu
   return parseSuccessData(json, listTenantsSuccessEnvelopeSchema, res.status, text);
 }
 
-export async function adminGetTenant(input: { accessToken: string; tenantId: string }): Promise<Tenant> {
-  const res = await authedFetch(`${SUPER}/tenants/${input.tenantId}`, input.accessToken, { method: "GET" });
+export async function adminGetTenant(input: { tenantId: string }): Promise<Tenant> {
+  const res = await authedFetch(`${SUPER}/tenants/${input.tenantId}`, { method: "GET" });
   const text = await res.text();
   const json = parseJsonUnknown(text);
   if (!res.ok) {
@@ -40,7 +37,6 @@ export async function adminGetTenant(input: { accessToken: string; tenantId: str
 }
 
 export async function adminCreateTenant(input: {
-  accessToken: string;
   body: { name: string; slug: string; plan: string; self_serve?: boolean };
 }): Promise<Tenant> {
   const wire = createTenantWireSchema.parse({
@@ -49,28 +45,24 @@ export async function adminCreateTenant(input: {
     plan: input.body.plan,
     self_serve: input.body.self_serve ?? false,
   });
-  return authedJson<Tenant>(`${SUPER}/tenants`, input.accessToken, {
+  return authedJson<Tenant>(`${SUPER}/tenants`, {
     method: "POST",
     json: wire,
   });
 }
 
-export async function adminPatchTenant(input: {
-  accessToken: string;
-  tenantId: string;
-  body: Record<string, unknown>;
-}): Promise<Tenant> {
-  return authedJson<Tenant>(`${SUPER}/tenants/${input.tenantId}`, input.accessToken, {
+export async function adminPatchTenant(input: { tenantId: string; body: Record<string, unknown> }): Promise<Tenant> {
+  return authedJson<Tenant>(`${SUPER}/tenants/${input.tenantId}`, {
     method: "PATCH",
     json: input.body,
   });
 }
 
-export async function adminUploadTenantLogo(input: { accessToken: string; file: File }): Promise<{ url: string }> {
+export async function adminUploadTenantLogo(input: { file: File }): Promise<{ url: string }> {
   const fd = new FormData();
   fd.set("file", input.file);
 
-  const res = await authedFetch(`${SUPER}/uploads/tenant-logo`, input.accessToken, { method: "POST", body: fd });
+  const res = await authedFetch(`${SUPER}/uploads/tenant-logo`, { method: "POST", body: fd });
   const text = await res.text();
   const json = parseJsonUnknown(text);
   if (!res.ok) throwFailedApiResponse(json, res.status, text);
@@ -82,13 +74,12 @@ export async function adminUploadTenantLogo(input: { accessToken: string; file: 
 }
 
 export async function adminCreateTenantUser(input: {
-  accessToken: string;
   tenantId: string;
   email: string;
   role?: string;
   temp_password?: string | null;
 }): Promise<{ user_id: string; temp_password: string }> {
-  return authedJson<{ user_id: string; temp_password: string }>(`${SUPER}/tenants/${input.tenantId}/users`, input.accessToken, {
+  return authedJson<{ user_id: string; temp_password: string }>(`${SUPER}/tenants/${input.tenantId}/users`, {
     method: "POST",
     json: {
       email: input.email,
@@ -106,15 +97,17 @@ export type TenantUserRow = {
 };
 
 export async function adminListTenantUsers(input: {
-  accessToken: string;
   tenantId: string;
   offset?: number;
   limit?: number;
 }): Promise<TenantUserRow[]> {
-  const url = new URL(joinUrl(`${SUPER}/tenants/${input.tenantId}/users`));
-  if (input.offset !== undefined) url.searchParams.set("offset", String(input.offset));
-  if (input.limit !== undefined) url.searchParams.set("limit", String(input.limit));
-  const res = await authedFetch(url.toString(), input.accessToken, { method: "GET" });
+  const res = await authedFetch(
+    joinUrlWithQuery(`${SUPER}/tenants/${input.tenantId}/users`, {
+      offset: input.offset,
+      limit: input.limit,
+    }),
+    { method: "GET" },
+  );
   const text = await res.text();
   const json = parseJsonUnknown(text);
   if (!res.ok) {
@@ -123,6 +116,6 @@ export async function adminListTenantUsers(input: {
   return parseSuccessData(json, listStoreUsersSuccessEnvelopeSchema, res.status, text);
 }
 
-export async function adminSuperadminStats(accessToken: string): Promise<SuperadminStats> {
-  return authedJson<SuperadminStats>(`${SUPER}/stats`, accessToken, { method: "GET" });
+export async function adminSuperadminStats(): Promise<SuperadminStats> {
+  return authedJson<SuperadminStats>(`${SUPER}/stats`, { method: "GET" });
 }

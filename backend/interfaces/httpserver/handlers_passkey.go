@@ -132,14 +132,25 @@ func (s *Server) AuthPasskeyFinish(c *gin.Context) {
 		respondMapped(c, mapLoginError(err))
 		return
 	}
-	respondOK(c, gin.H{
-		"step":                 "ok",
-		"access_token":         out.AccessToken,
-		"refresh_token":        out.RefreshToken,
-		"user_id":              out.UserID.String(),
-		"tenant_id":            out.TenantID,
-		"role":                 out.Role.String(),
-		"email":                out.Email,
-		"must_change_password": out.MustChangePassword,
-	})
+	respondOK(c, authDataFromResult(
+		out.Step,
+		out.AccessToken,
+		out.RefreshToken,
+		out.UserID,
+		out.MembershipID,
+		out.TenantID,
+		out.Role,
+		out.Email,
+		out.MustChangePassword,
+		out.Workspaces,
+		out.CustomerID,
+		out.ActiveEnrollmentID,
+		out.Enrollments,
+		gin.H{
+			"required":          false,
+			"methods":           []string{},
+			"enrolled_factors":  1,
+			"setup_recommended": false,
+		},
+	))
 }

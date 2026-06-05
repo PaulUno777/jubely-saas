@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
@@ -35,6 +36,7 @@ func tenantToGin(t *domain.Tenant) gin.H {
 		"active":          t.Active,
 		"plan":            t.Plan,
 		"conflict_policy": t.ConflictPolicy,
+		"allow_staff_self_enrollment": t.AllowStaffSelfEnrollment,
 		"settings":        settings,
 		"logo_url":        logoURL,
 		"created_at":      t.CreatedAt,
@@ -46,6 +48,22 @@ func parsePageQuery(c *gin.Context) (offset, limit int) {
 	limit, _ = strconv.Atoi(c.Query("limit"))
 	offset, _ = strconv.Atoi(c.Query("offset"))
 	return offset, limit
+}
+
+func parseTimeRangeQuery(c *gin.Context) (from, to *time.Time) {
+	if s := strings.TrimSpace(c.Query("from")); s != "" {
+		if t, err := time.Parse(time.RFC3339, s); err == nil {
+			utc := t.UTC()
+			from = &utc
+		}
+	}
+	if s := strings.TrimSpace(c.Query("to")); s != "" {
+		if t, err := time.Parse(time.RFC3339, s); err == nil {
+			utc := t.UTC()
+			to = &utc
+		}
+	}
+	return from, to
 }
 
 func (s *Server) AdminListTenants(c *gin.Context) {
@@ -85,6 +103,7 @@ type patchTenantBody struct {
 	Active         *bool            `json:"active"`
 	Plan           *string          `json:"plan"`
 	ConflictPolicy *string          `json:"conflict_policy"`
+	AllowStaffSelfEnrollment *bool  `json:"allow_staff_self_enrollment"`
 	Settings       *json.RawMessage `json:"settings"`
 }
 
@@ -99,7 +118,7 @@ func (s *Server) AdminPatchTenant(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
-	if body.Name == nil && body.Active == nil && body.Plan == nil && body.ConflictPolicy == nil && body.Settings == nil {
+	if body.Name == nil && body.Active == nil && body.Plan == nil && body.ConflictPolicy == nil && body.AllowStaffSelfEnrollment == nil && body.Settings == nil {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "no_fields"})
 		return
 	}
@@ -109,6 +128,7 @@ func (s *Server) AdminPatchTenant(c *gin.Context) {
 		Active:         body.Active,
 		Plan:           body.Plan,
 		ConflictPolicy: body.ConflictPolicy,
+		AllowStaffSelfEnrollment: body.AllowStaffSelfEnrollment,
 		Settings:       body.Settings,
 	})
 	if err != nil {

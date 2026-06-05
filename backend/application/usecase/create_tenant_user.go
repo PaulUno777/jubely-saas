@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
@@ -14,9 +15,10 @@ import (
 )
 
 type CreateTenantUser struct {
-	Tenants ports.TenantRepository
-	Users   ports.UserRepository
-	Hasher  ports.PasswordHasher
+	Tenants     ports.TenantRepository
+	Users       ports.UserRepository
+	Memberships ports.TenantMembershipRepository
+	Hasher      ports.PasswordHasher
 }
 
 type CreateTenantUserInput struct {
@@ -54,13 +56,7 @@ func (uc *CreateTenantUser) Execute(ctx context.Context, in CreateTenantUserInpu
 	if _, err := uc.Tenants.FindByID(ctx, in.TenantID); err != nil {
 		return nil, err
 	}
-	_, err := uc.Users.FindByTenantAndEmail(ctx, in.TenantID, email)
-	if err == nil {
-		return nil, fmt.Errorf("%w", domain.ErrEmailTaken)
-	}
-	if err != nil && !errors.Is(err, domain.ErrNotFound) {
-		return nil, err
-	}
+	var err error
 	var pwd string
 	if in.TempPassword != nil && strings.TrimSpace(*in.TempPassword) != "" {
 		pwd = strings.TrimSpace(*in.TempPassword)
@@ -77,19 +73,46 @@ func (uc *CreateTenantUser) Execute(ctx context.Context, in CreateTenantUserInpu
 	if err != nil {
 		return nil, err
 	}
-	u := &domain.User{
-		ID:                 uuid.New(),
-		TenantID:           &in.TenantID,
-		Email:              email,
-		PasswordHash:       hash,
-		Role:               in.Role,
-		MustChangePassword: true,
+	user, err := uc.Users.FindByEmail(ctx, email)
+	if err != nil && !errors.Is(err, domain.ErrNotFound) {
+		return nil, err
 	}
-	if err := uc.Users.Create(ctx, u); err != nil {
+	if user == nil {
+		user = &domain.User{
+			ID:                 uuid.New(),
+			Email:              email,
+			PasswordHash:       hash,
+			Role:               in.Role,
+			MustChangePassword: true,
+		}
+		if err := uc.Users.Create(ctx, user); err != nil {
+			if errors.Is(err, domain.ErrConflict) {
+				return nil, fmt.Errorf("%w", domain.ErrEmailTaken)
+			}
+			return nil, err
+		}
+	} else {
+		if _, err := uc.Memberships.FindByUserAndTenant(ctx, user.ID, in.TenantID); err == nil {
+			return nil, fmt.Errorf("%w", domain.ErrEmailTaken)
+		} else if !errors.Is(err, domain.ErrNotFound) {
+			return nil, err
+		}
+		if err := uc.Users.UpdatePassword(ctx, user.ID, hash, true); err != nil {
+			return nil, err
+		}
+	}
+	if err := uc.Memberships.Create(ctx, &domain.TenantMembership{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		TenantID:  in.TenantID,
+		Role:      in.Role,
+		Status:    domain.MembershipStatusActive,
+		CreatedAt: time.Now().UTC(),
+	}); err != nil {
 		if errors.Is(err, domain.ErrConflict) {
 			return nil, fmt.Errorf("%w", domain.ErrEmailTaken)
 		}
 		return nil, err
 	}
-	return &CreateTenantUserOutput{UserID: u.ID, TempPassword: pwd}, nil
+	return &CreateTenantUserOutput{UserID: user.ID, TempPassword: pwd}, nil
 }

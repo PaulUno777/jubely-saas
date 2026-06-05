@@ -43,7 +43,6 @@ func (uc *BootstrapSuperadmin) Execute(ctx context.Context, in BootstrapSuperadm
 	}
 	u := &domain.User{
 		ID:           uuid.New(),
-		TenantID:     nil,
 		Email:        email,
 		PasswordHash: hash,
 		Role:         domain.RoleSuperadmin,

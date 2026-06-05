@@ -89,7 +89,7 @@ func (s *Server) AdminGetStoreQR(c *gin.Context) {
 		respondMapped(c, mapTenantError(err))
 		return
 	}
-	token, err := s.QRCodec.SignStoreQR(c.Request.Context(), tenantID)
+	token, err := s.signEnrollmentStoreQR(c, tenantID)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
 		return

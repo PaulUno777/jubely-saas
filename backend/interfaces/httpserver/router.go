@@ -1,13 +1,14 @@
 package httpserver
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/authtoken"
 	"github.com/gin-gonic/gin"
 )
 
 func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 	r := gin.New()
-	r.Use(gin.Recovery())
+	r.Use(gin.Recovery(), SecurityHeaders())
 	if s != nil && s.CORSAllowAll {
 		r.Use(CORSAllowAll())
 	}
@@ -18,11 +19,22 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 	v1 := r.Group("/v1")
 	{
 		public := v1.Group("/public")
-		public.POST("/store/signup", s.PublicStoreSignup)
+		public.GET("/tenant/:slug", GinRateLimit(rateLimitPublicTenant), s.PublicGetTenantBySlug)
+		public.POST("/otp/send", GinRateLimit(rateLimitPublicOTPSend), s.PublicOTPSend)
+		public.POST("/otp/verify", GinRateLimit(rateLimitPublicOTPVerify), s.PublicOTPVerify)
+		public.POST("/enrollments", GinRateLimit(rateLimitPublicEnroll), s.PublicCreateEnrollment)
+		public.GET("/plans", s.PublicListPlans)
+		public.POST("/store/signup", GinRateLimit(rateLimitPublicSignup), s.PublicStoreSignup)
+		public.GET("/locations/nearby", GinRateLimit(rateLimitPublicTenant), s.PublicListNearbyLocations)
 		public.GET("/files/*filepath", s.PublicServeUpload)
 
-		v1.POST("/bootstrap/superadmin", s.BootstrapSuperadmin)
-		v1.POST("/auth/login", s.AuthLogin)
+		v1.POST("/webhooks/stripe", s.StripeWebhook)
+
+		v1.POST("/bootstrap/superadmin", GinRateLimit(rateLimitBootstrap), s.BootstrapSuperadmin)
+		v1.POST("/auth/login", GinRateLimit(rateLimitLogin), s.AuthLogin)
+		v1.POST("/auth/customer/login", GinRateLimit(rateLimitPublicOTPVerify), s.CustomerAuthLogin)
+		v1.POST("/auth/customer/session", AuthMiddleware(signer), s.CustomerSelectSession)
+		v1.POST("/auth/workspace", AuthMiddleware(signer), s.AuthSelectWorkspace)
 		v1.POST("/auth/mfa/totp/verify", s.AuthMFATOTPVerify)
 		v1.POST("/auth/refresh", s.AuthRefresh)
 		v1.POST("/auth/logout", s.AuthLogout)
@@ -45,32 +57,54 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		superadmin.GET("/stats", s.SuperadminStats)
 		superadmin.POST("/uploads/tenant-logo", s.AdminUploadTenantLogo)
 
-		// Backwards-compatible aliases (will be removed after clients migrate).
-		admin := v1.Group("/admin")
-		admin.Use(AuthMiddleware(signer), RequireSuperadmin())
-		admin.GET("/tenants", s.AdminListTenants)
-		admin.POST("/tenants", s.AdminCreateTenant)
-		admin.GET("/tenants/:tenantId", s.AdminGetTenant)
-		admin.PATCH("/tenants/:tenantId", s.AdminPatchTenant)
-		admin.GET("/tenants/:tenantId/users", s.AdminListTenantUsers)
-		admin.POST("/tenants/:tenantId/users", s.AdminCreateTenantUser)
-		admin.POST("/tenants/:tenantId/invitations", s.AdminCreateMerchantInvitation)
-		admin.GET("/tenants/:tenantId/store-qr", s.AdminGetStoreQR)
-		admin.GET("/stats", s.SuperadminStats)
-		admin.POST("/uploads/tenant-logo", s.AdminUploadTenantLogo)
+		customers := v1.Group("/customers")
+		customers.GET("/wallet", GinRateLimit(rateLimitPublicEnroll), s.CustomerGetWalletByQR)
+		customersMe := customers.Group("/me")
+		customersMe.Use(AuthMiddleware(signer))
+		customersMe.GET("/wallet", s.CustomerGetMyWallet)
+		customersMe.GET("/rewards", s.CustomerListRewards)
+		customersMe.POST("/rewards/:rewardId/claims", RequireWritableSubscription(), s.CustomerClaimReward)
+
+		org := v1.Group("/organizations/me")
+		org.Use(AuthMiddleware(signer), RequireMerchantAdmin(), RequireWritableSubscription())
+		org.GET("/stores", s.OrgListStores)
+		org.POST("/stores", s.OrgCreateStore)
+		org.GET("/subscription", s.OrgGetSubscription)
+		org.POST("/subscription/momo-invoice", s.OrgCreateMoMoInvoice)
+		org.POST("/subscription/confirm-momo", s.OrgConfirmMoMoInvoice)
 
 		store := v1.Group("/store")
 		store.Use(AuthMiddleware(signer), RequireMerchantAdmin())
+		store.GET("/metrics", s.StoreGetMetrics)
 		store.GET("/tenant", s.StoreGetTenant)
+		store.PATCH("/tenant", s.StorePatchTenant)
+		store.GET("/qr", s.StoreGetStoreQR)
 		store.GET("/users", s.StoreListUsers)
+		store.GET("/customers", s.StoreListCustomers)
+		store.GET("/transactions", s.StoreListPointEvents)
+		store.GET("/rewards", s.StoreListRewards)
+		store.POST("/rewards", s.StoreCreateReward)
+		store.PATCH("/rewards/:rewardId", s.StorePatchReward)
+		store.GET("/rules", s.StoreListRules)
+		store.POST("/rules", s.StoreCreateRule)
+		store.PATCH("/rules/:ruleId", s.StorePatchRule)
+		store.POST("/rules/simulate", s.StoreSimulateRules)
 		store.POST("/invitations", s.StoreCreateInvitation)
 
-		staff := v1.Group("/staff")
-		staff.Use(AuthMiddleware(signer), RequireStaffOrMerchantAdmin())
-		staff.POST("/customers", s.StaffCreateCustomer)
+		tenants := v1.Group("/tenants/:tenantId")
+		tenants.Use(AuthMiddleware(signer), RequireMerchantAdmin(), RequireTenantScope())
+		tenants.GET("/metrics", s.TenantGetMetrics)
+		tenants.GET("/metrics/loyalty-activity", s.TenantGetLoyaltyActivity)
+		tenants.GET("/stats", s.TenantGetStats)
+		tenants.GET("/locations", s.TenantListLocations)
+		tenants.POST("/locations", s.TenantCreateLocation)
+		tenants.PATCH("/locations/:locationId", s.TenantPatchLocation)
 
-		pwa := v1.Group("/pwa")
-		pwa.POST("/enrollments/scan", s.PWAEnrollByStoreQR)
+		staff := v1.Group("/staff")
+		staff.Use(AuthMiddleware(signer), RequireStaffOrMerchantAdmin(), RequireWritableSubscription())
+		staff.POST("/customers", RequirePermission(domain.PermEnrollCustomer), s.StaffCreateCustomer)
+		staff.POST("/purchases", RequirePermission(domain.PermRecordTransaction), s.StaffRecordPurchase)
+		staff.POST("/redemptions/validate", RequirePermission(domain.PermRecordTransaction), s.StaffValidateRedemption)
 
 		me := v1.Group("/me")
 		me.Use(AuthMiddleware(signer))

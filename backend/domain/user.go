@@ -7,11 +7,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// User is an authenticated operator or end-user.
-// Superadmin has TenantID=nil.
+// User is the global person/account record used for authentication.
+// Tenant-scoped worker access now lives in TenantMembership.
 type User struct {
 	ID                 uuid.UUID
-	TenantID           *uuid.UUID
 	Email              string
 	PasswordHash       string
 	Role               Role
@@ -21,5 +20,5 @@ type User struct {
 }
 
 func (u *User) IsSuperadmin() bool {
-	return u.Role == RoleSuperadmin && u.TenantID == nil
+	return u.Role == RoleSuperadmin
 }

@@ -70,6 +70,10 @@ body {
 }
 
 @layer base {
+  body {
+    font-family: var(--font-sans);
+  }
+
   a {
     color: inherit;
     text-decoration: none;
@@ -85,7 +89,8 @@ body {
     0%,
     100% {
       opacity: 1;
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--status-suspended) 55%, transparent);
+      box-shadow: 0 0 0 0
+        color-mix(in srgb, var(--status-suspended) 55%, transparent);
     }
 
     50% {
@@ -97,6 +102,11 @@ body {
   .surface-human {
     background-color: var(--human-surface);
     color: var(--human-foreground);
+  }
+
+  .surface-growth {
+    background-color: var(--growth-surface);
+    color: var(--growth-foreground);
   }
 
   .surface-reward {
@@ -119,5 +129,140 @@ body {
   .border-human {
     border-color: color-mix(in srgb, var(--human) 35%, transparent);
   }
-}
 
+  .border-growth {
+    border-color: color-mix(in srgb, var(--growth) 35%, transparent);
+  }
+
+  .merchant-portal-inset {
+    background:
+      radial-gradient(
+        ellipse 120% 80% at 100% -20%,
+        color-mix(in srgb, var(--growth) 8%, transparent),
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 90% 60% at -10% 0%,
+        color-mix(in srgb, var(--reward) 6%, transparent),
+        transparent 50%
+      ),
+      var(--background);
+  }
+
+  .dark[data-profile="admin"] .admin-portal-inset {
+    background:
+      radial-gradient(
+        ellipse 110% 70% at 100% -15%,
+        color-mix(in srgb, var(--primary) 12%, transparent),
+        transparent 50%
+      ),
+      radial-gradient(
+        ellipse 80% 50% at 0% 0%,
+        color-mix(in srgb, var(--status-active) 8%, transparent),
+        transparent 45%
+      ),
+      var(--background);
+  }
+
+  .dark[data-profile="merchant"] .merchant-portal-inset {
+    background:
+      radial-gradient(
+        ellipse 120% 80% at 100% -20%,
+        color-mix(in srgb, var(--growth) 10%, transparent),
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 90% 60% at -10% 0%,
+        color-mix(in srgb, var(--reward) 8%, transparent),
+        transparent 50%
+      ),
+      var(--background);
+  }
+
+  .merchant-portal-toolbar {
+    background: color-mix(in srgb, var(--card) 72%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
+  .merchant-portal-header,
+  .admin-portal-header,
+  .portal-topbar {
+    margin: 0;
+    background: var(--background);
+  }
+
+  .portal-card {
+    background-color: var(--portal-card-bg);
+    border: 1px solid var(--portal-card-border);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--portal-card-border) 80%, transparent);
+  }
+
+  .portal-kpi-card {
+    background-color: var(--portal-card-bg);
+    border: 1px solid var(--portal-card-border);
+  }
+
+  .jb-surface-neutral {
+    background-color: var(--secondary);
+  }
+
+  .jb-topbar-meta::before {
+    content: "·";
+    margin-right: 0.5rem;
+    color: var(--muted-foreground);
+    opacity: 0.7;
+  }
+
+  @media (max-width: 639px) {
+    .jb-topbar-meta::before {
+      display: none;
+    }
+  }
+
+  .jb-sidebar-store-card {
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .group[data-collapsible="icon"]:has(.jb-merchant-sidebar-header) [data-sidebar="header"],
+  .group[data-collapsible="icon"]:has(.jb-merchant-sidebar-header) [data-sidebar="footer"] {
+    overflow: visible;
+  }
+
+  .group[data-collapsible="icon"]:has(.jb-merchant-sidebar-header) [data-sidebar="group"] {
+    padding-inline: 0.25rem;
+  }
+
+  .group[data-collapsible="icon"]:has(.jb-merchant-sidebar-header) [data-sidebar="menu"] {
+    align-items: center;
+  }
+
+  .group[data-collapsible="icon"]:has(.jb-merchant-sidebar-header) [data-sidebar="menu-button"] {
+    justify-content: center;
+  }
+
+  .group[data-collapsible="icon"]:has(.jb-merchant-sidebar-header) .jb-sidebar-store-mark {
+    flex-shrink: 0;
+  }
+
+  .group[data-collapsible="icon"] [data-sidebar="footer"] {
+    overflow: visible;
+  }
+
+  .group[data-collapsible="icon"] [data-sidebar="footer"] .jb-nav-user-mark {
+    display: flex !important;
+    flex-shrink: 0;
+    opacity: 1 !important;
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .group[data-collapsible="icon"] [data-sidebar="footer"] .jb-nav-user-trigger {
+    overflow: visible;
+  }
+
+  .group[data-collapsible="icon"] [data-sidebar="header"] .jb-sidebar-store-mark {
+    margin-inline: auto;
+  }
+}

@@ -112,6 +112,7 @@ func TestRefresh_rotates_token(t *testing.T) {
 	uc := &RefreshAuth{
 		Users:         users,
 		RefreshTokens: refreshRepo,
+		Factors:       &stubFactorRepo{},
 		Signer:        signer,
 		Clock:         clock,
 		TTL:           30 * 24 * time.Hour,

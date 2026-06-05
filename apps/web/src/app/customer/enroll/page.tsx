@@ -6,8 +6,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { Button, Input, Label, Textarea } from "@jubely/ui";
-import { enrollByStoreQr } from "@/lib/customerApi";
-import { saveCustomerQr } from "@/lib/customerSession";
+import { customerAuthLogin, customerSelectContext, enrollByStoreQr } from "@/lib/customerApi";
+import { bootstrapAuthFromServer } from "@/lib/session";
 
 export default function CustomerEnrollPage() {
   const router = useRouter();
@@ -18,11 +18,17 @@ export default function CustomerEnrollPage() {
 
   const mut = useMutation({
     mutationFn: enrollByStoreQr,
-    onSuccess: (out) => {
-      if (out.customer_qr) {
-        saveCustomerQr(out.customer_qr);
+    onSuccess: (out, variables) => {
+      void (async () => {
+        if (variables.phoneVerifyToken) {
+          await customerAuthLogin(variables.phoneVerifyToken);
+          if (out.enrollment_id) {
+            await customerSelectContext(out.enrollment_id);
+          }
+          await bootstrapAuthFromServer();
+        }
         router.push("/customer/qr");
-      }
+      })();
     },
   });
 

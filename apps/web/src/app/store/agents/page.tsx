@@ -32,8 +32,10 @@ import {
   TableHeader,
   TableRow,
 } from "@jubely/ui";
-import { Plus } from "lucide-react";
+import { Copy, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { ApiResponseError } from "@jubely/api-schemas";
 import { Main } from "@/components/layout/main";
 import { StorePageHeader } from "@/components/store/store-page-header";
 import { useSession } from "@/hooks/useSession";
@@ -50,8 +52,8 @@ export default function StoreAgentsPage() {
 
   const q = useQuery({
     queryKey: ["store", "users"],
-    enabled: Boolean(session?.accessToken),
-    queryFn: () => storeListUsers({ accessToken: session!.accessToken, limit: 50, offset: 0 }),
+    enabled: Boolean(session),
+    queryFn: () => storeListUsers({ limit: 50, offset: 0 }),
   });
 
   const form = useForm<z.infer<typeof inviteSchema>>({
@@ -61,11 +63,15 @@ export default function StoreAgentsPage() {
 
   const mut = useMutation({
     mutationFn: async (values: z.infer<typeof inviteSchema>) => {
-      return storeCreateInvitation({ accessToken: session!.accessToken, email: values.email, role: "staff" });
+      return storeCreateInvitation({ email: values.email, role: "staff" });
     },
     onSuccess: () => {
+      toast.success(t("inviteSuccess"));
       form.reset();
       q.refetch();
+    },
+    onError: (e) => {
+      toast.error(e instanceof ApiResponseError ? e.message : t("inviteError"));
     },
   });
 
@@ -112,9 +118,33 @@ export default function StoreAgentsPage() {
                       </Button>
                     </DialogFooter>
                     {mut.data ? (
-                      <div className="rounded-lg border border-border bg-muted p-3">
-                        <p className="mb-1 text-xs text-muted-foreground">{t("tokenLabel")}</p>
-                        <p className="break-all font-mono text-sm">{mut.data.token}</p>
+                      <div className="space-y-3 rounded-lg border border-border bg-muted p-3">
+                        <div>
+                          <p className="mb-1 text-xs text-muted-foreground">{t("inviteLinkLabel")}</p>
+                          <p className="break-all font-mono text-sm">
+                            {typeof window !== "undefined"
+                              ? `${window.location.origin}/invite/${mut.data.token}`
+                              : `/invite/${mut.data.token}`}
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 gap-1.5"
+                            onClick={async () => {
+                              const url = `${window.location.origin}/invite/${mut.data!.token}`;
+                              await navigator.clipboard.writeText(url);
+                              toast.success(t("inviteLinkCopied"));
+                            }}
+                          >
+                            <Copy size={14} />
+                            {t("copyInviteLink")}
+                          </Button>
+                        </div>
+                        <div>
+                          <p className="mb-1 text-xs text-muted-foreground">{t("tokenLabel")}</p>
+                          <p className="break-all font-mono text-sm">{mut.data.token}</p>
+                        </div>
                       </div>
                     ) : null}
                   </form>
@@ -140,7 +170,7 @@ export default function StoreAgentsPage() {
                 ) : q.error ? (
                   <TableRow>
                     <TableCell colSpan={2} className="text-sm text-destructive">
-                      {t("loadError")}
+                      {q.error instanceof ApiResponseError ? q.error.message : t("loadErrorDetail")}
                     </TableCell>
                   </TableRow>
                 ) : q.data?.length ? (

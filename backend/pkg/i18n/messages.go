@@ -21,6 +21,7 @@ var backendMessages = map[Locale]map[string]string{
 		CodeCustomerPhoneTaken:        "Phone number is already registered.",
 		CodeCustomerEnrollmentActive:  "Customer is already enrolled for this store.",
 		CodeInternal:                  "Something went wrong. Please try again.",
+		CodeRateLimit:                 "Too many requests. Please try again later.",
 	},
 	LocaleFR: {
 		CodeBootstrapSuperadminCreated: "Superadmin créé.",
@@ -40,5 +41,6 @@ var backendMessages = map[Locale]map[string]string{
 		CodeCustomerPhoneTaken:        "Ce numéro est déjà enregistré.",
 		CodeCustomerEnrollmentActive:  "Le client est déjà inscrit dans ce magasin.",
 		CodeInternal:                  "Une erreur est survenue. Réessayez plus tard.",
+		CodeRateLimit:                 "Trop de requêtes. Réessayez plus tard.",
 	},
 }

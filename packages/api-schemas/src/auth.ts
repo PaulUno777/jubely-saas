@@ -14,33 +14,64 @@ export type AgentLoginForm = z.infer<typeof agentLoginFormSchema>;
 export const loginRequestWireSchema = z.object({
   email: z.string(),
   password: z.string(),
-  tenant_slug: z.string(),
+  tenant_slug: z.string().optional(),
+});
+
+export const authWorkspaceSchema = z.object({
+  membership_id: z.string(),
+  tenant_id: z.string(),
+  tenant_name: z.string().optional(),
+  tenant_slug: z.string().optional(),
+  role: z.string(),
+  permissions: z.array(z.string()).optional(),
+});
+
+export const authCustomerEnrollmentSchema = z.object({
+  enrollment_id: z.string(),
+  tenant_id: z.string(),
+  tenant_name: z.string().optional(),
+  tenant_slug: z.string().optional(),
+  tier: z.string().optional(),
+  points_balance: z.number().optional(),
+});
+
+export const authSessionDataSchema = z.object({
+  user_id: z.string(),
+  membership_id: z.union([z.string(), z.null()]).optional(),
+  tenant_id: z.union([z.string(), z.null()]).optional(),
+  role: z.union([z.string(), z.null()]).optional(),
+  email: z.string().optional(),
+  must_change_password: z.boolean().optional(),
+  workspaces: z.array(authWorkspaceSchema).optional(),
+  customer_id: z.union([z.string(), z.null()]).optional(),
+  active_enrollment_id: z.union([z.string(), z.null()]).optional(),
+  customer_enrollments: z.array(authCustomerEnrollmentSchema).optional(),
 });
 
 /** POST /v1/auth/login — discriminated by `step`. */
-export const loginOkStepSchema = z.object({
+export const loginOkStepSchema = authSessionDataSchema.extend({
   step: z.literal("ok"),
   access_token: z.string(),
   refresh_token: z.string().optional(),
-  user_id: z.string(),
-  tenant_id: z.union([z.string(), z.null()]).optional(),
-  role: z.string(),
-  email: z.string(),
-  must_change_password: z.boolean().optional(),
 });
 
-export const loginMfaRequiredStepSchema = z.object({
+export const loginWorkspaceSelectionStepSchema = authSessionDataSchema.extend({
+  step: z.literal("workspace_selection_required"),
+  access_token: z.string(),
+  refresh_token: z.string().optional(),
+});
+
+export const loginMfaRequiredStepSchema = authSessionDataSchema.extend({
   step: z.literal("mfa_required"),
   challenge_token: z.string(),
   methods: z.array(z.string()),
-  user_id: z.string().optional(),
-  tenant_id: z.union([z.string(), z.null()]).optional(),
-  role: z.string().optional(),
-  email: z.string().optional(),
-  must_change_password: z.boolean().optional(),
 });
 
-export const loginResponseDataSchema = z.discriminatedUnion("step", [loginOkStepSchema, loginMfaRequiredStepSchema]);
+export const loginResponseDataSchema = z.discriminatedUnion("step", [
+  loginOkStepSchema,
+  loginWorkspaceSelectionStepSchema,
+  loginMfaRequiredStepSchema,
+]);
 
 export const loginResponseSuccessEnvelopeSchema = successEnvelopeSchema(loginResponseDataSchema);
 
@@ -60,14 +91,9 @@ export const refreshRequestWireSchema = z.object({
   refresh_token: z.string().min(1),
 });
 
-export const refreshOkDataSchema = z.object({
+export const refreshOkDataSchema = authSessionDataSchema.extend({
   access_token: z.string(),
   refresh_token: z.string(),
-  user_id: z.string(),
-  tenant_id: z.union([z.string(), z.null()]).optional(),
-  role: z.string(),
-  email: z.string(),
-  must_change_password: z.boolean().optional(),
 });
 
 export const refreshSuccessEnvelopeSchema = successEnvelopeSchema(refreshOkDataSchema);

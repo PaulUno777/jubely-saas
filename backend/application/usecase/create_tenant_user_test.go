@@ -56,7 +56,8 @@ func TestCreateTenantUser_generates_temp_password_and_sets_must_change(t *testin
 	tenantID := uuid.New()
 	tr := &stubTenantRepoForUsers{t: &domain.Tenant{ID: tenantID, Name: "Chez Mama", Slug: "chez-mama"}}
 	ur := &stubUserRepoForTenantUser{findErr: domain.ErrNotFound}
-	uc := &CreateTenantUser{Tenants: tr, Users: ur, Hasher: stubHasherForTenantUser{}}
+	mr := &stubMembershipRepo{}
+	uc := &CreateTenantUser{Tenants: tr, Users: ur, Memberships: mr, Hasher: stubHasherForTenantUser{}}
 
 	out, err := uc.Execute(context.Background(), CreateTenantUserInput{
 		TenantID: tenantID,
@@ -75,8 +76,8 @@ func TestCreateTenantUser_generates_temp_password_and_sets_must_change(t *testin
 	if !ur.created.MustChangePassword {
 		t.Fatalf("expected must_change_password")
 	}
-	if ur.created.TenantID == nil || *ur.created.TenantID != tenantID {
-		t.Fatalf("expected tenant_id set")
+	if len(mr.items) != 1 || mr.items[0].TenantID != tenantID {
+		t.Fatalf("expected membership created")
 	}
 }
 
@@ -98,7 +99,7 @@ func (s *stubTenantRepoForUsers) Update(ctx context.Context, t *domain.Tenant) e
 func (s *stubTenantRepoForUsers) ListAll(ctx context.Context, offset, limit int) ([]domain.Tenant, error) {
 	return nil, nil
 }
-func (s *stubTenantRepoForUsers) CountAll(ctx context.Context) (int64, error) { return 0, nil }
+func (s *stubTenantRepoForUsers) CountAll(ctx context.Context) (int64, error)    { return 0, nil }
 func (s *stubTenantRepoForUsers) CountActive(ctx context.Context) (int64, error) { return 0, nil }
 func (s *stubTenantRepoForUsers) CountActiveByPlan(ctx context.Context, plan string) (int64, error) {
 	_ = plan

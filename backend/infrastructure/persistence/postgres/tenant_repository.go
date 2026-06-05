@@ -29,7 +29,7 @@ func scanTenant(row tenantRowScanner) (*domain.Tenant, error) {
 	var t domain.Tenant
 	var settings []byte
 	err := row.Scan(
-		&t.ID, &t.Name, &t.Slug, &t.SelfServe, &t.Active, &t.Plan, &t.ConflictPolicy, &settings,
+		&t.ID, &t.Name, &t.Slug, &t.SelfServe, &t.Active, &t.Plan, &t.ConflictPolicy, &t.AllowStaffSelfEnrollment, &settings,
 		&t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {
@@ -50,9 +50,9 @@ func (r *TenantRepository) Create(ctx context.Context, t *domain.Tenant) error {
 		settings = json.RawMessage(`{}`)
 	}
 	const q = `
-INSERT INTO tenants (id, name, slug, self_serve, active, plan, conflict_policy, settings, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10)`
-	_, err := db.Exec(ctx, q, t.ID, t.Name, t.Slug, t.SelfServe, t.Active, t.Plan, t.ConflictPolicy, []byte(settings), t.CreatedAt, t.UpdatedAt)
+INSERT INTO tenants (id, name, slug, self_serve, active, plan, conflict_policy, allow_staff_self_enrollment, settings, created_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11)`
+	_, err := db.Exec(ctx, q, t.ID, t.Name, t.Slug, t.SelfServe, t.Active, t.Plan, t.ConflictPolicy, t.AllowStaffSelfEnrollment, []byte(settings), t.CreatedAt, t.UpdatedAt)
 	if err != nil && isUniqueViolation(err) {
 		return domain.ErrConflict
 	}
@@ -62,7 +62,7 @@ VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10)`
 func (r *TenantRepository) FindBySlug(ctx context.Context, slug string) (*domain.Tenant, error) {
 	db := pickDB(ctx, r.Pool)
 	const q = `
-SELECT id, name, slug, self_serve, active, plan, conflict_policy, settings, created_at, updated_at
+SELECT id, name, slug, self_serve, active, plan, conflict_policy, allow_staff_self_enrollment, settings, created_at, updated_at
 FROM tenants WHERE lower(slug)=lower($1)`
 	t, err := scanTenant(db.QueryRow(ctx, q, slug))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -77,7 +77,7 @@ FROM tenants WHERE lower(slug)=lower($1)`
 func (r *TenantRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Tenant, error) {
 	db := pickDB(ctx, r.Pool)
 	const q = `
-SELECT id, name, slug, self_serve, active, plan, conflict_policy, settings, created_at, updated_at
+SELECT id, name, slug, self_serve, active, plan, conflict_policy, allow_staff_self_enrollment, settings, created_at, updated_at
 FROM tenants WHERE id=$1`
 	t, err := scanTenant(db.QueryRow(ctx, q, id))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -97,9 +97,9 @@ func (r *TenantRepository) Update(ctx context.Context, t *domain.Tenant) error {
 	}
 	const q = `
 UPDATE tenants
-SET name=$2, self_serve=$3, active=$4, plan=$5, conflict_policy=$6, settings=$7::jsonb, updated_at=$8
+SET name=$2, self_serve=$3, active=$4, plan=$5, conflict_policy=$6, allow_staff_self_enrollment=$7, settings=$8::jsonb, updated_at=$9
 WHERE id=$1`
-	res, err := db.Exec(ctx, q, t.ID, t.Name, t.SelfServe, t.Active, t.Plan, t.ConflictPolicy, []byte(settings), t.UpdatedAt)
+	res, err := db.Exec(ctx, q, t.ID, t.Name, t.SelfServe, t.Active, t.Plan, t.ConflictPolicy, t.AllowStaffSelfEnrollment, []byte(settings), t.UpdatedAt)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ WHERE id=$1`
 func (r *TenantRepository) ListAll(ctx context.Context, offset, limit int) ([]domain.Tenant, error) {
 	db := pickDB(ctx, r.Pool)
 	const q = `
-SELECT id, name, slug, self_serve, active, plan, conflict_policy, settings, created_at, updated_at
+SELECT id, name, slug, self_serve, active, plan, conflict_policy, allow_staff_self_enrollment, settings, created_at, updated_at
 FROM tenants
 ORDER BY created_at DESC
 OFFSET $1 LIMIT $2`

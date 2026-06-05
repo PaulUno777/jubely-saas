@@ -10,12 +10,17 @@ import (
 
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
+	"github.com/PaulUno777/jubely-saas/backend/infrastructure/persistence/postgres"
 	"github.com/google/uuid"
 )
 
 type RefreshAuth struct {
 	Users         ports.UserRepository
 	RefreshTokens ports.RefreshTokenRepository
+	Memberships   ports.TenantMembershipRepository
+	Customers     ports.CustomerIdentityRepository
+	Catalog       *postgres.StoreCatalog
+	Factors       ports.MFAFactorRepository
 	Signer        ports.TokenSigner
 	Clock         ports.Clock
 	TTL           time.Duration
@@ -31,10 +36,15 @@ type RefreshAuthOutput struct {
 	AccessToken        string
 	RefreshToken       string
 	UserID             uuid.UUID
+	MembershipID       *uuid.UUID
 	TenantID           *uuid.UUID
-	Role               domain.Role
+	Role               *domain.Role
 	Email              string
 	MustChangePassword bool
+	Workspaces         []domain.WorkspaceSummary
+	CustomerID         *uuid.UUID
+	ActiveEnrollmentID *uuid.UUID
+	Enrollments        []domain.CustomerEnrollmentSummary
 }
 
 func newRefreshToken() (plain string, hash []byte, err error) {
@@ -84,13 +94,29 @@ func (uc *RefreshAuth) Execute(ctx context.Context, in RefreshAuthInput) (*Refre
 		return nil, err
 	}
 
-	access, err := uc.Signer.SignAccessToken(ctx, ports.TokenClaims{
-		UserID:             user.ID,
-		TenantID:           user.TenantID,
-		Role:               user.Role,
-		Email:              user.Email,
-		MustChangePassword: user.MustChangePassword,
-	})
+	mfaEnrolled := 0
+	if uc.Factors != nil {
+		n, err := uc.Factors.CountEnabledByUser(ctx, user.ID)
+		if err != nil {
+			return nil, err
+		}
+		mfaEnrolled = int(n)
+	}
+
+	state, err := loadAuthSessionState(ctx, user, uc.Memberships, uc.Customers, uc.Catalog)
+	if err != nil {
+		return nil, err
+	}
+	state.MFAEnrolledCount = mfaEnrolled
+	access, _, claims, err := issueAuthSession(ctx, authSessionDependencies{
+		Signer:        uc.Signer,
+		RefreshTokens: uc.RefreshTokens,
+		Memberships:   uc.Memberships,
+		Customers:     uc.Customers,
+		Catalog:       uc.Catalog,
+		Clock:         uc.Clock,
+		RefreshTTL:    uc.TTL,
+	}, state, existing.ActiveMembershipID, existing.ActiveEnrollmentID, nil, true, in.UserAgent, in.IP)
 	if err != nil {
 		return nil, err
 	}
@@ -99,9 +125,14 @@ func (uc *RefreshAuth) Execute(ctx context.Context, in RefreshAuthInput) (*Refre
 		AccessToken:        access,
 		RefreshToken:       plain,
 		UserID:             user.ID,
-		TenantID:           user.TenantID,
-		Role:               user.Role,
+		MembershipID:       claims.MembershipID,
+		TenantID:           claims.TenantID,
+		Role:               claims.Role,
 		Email:              user.Email,
 		MustChangePassword: user.MustChangePassword,
+		Workspaces:         claims.Workspaces,
+		CustomerID:         claims.CustomerID,
+		ActiveEnrollmentID: claims.ActiveEnrollmentID,
+		Enrollments:        claims.Enrollments,
 	}, nil
 }
