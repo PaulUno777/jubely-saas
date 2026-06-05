@@ -30,6 +30,7 @@ Base URL is configured per environment (e.g. `http://localhost:8082/v1`). Respon
 | ------ | ---------------------------- | ---- | ----------- |
 | GET    | `/customers/wallet`          | —    | Wallet by query `customer_qr` (MVP device-local QR access) |
 | GET    | `/customers/me/wallet`       | Bearer (customer JWT, `active_enrollment_id` set) | Wallet for active enrollment |
+| PATCH  | `/customers/me/profile`      | Bearer (customer JWT) | Update customer profile fields |
 | POST   | `/auth/customer/session`     | Bearer (customer JWT) | Set active enrollment in session (`enrollment_id`) |
 
 ## Authenticated — superadmin (`Authorization: Bearer`, role `superadmin`)
@@ -63,18 +64,59 @@ Group `/v1/organizations/me` (org-wide billing & boutiques).
 
 JWT may include `active_store_id` (staff counter context) and `subscription_status` (`active`, `trialing`, `frozen`, …). Writes are blocked when status is not `active` or `trialing`.
 
-Group `/v1/store` (operations; purchase attribution uses `active_store_id`).
+### Merchant tenant API (primary — `/store` portal)
 
-| Method | Path                 | Description                                                    |
-| ------ | -------------------- | -------------------------------------------------------------- |
-| GET    | `/store/tenant`      | Current tenant profile                                         |
-| PATCH  | `/store/tenant`      | Update `name`, `conflict_policy`, `settings` (not plan/active) |
-| GET    | `/store/metrics`     | Points distributed + point events this month                   |
-| GET    | `/store/qr`          | Signed store QR (same semantics as superadmin route)           |
-| GET    | `/store/users`        | List store users                                               |
-| GET    | `/store/customers`    | Paginated enrolled customers + point balances                  |
-| GET    | `/store/transactions` | Paginated point events (ledger) for the store                    |
-| POST   | `/store/invitations`  | Invite staff / roles                                           |
+Group `/v1/tenants/:tenantId`. Requires merchant admin JWT with matching `tenant_id` scope.
+
+**Query conventions**
+
+| Param | Used on | Description |
+| ----- | ------- | ----------- |
+| `from`, `to` | metrics, transactions, analytics | ISO-8601 range (preferred over legacy `period`) |
+| `period` | metrics | Legacy fallback: `7d` \| `30d` when `from`/`to` omitted |
+| `location_id` | metrics, transactions, analytics, customers | Scope to a boutique |
+| `offset`, `limit` | list endpoints | Pagination |
+| `event_type` | transactions | Filter ledger by event type |
+| `q` | customers | Search by name/phone |
+| `active_only` | rewards | Default true; pass `false` to include inactive |
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/tenants/:id/metrics` | Dashboard KPIs |
+| GET | `/tenants/:id/metrics/loyalty-activity` | Points distributed vs rewarded series |
+| GET | `/tenants/:id/stats` | Sidebar badge counts |
+| GET/POST | `/tenants/:id/locations` | List / create locations |
+| PATCH | `/tenants/:id/locations/:locationId` | Update location (e.g. set HQ) |
+| GET | `/tenants/:id/customers` | Paginated enrolled customers |
+| GET | `/tenants/:id/customers/:enrollmentId` | Customer detail |
+| POST | `/tenants/:id/customers/:enrollmentId/adjustments` | Manual point adjustment |
+| GET | `/tenants/:id/transactions` | Point event ledger |
+| GET | `/tenants/:id/agents` | Staff / agent list |
+| POST | `/tenants/:id/invitations` | Create staff invitation |
+| GET/POST/PATCH | `/tenants/:id/rules` | Rules CRUD + simulate + validate |
+| GET/PUT | `/tenants/:id/tiers` | Loyalty tier config |
+| GET/POST/PATCH | `/tenants/:id/rewards` | Rewards CRUD |
+| POST | `/tenants/:id/rewards/:rewardId/image` | Reward image upload |
+| GET/PUT | `/tenants/:id/qr/branding` | Enrollment QR branding |
+| GET | `/tenants/:id/qr/token` | Signed store QR token |
+| GET | `/tenants/:id/qr/render.svg` | Branded QR SVG preview |
+| GET/PATCH | `/tenants/:id/settings` | Tenant profile + policies |
+| GET/PUT | `/tenants/:id/settings/locales` | Supported locales |
+| GET/POST/PATCH | `/tenants/:id/campaigns` | Campaign CRUD + launch/pause |
+| GET | `/tenants/:id/analytics/*` | Overview, member growth, tier distribution, heatmap, top rewards, retention |
+
+Zod wire schemas: `packages/api-schemas/src/tenant-admin.ts`.
+
+### Legacy store scope (`/v1/store` — agent portal only)
+
+Removed from merchant portal. Kept until `/agent` migrates to tenant APIs:
+
+| Method | Path                 | Description                    |
+| ------ | -------------------- | ------------------------------ |
+| GET    | `/store/tenant`      | Current tenant profile         |
+| GET    | `/store/metrics`     | Legacy metrics snapshot        |
+| GET    | `/store/customers`   | Paginated customers            |
+| GET    | `/store/transactions`| Paginated point events         |
 
 ## Authenticated — staff or merchant admin
 
@@ -94,6 +136,17 @@ Group `/v1/staff`.
 | -------- | ------- | ------------------------------ |
 | GET/POST | `/me/*` | Profile, password, MFA factors |
 
+## Frontend integration (merchant `/store`)
+
+| Layer | Path | Notes |
+| ----- | ---- | ----- |
+| API client | `apps/web/src/lib/tenant-admin/` | `core.ts` + domain modules; barrel `index.ts` |
+| Hooks | `apps/web/src/hooks/useTenantAdminQuery.ts`, `tenant-admin-hooks.ts` | Query key prefix `["tenant-admin", domain, tenantId, …]` |
+| Metrics (dashboard) | `["tenant", …]` | `useTenantMetrics` — supports `from`/`to` via `toIsoRange` |
+| Legacy agent | `apps/web/src/lib/storeApi.ts` | `/v1/store/*` shim only |
+
+Page → endpoint map: customers → `GET …/customers`; transactions → `GET …/transactions`; agents → `GET …/agents` + `POST …/invitations`; points-rules → `…/rules`, `…/tiers`; rewards → `…/rewards`; enrollment QR → `…/qr/*`; campaigns → `…/campaigns`; analytics → `…/analytics/*`; settings → `…/settings`, `…/settings/locales`.
+
 ## Rate limits
 
 - `POST /v1/auth/login`, `POST /v1/bootstrap/superadmin`, `POST /v1/public/store/signup`, `GET /v1/public/tenant/:slug`, `POST /v1/public/otp/send`, `POST /v1/public/otp/verify`, `POST /v1/public/enrollments`, `GET /v1/customers/wallet`: per-IP sliding-window limits (`backend/interfaces/httpserver/ratelimit.go`).
@@ -104,7 +157,7 @@ Optional: set `PUBLIC_ENROLL_REQUIRE_PHONE_VERIFY=true` to require a verified ph
 
 | Planning doc (example)     | Implemented as                                             |
 | -------------------------- | ---------------------------------------------------------- |
-| `GET /tenant/me`           | `GET /v1/store/tenant`                                     |
-| `PATCH /tenant/me`         | `PATCH /v1/store/tenant`                                   |
-| `GET /public/tenant/:slug` | `GET /v1/public/tenant/:slug`                              |
-| `GET /tenant/qr`           | `GET /v1/store/qr` (merchant) or superadmin `.../store-qr` |
+| Merchant settings          | `GET/PATCH /v1/tenants/:id/settings`                       |
+| Merchant customers         | `GET /v1/tenants/:id/customers`                            |
+| `GET /tenant/qr`           | `GET /v1/tenants/:id/qr/token` (merchant)                |
+| Agent legacy reads         | `GET /v1/store/*` (deprecated)                             |

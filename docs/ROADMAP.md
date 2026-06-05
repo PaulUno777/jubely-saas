@@ -61,23 +61,21 @@ Living tracker aligned with [context/NEW_PLANING.md](../context/NEW_PLANING.md),
 
 | Item | Status | Notes |
 |------|--------|-------|
-| `GET/PATCH /v1/store/tenant` | ✅ | Settings + branding |
-| `GET /v1/store/qr` | ✅ | Enrollment QR page |
-| `GET /v1/store/users` + invitations | ✅ | Agents page |
+| Merchant tenant API `/v1/tenants/:id/*` | ✅ | Primary for `/store` portal — see [api.md](./api.md) |
+| `GET/PATCH …/settings`, locales, QR branding | ✅ | `/store/settings`, `/store/enrollment-qr` |
+| Customers, transactions, agents | ✅ | Tenant list + detail + invitations |
+| Rules, tiers, rewards, campaigns | ✅ | `/store/points-rules`, `/store/rewards`, `/store/campaigns` |
+| Analytics rollups | ✅ | `/store/analytics` |
+| `GET …/metrics` + `from`/`to` | ✅ | Dashboard uses `tenant-admin` client |
+| Legacy `/v1/store/*` | 🚧 | Agent portal only (4 read endpoints) |
 | `GET/POST /v1/invitations/:token` | ✅ | `/invite/[token]` |
-| `GET /v1/store/metrics` | ✅ | Dashboard KPIs |
-| `GET /v1/store/customers` | ✅ | `/store/customers` |
-| `GET /v1/store/transactions` | ✅ | `/store/transactions` (point events) |
-| Store customers list UI | ✅ | `/store/customers` |
-| Store transactions list UI | ✅ | `/store/transactions` |
-| Rewards / rules CRUD | ⏸ | Phase 4 |
 | Custom roles UI | ⏸ | Permissions in JWT only |
 | `GET /public/tenant/:slug` | ✅ | Join page |
 
 ### Phase 2 manual checks
 
-- [x] Merchant admin: settings, branding, QR
-- [x] Create staff invitation / list users
+- [x] Merchant admin: settings, branding, QR (tenant API)
+- [x] Create staff invitation / list agents
 - [x] Agent self-service activation (`/invite/[token]`)
 - [ ] Custom role with subset permissions (deferred)
 - [ ] Cross-tenant isolation manual test (second tenant)

@@ -36,6 +36,7 @@ const navigation = {
     rewards: "Récompenses",
     enrollmentQr: "QR d'enrôlement",
     campaigns: "Campagnes",
+    analytics: "Analytique",
     settings: "Paramètres",
     locations: "Boutiques",
     subscription: "Abonnement",

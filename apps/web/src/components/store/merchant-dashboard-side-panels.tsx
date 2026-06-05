@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { Badge, Button } from "@jubely/ui";
 import {
   MerchantCard,
@@ -15,26 +14,16 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useSession } from "@/hooks/useSession";
-import { storeGetStoreQR, storeGetTenant } from "@/lib/storeApi";
-import { storeListRules } from "@/lib/storeRulesApi";
+import { useTenantRules } from "@/hooks/tenant-admin-hooks";
+import { useTenantQRToken } from "@/hooks/tenant-admin-hooks";
+import { useTenantSettings } from "@/hooks/useTenantSettings";
 
 export function MerchantDashboardQrPanel() {
   const t = useTranslations("store.home.qr");
-  const { session } = useSession();
   const [copied, setCopied] = useState(false);
 
-  const tenantQ = useQuery({
-    queryKey: ["store", "tenant", session?.tenantId],
-    enabled: Boolean(session),
-    queryFn: () => storeGetTenant(),
-  });
-
-  const qrQ = useQuery({
-    queryKey: ["store", "qr"],
-    enabled: Boolean(session),
-    queryFn: () => storeGetStoreQR(),
-  });
+  const tenantQ = useTenantSettings();
+  const qrQ = useTenantQRToken();
 
   const joinUrl = useMemo(() => {
     if (typeof window === "undefined" || !tenantQ.data?.slug) return "";
@@ -94,13 +83,7 @@ export function MerchantDashboardQrPanel() {
 
 export function MerchantDashboardRulesPanel() {
   const t = useTranslations("store.home.rules");
-  const { session } = useSession();
-
-  const rulesQ = useQuery({
-    queryKey: ["store", "rules", "dashboard"],
-    enabled: Boolean(session),
-    queryFn: () => storeListRules(),
-  });
+  const rulesQ = useTenantRules();
 
   const rules = (rulesQ.data ?? []).slice(0, 3);
 

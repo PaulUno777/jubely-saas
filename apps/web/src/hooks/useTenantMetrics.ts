@@ -3,41 +3,67 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "@/hooks/useSession";
 import {
-  tenantGetLoyaltyActivity,
-  tenantGetMetrics,
-  tenantGetStats,
-  tenantListLocations,
+  getLoyaltyActivity,
+  getMetrics,
+  getStats,
+  listLocations,
   type TenantMetricsQuery,
-} from "@/lib/tenantApi";
+} from "@/lib/tenant-admin";
 
-export function useTenantMetrics(opts?: Pick<TenantMetricsQuery, "period" | "locationId">) {
+type MetricsOpts = Pick<TenantMetricsQuery, "period" | "locationId" | "from" | "to">;
+
+function metricsEnabled(session: ReturnType<typeof useSession>["session"], tenantId?: string) {
+  return Boolean(session && session.role === "merchant_admin" && tenantId);
+}
+
+export function useTenantMetrics(opts?: MetricsOpts) {
   const { session } = useSession();
   const tenantId = session?.tenantId;
 
   return useQuery({
-    queryKey: ["tenant", "metrics", tenantId, opts?.period ?? "7d", opts?.locationId],
-    enabled: Boolean(session && session.role === "merchant_admin" && tenantId),
+    queryKey: [
+      "tenant",
+      "metrics",
+      tenantId,
+      opts?.from,
+      opts?.to,
+      opts?.period ?? "7d",
+      opts?.locationId,
+    ],
+    enabled: metricsEnabled(session, tenantId),
     queryFn: () =>
-      tenantGetMetrics({
+      getMetrics({
         tenantId: tenantId!,
         period: opts?.period,
+        from: opts?.from,
+        to: opts?.to,
         locationId: opts?.locationId,
       }),
     staleTime: 60_000,
   });
 }
 
-export function useTenantLoyaltyActivity(opts?: Pick<TenantMetricsQuery, "period" | "locationId">) {
+export function useTenantLoyaltyActivity(opts?: MetricsOpts) {
   const { session } = useSession();
   const tenantId = session?.tenantId;
 
   return useQuery({
-    queryKey: ["tenant", "loyalty-activity", tenantId, opts?.period ?? "7d", opts?.locationId],
-    enabled: Boolean(session && session.role === "merchant_admin" && tenantId),
+    queryKey: [
+      "tenant",
+      "loyalty-activity",
+      tenantId,
+      opts?.from,
+      opts?.to,
+      opts?.period ?? "7d",
+      opts?.locationId,
+    ],
+    enabled: metricsEnabled(session, tenantId),
     queryFn: () =>
-      tenantGetLoyaltyActivity({
+      getLoyaltyActivity({
         tenantId: tenantId!,
         period: opts?.period,
+        from: opts?.from,
+        to: opts?.to,
         locationId: opts?.locationId,
       }),
     staleTime: 60_000,
@@ -50,8 +76,8 @@ export function useTenantNavStats() {
 
   return useQuery({
     queryKey: ["tenant", "stats", tenantId],
-    enabled: Boolean(session && session.role === "merchant_admin" && tenantId),
-    queryFn: () => tenantGetStats(tenantId!),
+    enabled: metricsEnabled(session, tenantId),
+    queryFn: () => getStats(tenantId!),
     staleTime: 120_000,
   });
 }
@@ -62,8 +88,8 @@ export function useTenantLocations() {
 
   return useQuery({
     queryKey: ["tenant", "locations", tenantId],
-    enabled: Boolean(session && session.role === "merchant_admin" && tenantId),
-    queryFn: () => tenantListLocations(tenantId!),
+    enabled: metricsEnabled(session, tenantId),
+    queryFn: () => listLocations(tenantId!),
     staleTime: 120_000,
   });
 }

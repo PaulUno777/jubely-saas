@@ -1,33 +1,27 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { QRCodeCanvas } from "qrcode.react";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Textarea } from "@jubely/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Tabs, TabsContent, TabsList, TabsTrigger, Textarea, Button } from "@jubely/ui";
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { toast } from "sonner";
-import { Main } from "@/components/layout/main";
-import { StorePageHeader } from "@/components/store/store-page-header";
-import { useSession } from "@/hooks/useSession";
-import { storeGetStoreQR, storeGetTenant } from "@/lib/storeApi";
 import { ApiResponseError } from "@jubely/api-schemas";
+import { QRBrandingForm } from "@/components/store/qr-branding-form";
+import { QRPreviewPanel } from "@/components/store/qr-preview-panel";
+import { MerchantPageShell } from "@/components/store/merchant-page-shell";
+import { useMerchantLocationScope } from "@/hooks/useMerchantLocationScope";
+import { useQRBranding, useTenantQRToken } from "@/hooks/tenant-admin-hooks";
+import { useTenantSettings } from "@/hooks/useTenantSettings";
+import { useTenantId } from "@/hooks/useTenantId";
+import { qrRenderSvgUrl } from "@/lib/tenant-admin";
 
 export default function StoreEnrollmentQrPage() {
   const t = useTranslations("store.enrollmentQr");
-  const { session } = useSession();
-  const [copied, setCopied] = useState(false);
+  const { headerContext } = useMerchantLocationScope();
+  const tenantId = useTenantId();
 
-  const tenantQ = useQuery({
-    queryKey: ["store", "tenant", session?.tenantId],
-    enabled: Boolean(session),
-    queryFn: () => storeGetTenant(),
-  });
-
-  const qrQ = useQuery({
-    queryKey: ["store", "qr"],
-    enabled: Boolean(session),
-    queryFn: () => storeGetStoreQR(),
-  });
+  const tenantQ = useTenantSettings();
+  const qrQ = useTenantQRToken();
+  const brandingQ = useQRBranding();
 
   const joinUrl = useMemo(() => {
     if (typeof window === "undefined" || !tenantQ.data?.slug) return "";
@@ -35,62 +29,61 @@ export default function StoreEnrollmentQrPage() {
   }, [tenantQ.data?.slug]);
 
   const token = qrQ.data?.store_qr ?? "";
+  const loading = tenantQ.isLoading || qrQ.isLoading;
+  const renderUrl = tenantId ? qrRenderSvgUrl(tenantId) : undefined;
 
   const onCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
       toast.success(t("copied"));
-      setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error(t("copyFailed"));
     }
   };
 
   return (
-    <>
-      <StorePageHeader title={t("title")} />
-      <Main>
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("cardTitle")}</CardTitle>
-            <CardDescription>{t("cardDescription")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {qrQ.isLoading || tenantQ.isLoading ? (
-              <p className="text-sm text-muted-foreground">{t("loading")}</p>
-            ) : qrQ.error ? (
-              <p className="text-sm text-destructive">
-                {qrQ.error instanceof ApiResponseError ? qrQ.error.message : t("loadError")}
-              </p>
-            ) : (
-              <div className="flex flex-col gap-6 md:flex-row md:items-start">
-                <div className="rounded-xl border border-border bg-background p-4 inline-block">
-                  {token ? <QRCodeCanvas value={token} size={200} /> : null}
-                </div>
-                <div className="flex-1 space-y-3 min-w-0">
-                  <div>
-                    <p className="text-sm font-medium mb-1">{t("joinLink")}</p>
-                    <p className="text-xs text-muted-foreground break-all">{joinUrl || "—"}</p>
-                    {joinUrl ? (
-                      <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => void onCopy(joinUrl)}>
-                        {copied ? t("copied") : t("copyJoin")}
-                      </Button>
-                    ) : null}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium mb-1">{t("storeToken")}</p>
-                    <Textarea readOnly rows={4} className="font-mono text-xs" value={token} />
-                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => void onCopy(token)}>
-                      {t("copyToken")}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </Main>
-    </>
+    <MerchantPageShell title={t("title")} context={headerContext}>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("cardTitle")}</CardTitle>
+          <CardDescription>{t("cardDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {loading ? (
+            <p className="text-sm text-muted-foreground">{t("loading")}</p>
+          ) : qrQ.error ? (
+            <p className="text-sm text-destructive">
+              {qrQ.error instanceof ApiResponseError ? qrQ.error.message : t("loadError")}
+            </p>
+          ) : (
+            <Tabs defaultValue="preview">
+              <TabsList>
+                <TabsTrigger value="preview">{t("tabPreview")}</TabsTrigger>
+                <TabsTrigger value="branding">{t("tabBranding")}</TabsTrigger>
+                <TabsTrigger value="token">{t("tabToken")}</TabsTrigger>
+              </TabsList>
+              <TabsContent value="preview" className="mt-4">
+                <QRPreviewPanel
+                  token={token}
+                  joinUrl={joinUrl}
+                  renderSvgUrl={renderUrl}
+                  tenantName={tenantQ.data?.name}
+                />
+              </TabsContent>
+              <TabsContent value="branding" className="mt-4">
+                <QRBrandingForm branding={brandingQ.data} />
+              </TabsContent>
+              <TabsContent value="token" className="mt-4 space-y-3">
+                <p className="text-sm font-medium">{t("storeToken")}</p>
+                <Textarea readOnly rows={4} className="font-mono text-xs" value={token} />
+                <Button type="button" variant="outline" size="sm" onClick={() => void onCopy(token)}>
+                  {t("copyToken")}
+                </Button>
+              </TabsContent>
+            </Tabs>
+          )}
+        </CardContent>
+      </Card>
+    </MerchantPageShell>
   );
 }

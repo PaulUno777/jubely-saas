@@ -21,7 +21,7 @@ import {
   useTenantLoyaltyActivity,
   useTenantMetrics,
 } from "@/hooks/useTenantMetrics";
-import { toLegacyMetricsPeriod } from "@/lib/dateRangeQuery";
+import { toIsoRange, toLegacyMetricsPeriod } from "@/lib/dateRangeQuery";
 
 export default function StoreHome() {
   const t = useTranslations("store.home");
@@ -29,13 +29,18 @@ export default function StoreHome() {
   const { headerContext, activeStoreId } = useMerchantLocationScope();
   const [dateRange, setDateRange] = useState(() => defaultDateRangeValue("last_7_days"));
   const periodLabel = useDateRangeSubtitle(dateRange);
-  const legacyPeriod = toLegacyMetricsPeriod(dateRange) ?? "7d";
+  const isoRange = toIsoRange(dateRange);
+  const legacyPeriod = toLegacyMetricsPeriod(dateRange);
   const metricsQuery = useTenantMetrics({
-    period: legacyPeriod,
+    from: isoRange.from,
+    to: isoRange.to,
+    period: legacyPeriod ?? "7d",
     locationId: activeStoreId,
   });
   const activityQuery = useTenantLoyaltyActivity({
-    period: legacyPeriod,
+    from: isoRange.from,
+    to: isoRange.to,
+    period: legacyPeriod ?? "7d",
     locationId: activeStoreId,
   });
 

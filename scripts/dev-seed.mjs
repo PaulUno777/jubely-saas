@@ -6,132 +6,191 @@
  * - superadmin + organizations (each new org gets HQ store `main` + Growth trialing subscription)
  * - Chez Mama: activate MoMo subscription, then extra boutiques via POST /organizations/me/stores
  * - separate single-store orgs for multi-workspace agent demo
- * - org-wide rules + rewards; purchases tagged per boutique (active_store_id + store QR)
+ * - org-wide rules + rewards via /v1/tenants/:id/*; purchases tagged per boutique
+ * - 15 days of backdated purchase activity (occurred_at) for charts / analytics
  * - pooled loyalty: one enrollment per org; OTP claim + staff validation on primary org
+ * - tenant admin smoke: settings, stats, metrics, customers, transactions, analytics, QR
  *
  * Requires API running; backend/.env needs BOOTSTRAP_SECRET.
  * For automated customer login: PUBLIC_OTP_DEV_CODE=000000 (see backend/.env.example).
  *
- * Optional env: API_BASE, DEV_OTP_CODE, CUSTOMER_PHONE_VERIFY_TOKEN, etc.
+ * Optional env: API_BASE, SEED_ACTIVITY_DAYS, SEED_RANDOM_SEED, DEV_OTP_CODE, etc.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  api,
+  asArray,
+  asObject,
+  data,
+  env,
+  loginScoped,
+  requireString,
+  resolveApiBase,
+  metricsKpiValue,
+  tenantAdminSmoke,
+  tenantCreateCampaign,
+  tenantCreateReward,
+  tenantCreateRule,
+  tenantGetMetrics,
+  tenantGetQrToken,
+  tenantListCampaigns,
+  tenantListCustomers,
+  tenantListRewards,
+  tenantListRules,
+  tenantPatchSettings,
+  waitForApi,
+} from "./lib/dev-api.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ENV_FILE = process.env.ENV_FILE ?? join(ROOT, "backend", ".env");
 
-function parseEnvFile(path) {
-  if (!existsSync(path)) return {};
-  const out = {};
-  for (const line of readFileSync(path, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq).trim();
-    let value = trimmed.slice(eq + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    out[key] = value;
-  }
-  return out;
-}
-
-function env(key, fallback) {
-  if (process.env[key] !== undefined && process.env[key] !== "") {
-    return process.env[key];
-  }
-  const file = parseEnvFile(ENV_FILE);
-  if (file[key] !== undefined && file[key] !== "") {
-    return file[key];
-  }
-  return fallback;
-}
-
-function stripTrailingSlash(url) {
-  return url.replace(/\/$/, "");
-}
-
-function parseDockerBackendHostPort() {
-  const composePath = join(ROOT, "docker-compose.yml");
-  if (!existsSync(composePath)) return null;
-  const lines = readFileSync(composePath, "utf8").split("\n");
-  let inBackend = false;
-  for (const line of lines) {
-    if (/^\s{2}backend:\s*$/.test(line)) {
-      inBackend = true;
-      continue;
-    }
-    if (inBackend && /^\s{2}[a-zA-Z0-9_-]+:\s*$/.test(line) && !/^\s{2}backend:\s*$/.test(line)) {
-      inBackend = false;
-    }
-    if (!inBackend) continue;
-    const m = line.match(/-\s*["']?(\d+):8080["']?/);
-    if (m) return m[1];
-  }
-  return null;
-}
-
-function portFromPublicFileBaseUrl(fileUrl) {
-  if (!fileUrl) return null;
-  const m = fileUrl.match(/^https?:\/\/[^/:]+:(\d+)/);
-  return m?.[1] ?? null;
-}
-
-function resolveApiBase() {
-  if (process.env.API_BASE) {
-    return stripTrailingSlash(process.env.API_BASE);
-  }
-  const explicit = env("API_PUBLIC_BASE", "");
-  if (explicit) {
-    return stripTrailingSlash(explicit);
-  }
-  const fromFiles = portFromPublicFileBaseUrl(env("PUBLIC_FILE_BASE_URL", ""));
-  if (fromFiles) {
-    return `http://localhost:${fromFiles}`;
-  }
-  const fromCompose = parseDockerBackendHostPort();
-  if (fromCompose) {
-    return `http://localhost:${fromCompose}`;
-  }
-  const httpPort = env("HTTP_PORT", "8082");
-  if (httpPort === "8080") {
-    return "http://localhost:8082";
-  }
-  return `http://localhost:${httpPort}`;
-}
-
 const config = {
-  apiBase: resolveApiBase(),
-  webOrigin: env("WEB_ORIGIN", "http://localhost:3000"),
-  bootstrapSecret: env("BOOTSTRAP_SECRET", ""),
-  publicEnrollRequirePhoneVerify: env("PUBLIC_ENROLL_REQUIRE_PHONE_VERIFY", "") === "true",
-  devOtpCode: env("DEV_OTP_CODE", env("PUBLIC_OTP_DEV_CODE", "000000")),
-  superEmail: env("SUPER_EMAIL", "super@jubely.local"),
-  superPassword: env("SUPER_PASSWORD", "SuperAdmin123!"),
-  tenantName: env("TENANT_NAME", "Chez Mama"),
-  tenantSlug: env("TENANT_SLUG", "chez-mama"),
-  merchantEmail: env("MERCHANT_EMAIL", "merchant@chezmama.local"),
-  merchantPassword: env("MERCHANT_PASSWORD", "MerchantAdmin123!"),
-  agentEmail: env("AGENT_EMAIL", "agent.multi@jubely.local"),
-  agentPassword: env("AGENT_PASSWORD", "AgentStaff123!"),
-  customerName: env("CUSTOMER_NAME", "Awa Diop"),
-  customerPhone: env("CUSTOMER_PHONE", "+237611111111"),
-  customerEmail: env("CUSTOMER_EMAIL", "awa@example.com"),
-  customerPhoneVerifyToken: env("CUSTOMER_PHONE_VERIFY_TOKEN", ""),
-  workerCustomerPhone: env("WORKER_CUSTOMER_PHONE", "+237622222222"),
-  workerCustomerName: env("WORKER_CUSTOMER_NAME", "Mireille Workspace"),
-  workerCustomerPhoneVerifyToken: env("WORKER_CUSTOMER_PHONE_VERIFY_TOKEN", ""),
-  purchaseAmountFcfa: Number(env("PURCHASE_AMOUNT_FCFA", "4500")),
+  apiBase: resolveApiBase(ENV_FILE),
+  bootstrapSecret: env("BOOTSTRAP_SECRET", "", ENV_FILE),
+  publicEnrollRequirePhoneVerify: env("PUBLIC_ENROLL_REQUIRE_PHONE_VERIFY", "", ENV_FILE) === "true",
+  devOtpCode: env("DEV_OTP_CODE", env("PUBLIC_OTP_DEV_CODE", "000000", ENV_FILE), ENV_FILE),
+  superEmail: env("SUPER_EMAIL", "super@jubely.local", ENV_FILE),
+  superPassword: env("SUPER_PASSWORD", "SuperAdmin123!", ENV_FILE),
+  tenantName: env("TENANT_NAME", "Chez Mama", ENV_FILE),
+  tenantSlug: env("TENANT_SLUG", "chez-mama", ENV_FILE),
+  merchantEmail: env("MERCHANT_EMAIL", "merchant@chezmama.local", ENV_FILE),
+  merchantPassword: env("MERCHANT_PASSWORD", "MerchantAdmin123!", ENV_FILE),
+  agentEmail: env("AGENT_EMAIL", "agent.multi@jubely.local", ENV_FILE),
+  agentPassword: env("AGENT_PASSWORD", "AgentStaff123!", ENV_FILE),
+  customerName: env("CUSTOMER_NAME", "Awa Diop", ENV_FILE),
+  customerPhone: env("CUSTOMER_PHONE", "+237611111111", ENV_FILE),
+  customerEmail: env("CUSTOMER_EMAIL", "awa@example.com", ENV_FILE),
+  customerPhoneVerifyToken: env("CUSTOMER_PHONE_VERIFY_TOKEN", "", ENV_FILE),
+  workerCustomerPhone: env("WORKER_CUSTOMER_PHONE", "+237622222222", ENV_FILE),
+  workerCustomerName: env("WORKER_CUSTOMER_NAME", "Mireille Workspace", ENV_FILE),
+  workerCustomerPhoneVerifyToken: env("WORKER_CUSTOMER_PHONE_VERIFY_TOKEN", "", ENV_FILE),
+  purchaseAmountFcfa: Number(env("PURCHASE_AMOUNT_FCFA", "4500", ENV_FILE)),
+  seedActivityDays: Math.max(1, Number(env("SEED_ACTIVITY_DAYS", "15", ENV_FILE))),
+  seedRandomSeed: env("SEED_RANDOM_SEED", "jubely-dev", ENV_FILE),
+  webOrigin: env("WEB_ORIGIN", "http://localhost:3000", ENV_FILE),
 };
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+
+const SEED_PURCHASE_AMOUNTS_FCFA = [
+  850, 1200, 1500, 1800, 2200, 2500, 2800, 3200, 3500, 3900, 4500, 5200, 6200, 6800, 7800, 8500,
+  9800, 11200, 12500, 15600,
+];
+
+const SEED_WALK_IN_CUSTOMERS = [
+  { name: "Jean Kouam", phone: "+237633333331" },
+  { name: "Fatou Njoya", phone: "+237644444442" },
+  { name: "Sandrine Tchoumi", phone: "+237655555551" },
+  { name: "Eric Fouda", phone: "+237666666662" },
+  { name: "Nadine Abena", phone: "+237677777773" },
+  { name: "Patrick Essomba", phone: "+237688888884" },
+];
+
+/** Deterministic PRNG for reproducible demo data. */
+function mulberry32(seed) {
+  let state = 0;
+  for (const ch of String(seed)) {
+    state = (state + ch.charCodeAt(0)) | 0;
+  }
+  return () => {
+    state |= 0;
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function pickRandom(rng, arr) {
+  return arr[Math.floor(rng() * arr.length)];
+}
+
+/** Last N calendar days ending today (oldest first). */
+function buildSeedActivityDays(count) {
+  const days = [];
+  const now = new Date();
+  for (let offset = count - 1; offset >= 0; offset--) {
+    const day = new Date(now);
+    day.setHours(0, 0, 0, 0);
+    day.setDate(day.getDate() - offset);
+    days.push(day);
+  }
+  return days;
+}
+
+/** Random timestamp on a calendar day, clamped so it is never in the future. */
+function randomOccurredAt(dayDate, rng) {
+  const now = new Date();
+  const dt = new Date(dayDate);
+  const isToday = dayDate.toDateString() === now.toDateString();
+  const lunchRush = rng() > 0.45;
+  const dinnerRush = !lunchRush && rng() > 0.4;
+  let hour;
+  if (lunchRush) {
+    hour = 11 + Math.floor(rng() * 3);
+  } else if (dinnerRush) {
+    hour = 17 + Math.floor(rng() * 3);
+  } else {
+    hour = 8 + Math.floor(rng() * 13);
+  }
+  if (isToday) {
+    hour = Math.min(hour, Math.max(8, now.getHours() - 1));
+  }
+  dt.setHours(hour, Math.floor(rng() * 60), Math.floor(rng() * 60), 0);
+  if (dt.getTime() > now.getTime() - 60_000) {
+    dt.setTime(now.getTime() - 60_000 - Math.floor(rng() * 3_600_000));
+  }
+  return dt.toISOString();
+}
+
+function formatDayLabel(iso) {
+  return iso.slice(0, 10);
+}
+
+function isWeekendDay(dayDate) {
+  const dow = dayDate.getDay();
+  return dow === 0 || dow === 5 || dow === 6;
+}
+
+function transactionsForDay(dayDate, richDemo, rng) {
+  if (!richDemo) {
+    return 1 + (rng() > 0.5 ? 1 : 0);
+  }
+  const weekend = isWeekendDay(dayDate);
+  return weekend ? 4 + Math.floor(rng() * 5) : 2 + Math.floor(rng() * 4);
+}
+
+/**
+ * @param {{ richDemo?: boolean; includeSharedAgent?: boolean; slug?: string }} org
+ * @param {OrgStoreRow[]} orgStores
+ * @param {Array<{ name: string; phone: string; customer_qr?: string }>} customers
+ * @param {Date[]} activityDays
+ * @param {() => number} rng
+ */
+function buildSeedPurchasePlan(org, orgStores, customers, activityDays, rng) {
+  /** @type {Array<{ day: Date; boutique: OrgStoreRow; customer: { name: string; phone: string; customer_qr?: string }; amount: number; occurredAt: string; useAgent: boolean }>} */
+  const plan = [];
+  for (const day of activityDays) {
+    const txCount = transactionsForDay(day, Boolean(org.richDemo), rng);
+    for (let i = 0; i < txCount; i++) {
+      const boutique = pickRandom(rng, orgStores);
+      const customer = pickRandom(rng, customers);
+      plan.push({
+        day,
+        boutique,
+        customer,
+        amount: pickRandom(rng, SEED_PURCHASE_AMOUNTS_FCFA),
+        occurredAt: randomOccurredAt(day, rng),
+        useAgent: Boolean(org.includeSharedAgent) && rng() > 0.38,
+      });
+    }
+  }
+  plan.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+  return plan;
+}
 
 /** Design-aligned rule presets (admin simulator). */
 function pilotRulesForStore(storeSlug) {
@@ -251,81 +310,22 @@ const organizations = [
   },
 ];
 
-const extraStaffCustomers = [
-  { name: "Jean Kouam", phone: "+237633333331", amountFcfa: 12500 },
-  { name: "Fatou Njoya", phone: "+237644444442", amountFcfa: 2800 },
-];
+const extraStaffCustomers = SEED_WALK_IN_CUSTOMERS.slice(0, 2);
 
 function log(step) {
   console.log(`-> ${step}`);
 }
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /**
- * @typedef {{ data?: unknown; error?: { code?: string; message?: string } }} ApiEnvelope
  * @typedef {{ tenant_id?: string; name?: string; slug?: string }} TenantRow
  * @typedef {{ id?: string; slug?: string; name?: string; is_hq?: boolean }} OrgStoreRow
  * @typedef {{ membership_id?: string; tenant_slug?: string; tenant_name?: string; role?: string }} WorkspaceRow
  * @typedef {{ enrollment_id?: string; phone?: string; name?: string; points_balance?: number; customer_qr?: string }} StoreCustomerRow
  */
 
-/**
- * @param {string} method
- * @param {string} path
- * @param {{ headers?: Record<string, string>; body?: unknown; allowError?: boolean }} [opts]
- */
-async function api(method, path, opts = {}) {
-  const url = `${config.apiBase}${path.startsWith("/") ? path : `/${path}`}`;
-  const headers = { accept: "application/json", ...opts.headers };
-  let body;
-  if (opts.body !== undefined) {
-    headers["content-type"] = "application/json";
-    body = JSON.stringify(opts.body);
-  }
-  const res = await fetch(url, { method, headers, body });
-  const text = await res.text();
-  /** @type {ApiEnvelope | null} */
-  let json = null;
-  if (text) {
-    try {
-      json = JSON.parse(text);
-    } catch {
-      throw new Error(`${method} ${path}: invalid JSON (${res.status}): ${text.slice(0, 200)}`);
-    }
-  }
-  if (!res.ok && !opts.allowError) {
-    const msg = json?.error?.message ?? text.slice(0, 200) ?? res.statusText;
-    throw new Error(`${method} ${path} failed (${res.status}): ${msg}`);
-  }
-  return { res, json, text };
-}
-
-function data(json) {
-  if (json && typeof json === "object" && "data" in json) {
-    return json.data;
-  }
-  return undefined;
-}
-
-function asObject(value, label) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`${label}: expected object`);
-  }
-  return /** @type {Record<string, unknown>} */ (value);
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function requireString(value, label) {
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`${label}: missing string value`);
-  }
-  return value.trim();
+/** @param {string} method @param {string} path @param {object} [opts] */
+function callApi(method, path, opts = {}) {
+  return api(config.apiBase, method, path, opts);
 }
 
 /** Default earn rule: 1 pt / 100 FCFA (matches rule engine). */
@@ -333,45 +333,30 @@ function pointsForAmount(amountFcfa) {
   return Math.floor(amountFcfa / 100);
 }
 
-async function waitForApi() {
+async function waitForApiReady() {
   log(`Health check ${config.apiBase}/health`);
-  for (let i = 0; i < 30; i++) {
-    try {
-      const { json } = await api("GET", "/health", { allowError: true });
-      if (json?.data && typeof json.data === "object" && json.data.status === "ok") {
-        return;
-      }
-    } catch {
-      // retry
-    }
-    if (i > 0) await sleep(1000);
-  }
-  let last = "";
   try {
-    const r = await fetch(`${config.apiBase}/health`);
-    last = await r.text();
-  } catch (error) {
-    last = String(error);
+    await waitForApi(config.apiBase);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err);
+    console.error("Tip: docker compose up backend  or  cd backend && go run ./cmd/api");
+    process.exit(1);
   }
-  console.error(`API not ready at ${config.apiBase}/health`);
-  console.error("Last response:", last.slice(0, 500));
-  console.error("Tip: cd backend && go run ./cmd/api  (check HTTP_PORT in backend/.env)");
-  process.exit(1);
 }
 
 async function inviteAndAccept(auth, email, role, password, invPath) {
-  const inv = await api("POST", invPath, {
+  const inv = await callApi("POST", invPath, {
     headers: { authorization: `Bearer ${auth}` },
     body: { email, role },
   });
   const token = requireString(asObject(data(inv.json), `invite ${email}`).token, `invite token for ${email}`);
-  await api("POST", `/v1/invitations/${encodeURIComponent(token)}/accept`, {
+  await callApi("POST", `/v1/invitations/${encodeURIComponent(token)}/accept`, {
     body: { password },
   });
 }
 
 async function listTenants(superToken) {
-  const list = await api("GET", "/v1/superadmin/tenants?limit=200", {
+  const list = await callApi("GET", "/v1/superadmin/tenants?limit=200", {
     headers: { authorization: `Bearer ${superToken}` },
   });
   return /** @type {TenantRow[]} */ (asArray(data(list.json)));
@@ -379,7 +364,7 @@ async function listTenants(superToken) {
 
 async function ensureTenant(superToken, org) {
   const plan = typeof org.plan === "string" && org.plan ? org.plan : "starter";
-  const created = await api("POST", "/v1/superadmin/tenants", {
+  const created = await callApi("POST", "/v1/superadmin/tenants", {
     allowError: true,
     headers: { authorization: `Bearer ${superToken}` },
     body: { name: org.name, slug: org.slug, plan },
@@ -399,7 +384,7 @@ async function ensureTenant(superToken, org) {
 }
 
 async function listOrgStores(merchantToken) {
-  const res = await api("GET", "/v1/organizations/me/stores", {
+  const res = await callApi("GET", "/v1/organizations/me/stores", {
     headers: { authorization: `Bearer ${merchantToken}` },
   });
   const payload = asObject(data(res.json), "org stores");
@@ -407,7 +392,7 @@ async function listOrgStores(merchantToken) {
 }
 
 async function createOrgStore(merchantToken, boutique) {
-  const res = await api("POST", "/v1/organizations/me/stores", {
+  const res = await callApi("POST", "/v1/organizations/me/stores", {
     headers: { authorization: `Bearer ${merchantToken}` },
     body: {
       slug: boutique.slug,
@@ -442,7 +427,7 @@ async function ensureOrgBoutiques(merchantToken, boutiques) {
 }
 
 async function activateOrgSubscription(merchantToken) {
-  const subRes = await api("GET", "/v1/organizations/me/subscription", {
+  const subRes = await callApi("GET", "/v1/organizations/me/subscription", {
     headers: { authorization: `Bearer ${merchantToken}` },
   });
   const sub = asObject(data(subRes.json), "subscription");
@@ -450,242 +435,98 @@ async function activateOrgSubscription(merchantToken) {
     return;
   }
   log("Activate org subscription (dev MoMo confirm)");
-  const invRes = await api("POST", "/v1/organizations/me/subscription/momo-invoice", {
+  const invRes = await callApi("POST", "/v1/organizations/me/subscription/momo-invoice", {
     headers: { authorization: `Bearer ${merchantToken}` },
   });
   const inv = asObject(data(invRes.json), "momo invoice");
   const payRef = requireString(inv.pay_reference, "pay_reference");
-  await api("POST", "/v1/organizations/me/subscription/confirm-momo", {
+  await callApi("POST", "/v1/organizations/me/subscription/confirm-momo", {
     headers: { authorization: `Bearer ${merchantToken}` },
     body: { pay_reference: payRef },
   });
 }
 
-async function login(email, password, preferredTenantSlug = "") {
-  for (let attempt = 0; attempt < 6; attempt++) {
-    const res = await api("POST", "/v1/auth/login", {
-      allowError: true,
-      body: {
-        email,
-        password,
-        ...(preferredTenantSlug ? { tenant_slug: preferredTenantSlug } : {}),
-      },
-    });
-    if (res.res.ok) {
-      return asObject(data(res.json), `login ${email}`);
-    }
-    if (res.res.status === 429 && attempt < 5) {
-      await sleep(1000 * (attempt + 1));
-      continue;
-    }
-    const message =
-      res.json?.error?.message ??
-      res.text.slice(0, 200) ??
-      `login failed for ${email}`;
-    throw new Error(`POST /v1/auth/login failed (${res.res.status}): ${String(message)}`);
-  }
-  throw new Error(`login retries exhausted for ${email}`);
-}
-
-async function maybeLogin(email, password) {
-  try {
-    return await login(email, password);
-  } catch {
-    return null;
-  }
-}
-
-async function selectWorkspace(accessToken, membershipId, activeStoreId = "") {
-  const body = { membership_id: membershipId };
-  if (activeStoreId) {
-    body.active_store_id = activeStoreId;
-  }
-  const res = await api("POST", "/v1/auth/workspace", {
-    headers: { authorization: `Bearer ${accessToken}` },
-    body,
-  });
-  return asObject(data(res.json), `select workspace ${membershipId}`);
-}
-
 async function loginScopedWithStore(email, password, tenantSlug, activeStoreId = "") {
-  const session = await loginScoped(email, password, tenantSlug);
-  if (!activeStoreId) {
-    return session;
-  }
-  const membershipId =
-    session.membershipId ||
-    (typeof session.payload.membership_id === "string" ? session.payload.membership_id : "");
-  if (!membershipId) {
-    throw new Error(`Cannot scope ${email} to store ${activeStoreId}: missing membership_id`);
-  }
-  const bearer = session.initialAccessToken || session.accessToken;
-  const scoped = await selectWorkspace(bearer, membershipId, activeStoreId);
-  return {
-    ...session,
-    accessToken: requireString(scoped.access_token, `store-scoped token for ${email}`),
-    payload: scoped,
-    membershipId,
-  };
+  return loginScoped(config.apiBase, email, password, tenantSlug, activeStoreId);
 }
 
 function hqStore(stores) {
   return stores.find((row) => row.is_hq) ?? stores.find((row) => row.slug === "main") ?? stores[0];
 }
 
-function hasWorkspace(payload, desiredTenantSlug) {
+function hasWorkspace(session, desiredTenantSlug) {
   if (!desiredTenantSlug) return true;
-  const workspaces = /** @type {WorkspaceRow[]} */ (asArray(payload.workspaces));
+  const workspaces = /** @type {WorkspaceRow[]} */ (asArray(session.workspaces));
   return workspaces.some((row) => row.tenant_slug === desiredTenantSlug);
 }
 
-async function loginScoped(email, password, desiredTenantSlug = "") {
-  const payload = await login(email, password);
-  const step = typeof payload.step === "string" ? payload.step : "ok";
-  if (step === "mfa_required") {
-    throw new Error(`Seed users should not require MFA (${email})`);
+async function maybeLoginScoped(email, password, tenantSlug = "") {
+  try {
+    return await loginScoped(config.apiBase, email, password, tenantSlug);
+  } catch {
+    return null;
   }
-  const initialAccessToken = requireString(payload.access_token, `initial access token for ${email}`);
-  const workspaces = /** @type {WorkspaceRow[]} */ (asArray(payload.workspaces));
-
-  if (step === "workspace_selection_required") {
-    if (!desiredTenantSlug) {
-      return {
-        accessToken: initialAccessToken,
-        initialAccessToken,
-        initialPayload: payload,
-        payload,
-        workspaces,
-        membershipId: "",
-      };
-    }
-    const workspace =
-      workspaces.find((row) => row.tenant_slug === desiredTenantSlug) ??
-      (workspaces.length === 1 ? workspaces[0] : null);
-    if (!workspace?.membership_id) {
-      throw new Error(`No workspace found for ${email} in ${desiredTenantSlug || "requested scope"}`);
-    }
-    const scoped = await selectWorkspace(initialAccessToken, workspace.membership_id);
-    return {
-      accessToken: requireString(scoped.access_token, `scoped access token for ${email}`),
-      initialAccessToken,
-      initialPayload: payload,
-      payload: scoped,
-      workspaces,
-      membershipId: workspace.membership_id,
-    };
-  }
-
-  return {
-    accessToken: initialAccessToken,
-    initialAccessToken,
-    initialPayload: payload,
-    payload,
-    workspaces,
-    membershipId: typeof payload.membership_id === "string" ? payload.membership_id : "",
-  };
 }
 
 async function ensureWorkspaceAccess(inviterAuthToken, email, role, password, invPath, desiredTenantSlug = "") {
-  const existing = await maybeLogin(email, password);
+  const existing = await maybeLoginScoped(email, password, desiredTenantSlug);
   if (existing && hasWorkspace(existing, desiredTenantSlug)) {
     return;
   }
   await inviteAndAccept(inviterAuthToken, email, role, password, invPath);
 }
 
-async function listStoreCustomers(authToken) {
-  const res = await api("GET", "/v1/store/customers?limit=200", {
-    headers: { authorization: `Bearer ${authToken}` },
-  });
-  return /** @type {StoreCustomerRow[]} */ (asArray(data(res.json)));
-}
-
-async function getStoreQr(authToken) {
-  const res = await api("GET", "/v1/store/qr", {
-    headers: { authorization: `Bearer ${authToken}` },
-  });
-  const payload = asObject(data(res.json), "store qr");
-  return requireString(payload.store_qr, "store qr");
-}
-
-async function getStoreMetrics(authToken) {
-  const res = await api("GET", "/v1/store/metrics", {
-    headers: { authorization: `Bearer ${authToken}` },
-  });
-  return asObject(data(res.json), "store metrics");
-}
-
-/** Staff/merchant POST /staff/customers requires this when the actor has a store membership. */
-async function ensureStaffCanEnrollCustomers(authToken) {
-  await api("PATCH", "/v1/store/tenant", {
-    headers: { authorization: `Bearer ${authToken}` },
-    body: { allow_staff_self_enrollment: true },
-  });
-}
-
-async function listStoreRules(authToken) {
-  const res = await api("GET", "/v1/store/rules", {
-    headers: { authorization: `Bearer ${authToken}` },
-  });
-  const payload = asObject(data(res.json), "store rules");
-  return asArray(payload.rules);
-}
-
-async function createStoreRule(authToken, rule, priority = 0) {
-  await api("POST", "/v1/store/rules", {
-    headers: { authorization: `Bearer ${authToken}` },
-    body: { rule, priority, active: true },
-  });
-}
-
-async function ensureStoreRules(authToken, storeSlug) {
-  const existing = await listStoreRules(authToken);
+async function ensureTenantRules(authToken, tenantId, storeSlug) {
+  const existing = await tenantListRules(config.apiBase, authToken, tenantId);
   if (existing.length > 0) {
     return existing.length;
   }
   let n = 0;
   for (const [i, rule] of pilotRulesForStore(storeSlug).entries()) {
-    await createStoreRule(authToken, rule, i);
+    await tenantCreateRule(config.apiBase, authToken, tenantId, rule, i);
     n++;
   }
   return n;
 }
 
-async function listStoreRewards(authToken) {
-  const res = await api("GET", "/v1/store/rewards?active=false", {
-    headers: { authorization: `Bearer ${authToken}` },
-  });
-  const payload = asObject(data(res.json), "store rewards");
-  return asArray(payload.rewards);
-}
-
-async function createStoreReward(authToken, reward) {
-  const res = await api("POST", "/v1/store/rewards", {
-    headers: { authorization: `Bearer ${authToken}` },
-    body: { ...reward, active: true },
-  });
-  return asObject(data(res.json), "create reward");
-}
-
-async function ensureStoreRewards(authToken, storeSlug) {
-  const existing = await listStoreRewards(authToken);
+async function ensureTenantRewardsCatalog(authToken, tenantId, storeSlug) {
+  const existing = await tenantListRewards(config.apiBase, authToken, tenantId, false);
   if (existing.length > 0) {
     return existing;
   }
   const created = [];
   for (const row of pilotRewardsForStore(storeSlug)) {
-    created.push(await createStoreReward(authToken, row));
+    created.push(await tenantCreateReward(config.apiBase, authToken, tenantId, row));
   }
   return created;
 }
 
-async function ensurePwaEnrollment(merchantAuthToken, storeQr, customer) {
+async function ensurePilotCampaign(authToken, tenantId) {
+  const existing = await tenantListCampaigns(config.apiBase, authToken, tenantId);
+  if (existing.length > 0) {
+    return existing[0];
+  }
+  const startsAt = new Date();
+  const endsAt = new Date(startsAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+  log(`[campaign] Create pilot push campaign`);
+  return tenantCreateCampaign(config.apiBase, authToken, tenantId, {
+    name: "Fidélité week-end",
+    campaign_type: "push",
+    starts_at: startsAt.toISOString(),
+    ends_at: endsAt.toISOString(),
+    targeting_json: { tier: "all" },
+    action_json: { message: "Double points ce week-end !" },
+    budget_points: 5000,
+  });
+}
+
+async function ensurePwaEnrollment(merchantAuthToken, tenantId, storeQr, customer) {
   if (config.publicEnrollRequirePhoneVerify && !customer.phoneVerifyToken) {
     throw new Error(
       `PUBLIC_ENROLL_REQUIRE_PHONE_VERIFY=true requires a phone proof token for ${customer.phone}. Set CUSTOMER_PHONE_VERIFY_TOKEN or use PUBLIC_OTP_DEV_CODE.`,
     );
   }
-  const res = await api("POST", "/v1/public/enrollments", {
+  const res = await callApi("POST", "/v1/public/enrollments", {
     allowError: true,
     body: {
       store_qr: storeQr,
@@ -698,7 +539,9 @@ async function ensurePwaEnrollment(merchantAuthToken, storeQr, customer) {
   if (res.res.ok) {
     return asObject(data(res.json), `pwa enroll ${customer.phone}`);
   }
-  const existingRows = await listStoreCustomers(merchantAuthToken);
+  const existingRows = await tenantListCustomers(config.apiBase, merchantAuthToken, tenantId, {
+    limit: 200,
+  });
   const existing = existingRows.find((row) => row.phone === customer.phone);
   if (existing?.enrollment_id) {
     return {
@@ -715,8 +558,8 @@ async function ensurePwaEnrollment(merchantAuthToken, storeQr, customer) {
   throw new Error(String(message));
 }
 
-async function staffCreateCustomer(authToken, merchantAuthToken, customer) {
-  const res = await api("POST", "/v1/staff/customers", {
+async function staffCreateCustomer(authToken, merchantAuthToken, tenantId, customer) {
+  const res = await callApi("POST", "/v1/staff/customers", {
     allowError: true,
     headers: { authorization: `Bearer ${authToken}` },
     body: {
@@ -728,7 +571,9 @@ async function staffCreateCustomer(authToken, merchantAuthToken, customer) {
   if (res.res.ok) {
     return asObject(data(res.json), `staff customer ${customer.phone}`);
   }
-  const existingRows = await listStoreCustomers(merchantAuthToken);
+  const existingRows = await tenantListCustomers(config.apiBase, merchantAuthToken, tenantId, {
+    limit: 200,
+  });
   const existing = existingRows.find((row) => row.phone === customer.phone);
   if (existing?.enrollment_id) {
     return { enrollment_id: existing.enrollment_id, customer_qr: "" };
@@ -737,24 +582,25 @@ async function staffCreateCustomer(authToken, merchantAuthToken, customer) {
   throw new Error(`POST /v1/staff/customers failed (${res.res.status}): ${message}`);
 }
 
-async function recordPurchase(authToken, { phone, customerQr, amountFcfa }) {
-  const res = await api("POST", "/v1/staff/purchases", {
+async function recordPurchase(authToken, { phone, customerQr, amountFcfa, occurredAt }) {
+  const res = await callApi("POST", "/v1/staff/purchases", {
     headers: { authorization: `Bearer ${authToken}` },
     body: {
       ...(phone ? { phone_e164: phone } : {}),
       ...(customerQr ? { customer_qr: customerQr } : {}),
       amount_fcfa: amountFcfa,
+      ...(occurredAt ? { occurred_at: occurredAt } : {}),
     },
   });
   return asObject(data(res.json), `purchase ${phone ?? customerQr ?? amountFcfa}`);
 }
 
 async function otpSend(phone) {
-  await api("POST", "/v1/public/otp/send", { body: { phone_e164: phone } });
+  await callApi("POST", "/v1/public/otp/send", { body: { phone_e164: phone } });
 }
 
 async function otpVerify(phone, code) {
-  const res = await api("POST", "/v1/public/otp/verify", {
+  const res = await callApi("POST", "/v1/public/otp/verify", {
     body: { phone_e164: phone, code },
   });
   const payload = asObject(data(res.json), "otp verify");
@@ -773,14 +619,14 @@ async function resolvePhoneVerifyToken(phone, explicitToken = "") {
 }
 
 async function customerLogin(phoneVerifyToken) {
-  const res = await api("POST", "/v1/auth/customer/login", {
+  const res = await callApi("POST", "/v1/auth/customer/login", {
     body: { phone_verify_token: phoneVerifyToken },
   });
   return asObject(data(res.json), "customer login");
 }
 
 async function customerSelectSession(accessToken, enrollmentId) {
-  const res = await api("POST", "/v1/auth/customer/session", {
+  const res = await callApi("POST", "/v1/auth/customer/session", {
     headers: { authorization: `Bearer ${accessToken}` },
     body: { enrollment_id: enrollmentId },
   });
@@ -788,14 +634,14 @@ async function customerSelectSession(accessToken, enrollmentId) {
 }
 
 async function customerListRewards(accessToken) {
-  const res = await api("GET", "/v1/customers/me/rewards", {
+  const res = await callApi("GET", "/v1/customers/me/rewards", {
     headers: { authorization: `Bearer ${accessToken}` },
   });
   return asObject(data(res.json), "customer rewards");
 }
 
 async function customerClaimReward(accessToken, rewardId) {
-  const res = await api("POST", `/v1/customers/me/rewards/${encodeURIComponent(rewardId)}/claims`, {
+  const res = await callApi("POST", `/v1/customers/me/rewards/${encodeURIComponent(rewardId)}/claims`, {
     headers: { authorization: `Bearer ${accessToken}` },
     body: {},
   });
@@ -803,78 +649,117 @@ async function customerClaimReward(accessToken, rewardId) {
 }
 
 async function staffValidateRedemption(authToken, claimQr) {
-  const res = await api("POST", "/v1/staff/redemptions/validate", {
+  const res = await callApi("POST", "/v1/staff/redemptions/validate", {
     headers: { authorization: `Bearer ${authToken}` },
     body: { claim_qr: claimQr },
   });
   return asObject(data(res.json), "validate redemption");
 }
 
-async function seedOrgLoyaltyDemo(org, merchantEmail, merchantPassword, orgStores, agentToken) {
+async function seedOrgLoyaltyDemo(org, tenantId, merchantEmail, merchantPassword, orgStores, agentToken) {
   const hq = hqStore(orgStores);
   if (!hq?.id) {
     throw new Error(`No HQ store for org ${org.slug}`);
   }
   const hqSession = await loginScopedWithStore(merchantEmail, merchantPassword, org.slug, hq.id);
   const merchantToken = hqSession.accessToken;
+  const rng = mulberry32(`${config.seedRandomSeed}:${org.slug}`);
 
-  await ensureStaffCanEnrollCustomers(merchantToken);
+  await tenantPatchSettings(config.apiBase, merchantToken, tenantId, {
+    allow_staff_self_enrollment: true,
+  });
   log(`[${org.slug}] Seed org-wide rules + rewards (HQ ${hq.slug})`);
-  const ruleCount = await ensureStoreRules(merchantToken, hq.slug ?? "main");
-  const rewards = await ensureStoreRewards(merchantToken, hq.slug ?? "main");
+  const ruleCount = await ensureTenantRules(merchantToken, tenantId, hq.slug ?? "main");
+  const rewards = await ensureTenantRewardsCatalog(merchantToken, tenantId, hq.slug ?? "main");
+  if (org.richDemo) {
+    await ensurePilotCampaign(merchantToken, tenantId);
+  }
 
-  const hqQr = await getStoreQr(merchantToken);
+  const hqQr = await tenantGetQrToken(config.apiBase, merchantToken, tenantId);
 
   log(`[${org.slug}] Enroll main customer ${config.customerPhone} (pooled loyalty)`);
-  const enrolled = await ensurePwaEnrollment(merchantToken, hqQr, {
+  const enrolled = await ensurePwaEnrollment(merchantToken, tenantId, hqQr, {
     name: config.customerName,
     phone: config.customerPhone,
     email: config.customerEmail,
     phoneVerifyToken: config.customerPhoneVerifyToken || undefined,
   });
 
-  const amounts = [org.purchaseAmountFcfa, ...org.extraPurchases];
-  const boutiqueActivity = [];
+  /** @type {Array<{ name: string; phone: string; customer_qr?: string }>} */
+  const activityCustomers = [
+    {
+      name: config.customerName,
+      phone: config.customerPhone,
+      customer_qr: typeof enrolled.customer_qr === "string" ? enrolled.customer_qr : "",
+    },
+  ];
 
-  for (const boutique of orgStores) {
-    const storeId = requireString(boutique.id, `store id for ${boutique.slug}`);
-    const storeSlug = boutique.slug ?? "main";
-    const session =
-      storeId === hq.id
-        ? hqSession
-        : await loginScopedWithStore(merchantEmail, merchantPassword, org.slug, storeId);
-    const purchaseAuth = agentToken
-      ? (
-          await loginScopedWithStore(config.agentEmail, config.agentPassword, org.slug, storeId)
-        ).accessToken
-      : session.accessToken;
-
-    for (const amount of amounts) {
-      log(`[${org.slug}/${storeSlug}] Purchase ${amount} FCFA for ${config.customerPhone}`);
-      await recordPurchase(purchaseAuth, { phone: config.customerPhone, amountFcfa: amount });
-    }
-    boutiqueActivity.push({ slug: storeSlug, purchaseCount: amounts.length });
+  const walkIns = org.richDemo ? SEED_WALK_IN_CUSTOMERS : extraStaffCustomers;
+  for (const walkIn of walkIns) {
+    log(`[${org.slug}] Enroll walk-in ${walkIn.name} (${walkIn.phone})`);
+    const row = await staffCreateCustomer(merchantToken, merchantToken, tenantId, walkIn);
+    activityCustomers.push({
+      name: walkIn.name,
+      phone: walkIn.phone,
+      customer_qr: typeof row.customer_qr === "string" ? row.customer_qr : "",
+    });
   }
 
-  if (org.richDemo) {
-    for (const extra of extraStaffCustomers) {
-      log(`[${org.slug}] Staff-create ${extra.phone}`);
-      const created = await staffCreateCustomer(merchantToken, merchantToken, {
-        name: extra.name,
-        phone: extra.phone,
-      });
-      log(`[${org.slug}] Purchase ${extra.amountFcfa} FCFA for ${extra.name}`);
-      await recordPurchase(merchantToken, {
-        ...(created.customer_qr
-          ? { customerQr: String(created.customer_qr) }
-          : { phone: extra.phone }),
-        amountFcfa: extra.amountFcfa,
-      });
+  const activityDays = buildSeedActivityDays(config.seedActivityDays);
+  const purchasePlan = buildSeedPurchasePlan(org, orgStores, activityCustomers, activityDays, rng);
+  log(
+    `[${org.slug}] Seed ${purchasePlan.length} purchases across ${activityDays.length} days (${activityCustomers.length} customers, ${orgStores.length} boutiques)`,
+  );
+
+  /** @type {Map<string, string>} */
+  const purchaseAuthCache = new Map();
+  /** @type {Map<string, number>} */
+  const boutiqueCounts = new Map();
+
+  for (const tx of purchasePlan) {
+    const storeId = requireString(tx.boutique.id, `store id for ${tx.boutique.slug ?? "main"}`);
+    const storeSlug = tx.boutique.slug ?? "main";
+    const authKey = `${storeId}:${tx.useAgent ? "agent" : "merchant"}`;
+    if (!purchaseAuthCache.has(authKey)) {
+      if (tx.useAgent && agentToken) {
+        purchaseAuthCache.set(
+          authKey,
+          (
+            await loginScopedWithStore(config.agentEmail, config.agentPassword, org.slug, storeId)
+          ).accessToken,
+        );
+      } else {
+        purchaseAuthCache.set(
+          authKey,
+          storeId === hq.id
+            ? hqSession.accessToken
+            : (
+                await loginScopedWithStore(merchantEmail, merchantPassword, org.slug, storeId)
+              ).accessToken,
+        );
+      }
     }
+    const purchaseAuth = purchaseAuthCache.get(authKey);
+    log(
+      `[${org.slug}/${storeSlug}] Purchase ${tx.amount} FCFA for ${tx.customer.name} (${formatDayLabel(tx.occurredAt)}${tx.useAgent ? ", agent" : ""})`,
+    );
+    await recordPurchase(purchaseAuth, {
+      phone: tx.customer.phone,
+      ...(tx.customer.customer_qr ? { customerQr: tx.customer.customer_qr } : {}),
+      amountFcfa: tx.amount,
+      occurredAt: tx.occurredAt,
+    });
+    boutiqueCounts.set(storeSlug, (boutiqueCounts.get(storeSlug) ?? 0) + 1);
   }
 
-  const metrics = await getStoreMetrics(merchantToken);
-  const pointsPerBoutique = amounts.reduce((sum, a) => sum + pointsForAmount(a), 0);
+  const boutiqueActivity = [...boutiqueCounts.entries()].map(([slug, purchaseCount]) => ({
+    slug,
+    purchaseCount,
+  }));
+
+  const metrics = await tenantGetMetrics(config.apiBase, merchantToken, tenantId, { period: "30d" });
+  const mainCustomerTx = purchasePlan.filter((tx) => tx.customer.phone === config.customerPhone);
+  const totalMainPoints = mainCustomerTx.reduce((sum, tx) => sum + pointsForAmount(tx.amount), 0);
   return {
     hqQr,
     enrolled,
@@ -882,7 +767,8 @@ async function seedOrgLoyaltyDemo(org, merchantEmail, merchantPassword, orgStore
     ruleCount,
     metrics,
     boutiqueActivity,
-    totalMainPoints: pointsPerBoutique * orgStores.length,
+    purchaseCount: purchasePlan.length,
+    totalMainPoints,
   };
 }
 
@@ -937,20 +823,23 @@ async function main() {
   }
 
   console.log(`Using API base: ${config.apiBase} (set API_BASE to override)`);
+  console.log(
+    `Activity window: ${config.seedActivityDays} days (SEED_ACTIVITY_DAYS, seed=${config.seedRandomSeed})`,
+  );
   if (!config.publicEnrollRequirePhoneVerify) {
     console.log("Tip: PUBLIC_OTP_DEV_CODE in backend/.env enables automated customer claim seed.");
   }
-  await waitForApi();
+  await waitForApiReady();
 
   log(`Bootstrap superadmin (${config.superEmail})`);
-  await api("POST", "/v1/bootstrap/superadmin", {
+  await callApi("POST", "/v1/bootstrap/superadmin", {
     allowError: true,
     headers: { "X-Bootstrap-Secret": config.bootstrapSecret },
     body: { email: config.superEmail, password: config.superPassword },
   });
 
   log("Login superadmin");
-  const superLogin = await loginScoped(config.superEmail, config.superPassword);
+  const superLogin = await loginScoped(config.apiBase, config.superEmail, config.superPassword);
   const superToken = superLogin.accessToken;
 
   const seededOrgs = [];
@@ -969,11 +858,21 @@ async function main() {
     );
 
     log(`Login merchant ${org.merchantEmail}`);
-    let merchantSession = await loginScoped(org.merchantEmail, org.merchantPassword, org.slug);
+    let merchantSession = await loginScoped(
+      config.apiBase,
+      org.merchantEmail,
+      org.merchantPassword,
+      org.slug,
+    );
 
     if (org.activateBilling) {
       await activateOrgSubscription(merchantSession.accessToken);
-      merchantSession = await loginScoped(org.merchantEmail, org.merchantPassword, org.slug);
+      merchantSession = await loginScoped(
+        config.apiBase,
+        org.merchantEmail,
+        org.merchantPassword,
+        org.slug,
+      );
     }
 
     let orgStores = await listOrgStores(merchantSession.accessToken);
@@ -988,7 +887,7 @@ async function main() {
         config.agentEmail,
         "staff",
         config.agentPassword,
-        "/v1/store/invitations",
+        `/v1/tenants/${tenantId}/invitations`,
         org.slug,
       );
     }
@@ -1002,7 +901,11 @@ async function main() {
   }
 
   log(`Login shared staff (${config.agentEmail})`);
-  const sharedAgentSession = await loginScoped(config.agentEmail, config.agentPassword);
+  const sharedAgentSession = await loginScoped(
+    config.apiBase,
+    config.agentEmail,
+    config.agentPassword,
+  );
   const sharedAgentWorkspaces = /** @type {WorkspaceRow[]} */ (sharedAgentSession.workspaces);
 
   /** @type {Array<{ orgSlug: string; enrollmentId: string; points: number; boutiques: string[]; metrics?: Record<string, unknown> }>} */
@@ -1013,17 +916,37 @@ async function main() {
   for (const org of seededOrgs) {
     let agentToken = "";
     if (org.includeSharedAgent) {
-      const agentForOrg = await loginScoped(config.agentEmail, config.agentPassword, org.slug);
+      const agentForOrg = await loginScoped(
+        config.apiBase,
+        config.agentEmail,
+        config.agentPassword,
+        org.slug,
+      );
       agentToken = agentForOrg.accessToken;
     }
 
     const seeded = await seedOrgLoyaltyDemo(
       org,
+      org.tenantId,
       org.merchantEmail,
       org.merchantPassword,
       org.orgStores,
       agentToken || undefined,
     );
+
+    try {
+      const smoke = await tenantAdminSmoke(
+        config.apiBase,
+        org.merchantToken,
+        org.tenantId,
+        org.slug,
+      );
+      log(smoke.logLine);
+    } catch (err) {
+      console.warn(
+        `  Tenant admin smoke skipped for ${org.slug}: ${err instanceof Error ? err.message : err}`,
+      );
+    }
 
     mainCustomerPrograms.push({
       orgSlug: org.slug,
@@ -1056,16 +979,33 @@ async function main() {
     crossTenantOrg.slug,
     requireString(crossHq?.id, "cross-tenant HQ id"),
   );
-  const crossTenantStoreQr = await getStoreQr(crossSession.accessToken);
-  await ensurePwaEnrollment(crossSession.accessToken, crossTenantStoreQr, {
+  const crossTenantStoreQr = await tenantGetQrToken(
+    config.apiBase,
+    crossSession.accessToken,
+    crossTenantOrg.tenantId,
+  );
+  const workerActivityDays = buildSeedActivityDays(config.seedActivityDays);
+  const workerRng = mulberry32(`${config.seedRandomSeed}:worker-customer`);
+  const workerDay = workerActivityDays[Math.floor(workerRng() * workerActivityDays.length)];
+  await ensurePwaEnrollment(
+    crossSession.accessToken,
+    crossTenantOrg.tenantId,
+    crossTenantStoreQr,
+    {
     name: config.workerCustomerName,
     phone: config.workerCustomerPhone,
     email: config.agentEmail,
     phoneVerifyToken: config.workerCustomerPhoneVerifyToken || undefined,
-  });
+    },
+  );
+  const workerOccurredAt = randomOccurredAt(workerDay, workerRng);
+  log(
+    `[${crossTenantOrg.slug}] Purchase 3900 FCFA for worker-customer (${formatDayLabel(workerOccurredAt)})`,
+  );
   await recordPurchase(crossSession.accessToken, {
     phone: config.workerCustomerPhone,
     amountFcfa: 3900,
+    occurredAt: workerOccurredAt,
   });
 
   const primary = mainCustomerPrograms.find((p) => p.orgSlug === config.tenantSlug);
@@ -1086,7 +1026,7 @@ async function main() {
     );
     console.log(`      Boutiques (${org.orgStores.length}): ${boutiqueSlugs}`);
     console.log(
-      `      UI: /store  /store/locations  /store/subscription  /store/customers  /store/rewards`,
+      `      UI: /store  /store/customers  /store/transactions  /store/analytics  /store/campaigns  /store/enrollment-qr`,
     );
   }
   console.log("");
@@ -1108,7 +1048,7 @@ async function main() {
   if (primary?.metrics) {
     const m = primary.metrics;
     console.log(
-      `    Primary store metrics: distributed=${m.points_distributed} today_clients=${m.clients_served_today} today_pts=${m.points_issued_today} redemptions_today=${m.redemptions_today}`,
+      `    Primary store metrics (7d): points_distributed=${metricsKpiValue(m, "points_distributed") ?? "?"} active_customers=${metricsKpiValue(m, "active_customers") ?? "?"} rewards_validated=${metricsKpiValue(m, "rewards_validated") ?? "?"}`,
     );
   }
   if (claimDemo) {
@@ -1139,7 +1079,7 @@ async function main() {
   const boutiqueTotal = seededOrgs.reduce((n, o) => n + o.orgStores.length, 0);
   console.log(`  Boutiques:     ${boutiqueTotal} (HQ main + extras on ${config.tenantSlug} when billing activated)`);
   console.log(
-    `  Ledger:        earn events per boutique; pooled balance per org; redeem on ${config.tenantSlug} when OTP works`,
+    `  Ledger:        ${config.seedActivityDays} days of earn events; pooled balance; redeem on ${config.tenantSlug} when OTP works`,
   );
   console.log("");
   console.log("Tips:");

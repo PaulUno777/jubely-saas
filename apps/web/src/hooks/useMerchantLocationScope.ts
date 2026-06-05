@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useStoreTenant } from "@/hooks/useStoreTenant";
+import { useTenantSettings } from "@/hooks/useTenantSettings";
 import { useSession } from "@/hooks/useSession";
 import { useTenantLocations } from "@/hooks/useTenantMetrics";
 import {
@@ -13,7 +13,7 @@ import { useTranslations } from "next-intl";
 
 export function useMerchantLocationScope() {
   const { session } = useSession();
-  const { data: tenant } = useStoreTenant();
+  const { data: tenant } = useTenantSettings();
   const locationsQuery = useTenantLocations();
   const t = useTranslations("store.shell");
 

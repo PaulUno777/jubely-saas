@@ -128,6 +128,14 @@ Content-Type: application/json
 
 Response includes `customer_qr` for client display.
 
+## Merchant tenant admin routes
+
+Merchant `/store` UI calls **`/v1/tenants/:tenantId/*`** (scoped to JWT `tenant_id`). Handlers live in `interfaces/httpserver/handlers_tenant_admin.go`. Wire schemas: `packages/api-schemas/src/tenant-admin.ts`.
+
+Legacy **`/v1/store/*`** remains for the agent portal (`GET` metrics, tenant, customers, transactions) until `/agent` migrates.
+
+Frontend client: `apps/web/src/lib/tenant-admin/` with React Query keys `["tenant-admin", …]`.
+
 ## JSON API (Phase 1 envelope)
 
 All JSON responses use a stable envelope. **`error.message` is localized** from the `Accept-Language` header (supported: `en`, `fr`; fallback `en`). Clients may send **`X-Request-Id`**; otherwise the server generates one and echoes it in `meta`.

@@ -1,26 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import {
-  Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@jubely/ui";
-import { ApiResponseError } from "@jubely/api-schemas";
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@jubely/ui";
 import { useTranslations } from "next-intl";
-import { Main } from "@/components/layout/main";
-import { StorePageHeader } from "@/components/store/store-page-header";
-import { useSession } from "@/hooks/useSession";
-import { storeListPointEvents } from "@/lib/storeApi";
+import { MerchantDataTable } from "@/components/store/merchant-data-table";
+import { MerchantFilterBar } from "@/components/store/merchant-filter-bar";
+import { MerchantPageShell } from "@/components/store/merchant-page-shell";
+import { useMerchantLocationScope } from "@/hooks/useMerchantLocationScope";
+import { useTenantDateRange } from "@/hooks/useTenantDateRange";
+import { useTenantTransactions } from "@/hooks/tenant-admin-hooks";
 
 function formatDate(value: string | number | Date) {
   const d = value instanceof Date ? value : new Date(value);
@@ -37,83 +24,89 @@ function amountFromPayload(payload: unknown): string | null {
 
 export default function StoreTransactionsPage() {
   const t = useTranslations("store.transactions");
-  const { session } = useSession();
+  const { headerContext, activeStoreId } = useMerchantLocationScope();
+  const { dateRange, setDateRange, isoRange } = useTenantDateRange("last_30_days");
 
-  const q = useQuery({
-    queryKey: ["store", "transactions"],
-    enabled: Boolean(session),
-    queryFn: () => storeListPointEvents({ limit: 100, offset: 0 }),
+  const q = useTenantTransactions({
+    limit: 100,
+    offset: 0,
+    from: isoRange.from,
+    to: isoRange.to,
+    locationId: activeStoreId,
   });
 
+  const transactions = q.data?.transactions ?? [];
+
   return (
-    <>
-      <StorePageHeader title={t("title")} />
-      <Main>
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("listTitle")}</CardTitle>
-            <CardDescription>{t("listDescription")}</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("date")}</TableHead>
-                  <TableHead>{t("customer")}</TableHead>
-                  <TableHead>{t("type")}</TableHead>
-                  <TableHead>{t("amount")}</TableHead>
-                  <TableHead className="text-right">{t("points")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {q.isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-sm text-muted-foreground">
-                      {t("loading")}
-                    </TableCell>
-                  </TableRow>
-                ) : q.error ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-sm text-destructive">
-                      {q.error instanceof ApiResponseError ? q.error.message : t("loadError")}
-                    </TableCell>
-                  </TableRow>
-                ) : q.data?.length ? (
-                  q.data.map((row) => {
-                    const amount = amountFromPayload(row.payload);
-                    return (
-                      <TableRow key={row.event_id}>
-                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                          {formatDate(row.created_at)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm font-medium">{row.customer_name ?? "—"}</div>
-                          {row.customer_phone ? (
-                            <div className="font-mono text-xs text-muted-foreground">{row.customer_phone}</div>
-                          ) : null}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{row.event_type}</Badge>
-                        </TableCell>
-                        <TableCell className="text-sm">{amount ?? "—"}</TableCell>
-                        <TableCell className="text-right font-mono tabular-nums">
-                          {row.delta > 0 ? `+${row.delta}` : row.delta}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-sm text-muted-foreground">
-                      {t("empty")}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </Main>
-    </>
+    <MerchantPageShell
+      title={t("title")}
+      context={headerContext}
+      filters={
+        <MerchantFilterBar dateRange={dateRange} onDateRangeChange={setDateRange} />
+      }
+    >
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("listTitle")}</CardTitle>
+          <CardDescription>{t("listDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <MerchantDataTable
+            columns={[
+              {
+                key: "date",
+                header: t("date"),
+                cell: (row) => (
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">
+                    {formatDate(row.created_at)}
+                  </span>
+                ),
+              },
+              {
+                key: "customer",
+                header: t("customer"),
+                cell: (row) => (
+                  <div>
+                    <div className="text-sm font-medium">{row.customer_name ?? "—"}</div>
+                    {row.customer_phone ? (
+                      <div className="font-mono text-xs text-muted-foreground">
+                        {row.customer_phone}
+                      </div>
+                    ) : null}
+                  </div>
+                ),
+              },
+              {
+                key: "type",
+                header: t("type"),
+                cell: (row) => <Badge variant="outline">{row.event_type}</Badge>,
+              },
+              {
+                key: "amount",
+                header: t("amount"),
+                cell: (row) => <span className="text-sm">{amountFromPayload(row.payload) ?? "—"}</span>,
+              },
+              {
+                key: "points",
+                header: t("points"),
+                className: "text-right",
+                cell: (row) => (
+                  <span className="font-mono tabular-nums">
+                    {row.delta > 0 ? `+${row.delta}` : row.delta}
+                  </span>
+                ),
+              },
+            ]}
+            rows={transactions}
+            rowKey={(row) => row.event_id}
+            loading={q.isLoading}
+            error={q.error}
+            loadingLabel={t("loading")}
+            errorLabel={t("loadError")}
+            emptyLabel={t("empty")}
+          />
+        </CardContent>
+      </Card>
+    </MerchantPageShell>
   );
 }

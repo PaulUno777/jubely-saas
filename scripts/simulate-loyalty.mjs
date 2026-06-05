@@ -2,123 +2,56 @@
 /**
  * Simulate normal daily loyalty activity against a running API.
  *
- * Run after `pnpm dev:seed` (or equivalent) so tenants, rules, and rewards exist.
+ * Run after `pnpm dev:seed` so tenants, rules, and rewards exist.
  *
  * Each run typically:
- * - enrolls new walk-in customers (public QR + optional staff enroll)
- * - records purchases (points attribution)
+ * - smoke-reads tenant admin APIs (settings, stats, metrics, analytics, QR)
+ * - enrolls new walk-in customers (public QR + staff enroll)
+ * - records purchases (merchant or agent-scoped boutique)
  * - claims an affordable reward and staff-validates when balance allows
  *
- * Requires API running; backend/.env with PUBLIC_OTP_DEV_CODE=000000 for claim flow.
+ * Merchant reads use /v1/tenants/:tenantId/* (tenant-first API).
  *
- * Optional env: API_BASE, TENANT_SLUG, MERCHANT_EMAIL, MERCHANT_PASSWORD,
- *   AGENT_EMAIL, AGENT_PASSWORD, SIM_NEW_ENROLLMENTS, SIM_PURCHASES, SIM_CLAIMS, SIM_DRY_RUN
+ * Optional env: API_BASE, TENANT_SLUG, SIM_NEW_ENROLLMENTS, SIM_PURCHASES, SIM_CLAIMS, SIM_DRY_RUN
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  api,
+  asArray,
+  asObject,
+  data,
+  env,
+  loginScoped,
+  requireString,
+  resolveApiBase,
+  metricsKpiValue,
+  tenantAdminSmoke,
+  tenantGetMetrics,
+  tenantGetQrToken,
+  tenantListCustomers,
+  tenantListRewards,
+  tenantListTransactions,
+  waitForApi,
+} from "./lib/dev-api.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ENV_FILE = process.env.ENV_FILE ?? join(ROOT, "backend", ".env");
 
-function parseEnvFile(path) {
-  if (!existsSync(path)) return {};
-  const out = {};
-  for (const line of readFileSync(path, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq).trim();
-    let value = trimmed.slice(eq + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    out[key] = value;
-  }
-  return out;
-}
-
-function env(key, fallback) {
-  if (process.env[key] !== undefined && process.env[key] !== "") {
-    return process.env[key];
-  }
-  const file = parseEnvFile(ENV_FILE);
-  if (file[key] !== undefined && file[key] !== "") {
-    return file[key];
-  }
-  return fallback;
-}
-
-function stripTrailingSlash(url) {
-  return url.replace(/\/$/, "");
-}
-
-function parseDockerBackendHostPort() {
-  const composePath = join(ROOT, "docker-compose.yml");
-  if (!existsSync(composePath)) return null;
-  const lines = readFileSync(composePath, "utf8").split("\n");
-  let inBackend = false;
-  for (const line of lines) {
-    if (/^\s{2}backend:\s*$/.test(line)) {
-      inBackend = true;
-      continue;
-    }
-    if (inBackend && /^\s{2}[a-zA-Z0-9_-]+:\s*$/.test(line) && !/^\s{2}backend:\s*$/.test(line)) {
-      inBackend = false;
-    }
-    if (!inBackend) continue;
-    const m = line.match(/-\s*["']?(\d+):8080["']?/);
-    if (m) return m[1];
-  }
-  return null;
-}
-
-function portFromPublicFileBaseUrl(fileUrl) {
-  if (!fileUrl) return null;
-  const m = fileUrl.match(/^https?:\/\/[^/:]+:(\d+)/);
-  return m?.[1] ?? null;
-}
-
-function resolveApiBase() {
-  if (process.env.API_BASE) {
-    return stripTrailingSlash(process.env.API_BASE);
-  }
-  const explicit = env("API_PUBLIC_BASE", "");
-  if (explicit) {
-    return stripTrailingSlash(explicit);
-  }
-  const fromFiles = portFromPublicFileBaseUrl(env("PUBLIC_FILE_BASE_URL", ""));
-  if (fromFiles) {
-    return `http://localhost:${fromFiles}`;
-  }
-  const fromCompose = parseDockerBackendHostPort();
-  if (fromCompose) {
-    return `http://localhost:${fromCompose}`;
-  }
-  const httpPort = env("HTTP_PORT", "8082");
-  if (httpPort === "8080") {
-    return "http://localhost:8082";
-  }
-  return `http://localhost:${httpPort}`;
-}
-
 const config = {
-  apiBase: resolveApiBase(),
-  dryRun: env("SIM_DRY_RUN", "") === "true",
-  devOtpCode: env("DEV_OTP_CODE", env("PUBLIC_OTP_DEV_CODE", "000000")),
-  tenantSlug: env("TENANT_SLUG", "chez-mama"),
-  merchantEmail: env("MERCHANT_EMAIL", "merchant@chezmama.local"),
-  merchantPassword: env("MERCHANT_PASSWORD", "MerchantAdmin123!"),
-  agentEmail: env("AGENT_EMAIL", "agent.multi@jubely.local"),
-  agentPassword: env("AGENT_PASSWORD", "AgentStaff123!"),
-  newEnrollments: Math.max(0, Number(env("SIM_NEW_ENROLLMENTS", "2"))),
-  purchases: Math.max(0, Number(env("SIM_PURCHASES", "5"))),
-  claims: Math.max(0, Number(env("SIM_CLAIMS", "1"))),
+  apiBase: resolveApiBase(ENV_FILE),
+  dryRun: env("SIM_DRY_RUN", "", ENV_FILE) === "true",
+  devOtpCode: env("DEV_OTP_CODE", env("PUBLIC_OTP_DEV_CODE", "000000", ENV_FILE), ENV_FILE),
+  tenantSlug: env("TENANT_SLUG", "chez-mama", ENV_FILE),
+  merchantEmail: env("MERCHANT_EMAIL", "merchant@chezmama.local", ENV_FILE),
+  merchantPassword: env("MERCHANT_PASSWORD", "MerchantAdmin123!", ENV_FILE),
+  agentEmail: env("AGENT_EMAIL", "agent.multi@jubely.local", ENV_FILE),
+  agentPassword: env("AGENT_PASSWORD", "AgentStaff123!", ENV_FILE),
+  newEnrollments: Math.max(0, Number(env("SIM_NEW_ENROLLMENTS", "2", ENV_FILE))),
+  purchases: Math.max(0, Number(env("SIM_PURCHASES", "5", ENV_FILE))),
+  claims: Math.max(0, Number(env("SIM_CLAIMS", "1", ENV_FILE))),
 };
 
 const WALK_IN_NAMES = [
@@ -138,10 +71,6 @@ function log(step) {
   console.log(`-> ${step}`);
 }
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -155,184 +84,19 @@ function uniquePhone() {
   return `+2376${suffix}`;
 }
 
-/**
- * @param {string} method
- * @param {string} path
- * @param {{ headers?: Record<string, string>; body?: unknown; allowError?: boolean }} [opts]
- */
-async function api(method, path, opts = {}) {
-  const url = `${config.apiBase}${path.startsWith("/") ? path : `/${path}`}`;
-  const headers = { accept: "application/json", ...opts.headers };
-  let body;
-  if (opts.body !== undefined) {
-    headers["content-type"] = "application/json";
-    body = JSON.stringify(opts.body);
-  }
-  const res = await fetch(url, { method, headers, body });
-  const text = await res.text();
-  /** @type {{ data?: unknown; error?: { message?: string } } | null} */
-  let json = null;
-  if (text) {
-    try {
-      json = JSON.parse(text);
-    } catch {
-      throw new Error(`${method} ${path}: invalid JSON (${res.status}): ${text.slice(0, 200)}`);
-    }
-  }
-  if (!res.ok && !opts.allowError) {
-    const msg = json?.error?.message ?? text.slice(0, 200) ?? res.statusText;
-    throw new Error(`${method} ${path} failed (${res.status}): ${msg}`);
-  }
-  return { res, json, text };
-}
-
-function data(json) {
-  if (json && typeof json === "object" && "data" in json) {
-    return json.data;
-  }
-  return undefined;
-}
-
-function asObject(value, label) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`${label}: expected object`);
-  }
-  return /** @type {Record<string, unknown>} */ (value);
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function requireString(value, label) {
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`${label}: missing string value`);
-  }
-  return value.trim();
-}
-
-async function waitForApi() {
-  log(`Health check ${config.apiBase}/health`);
-  for (let i = 0; i < 20; i++) {
-    try {
-      const { json } = await api("GET", "/health", { allowError: true });
-      if (json?.data && typeof json.data === "object" && json.data.status === "ok") {
-        return;
-      }
-    } catch {
-      // retry
-    }
-    if (i > 0) await sleep(800);
-  }
-  console.error(`API not ready at ${config.apiBase}/health`);
-  console.error("Run the API first, then `pnpm dev:seed` if the tenant is missing.");
-  process.exit(1);
-}
-
-async function login(email, password, preferredTenantSlug = "") {
-  const res = await api("POST", "/v1/auth/login", {
-    allowError: true,
-    body: {
-      email,
-      password,
-      ...(preferredTenantSlug ? { tenant_slug: preferredTenantSlug } : {}),
-    },
-  });
-  if (!res.res.ok) {
-    const message = res.json?.error?.message ?? res.text.slice(0, 200);
-    throw new Error(`POST /v1/auth/login failed (${res.res.status}): ${message}`);
-  }
-  return asObject(data(res.json), `login ${email}`);
-}
-
-async function selectWorkspace(accessToken, membershipId, activeStoreId = "") {
-  const body = { membership_id: membershipId };
-  if (activeStoreId) {
-    body.active_store_id = activeStoreId;
-  }
-  const res = await api("POST", "/v1/auth/workspace", {
-    headers: { authorization: `Bearer ${accessToken}` },
-    body,
-  });
-  return asObject(data(res.json), "workspace");
-}
-
-async function loginScoped(email, password, tenantSlug, activeStoreId = "") {
-  const payload = await login(email, password, tenantSlug);
-  const step = typeof payload.step === "string" ? payload.step : "ok";
-  const initialAccessToken = requireString(payload.access_token, "access token");
-  const workspaces = asArray(payload.workspaces);
-
-  if (step === "workspace_selection_required") {
-    const workspace =
-      workspaces.find(
-        (row) => typeof row === "object" && row && row.tenant_slug === tenantSlug,
-      ) ?? workspaces[0];
-    const membershipId =
-      typeof workspace === "object" && workspace && typeof workspace.membership_id === "string"
-        ? workspace.membership_id
-        : "";
-    if (!membershipId) {
-      throw new Error(`No workspace for ${email} in ${tenantSlug}`);
-    }
-    const scoped = await selectWorkspace(initialAccessToken, membershipId, activeStoreId);
-    return {
-      accessToken: requireString(scoped.access_token, "scoped token"),
-      membershipId,
-    };
-  }
-
-  if (activeStoreId && typeof payload.membership_id === "string") {
-    const scoped = await selectWorkspace(initialAccessToken, payload.membership_id, activeStoreId);
-    return {
-      accessToken: requireString(scoped.access_token, "scoped token"),
-      membershipId: payload.membership_id,
-    };
-  }
-
-  return {
-    accessToken: initialAccessToken,
-    membershipId: typeof payload.membership_id === "string" ? payload.membership_id : "",
-  };
+function callApi(method, path, opts = {}) {
+  return api(config.apiBase, method, path, opts);
 }
 
 async function listOrgStores(token) {
-  const res = await api("GET", "/v1/organizations/me/stores", {
+  const res = await callApi("GET", "/v1/organizations/me/stores", {
     headers: { authorization: `Bearer ${token}` },
   });
   return asArray(asObject(data(res.json), "stores").stores);
 }
 
-async function getStoreQr(token) {
-  const res = await api("GET", "/v1/store/qr", {
-    headers: { authorization: `Bearer ${token}` },
-  });
-  return requireString(asObject(data(res.json), "qr").store_qr, "store_qr");
-}
-
-async function listCustomers(token) {
-  const res = await api("GET", "/v1/store/customers?limit=200", {
-    headers: { authorization: `Bearer ${token}` },
-  });
-  return asArray(data(res.json));
-}
-
-async function listRewards(token) {
-  const res = await api("GET", "/v1/store/rewards?active=true", {
-    headers: { authorization: `Bearer ${token}` },
-  });
-  return asArray(asObject(data(res.json), "rewards").rewards);
-}
-
-async function getMetrics(token) {
-  const res = await api("GET", "/v1/store/metrics", {
-    headers: { authorization: `Bearer ${token}` },
-  });
-  return asObject(data(res.json), "metrics");
-}
-
 async function publicEnroll(storeQr, customer) {
-  const res = await api("POST", "/v1/public/enrollments", {
+  const res = await callApi("POST", "/v1/public/enrollments", {
     allowError: true,
     body: {
       store_qr: storeQr,
@@ -347,7 +111,7 @@ async function publicEnroll(storeQr, customer) {
 }
 
 async function staffEnroll(token, customer) {
-  const res = await api("POST", "/v1/staff/customers", {
+  const res = await callApi("POST", "/v1/staff/customers", {
     allowError: true,
     headers: { authorization: `Bearer ${token}` },
     body: {
@@ -362,7 +126,7 @@ async function staffEnroll(token, customer) {
 }
 
 async function recordPurchase(token, { phone, customerQr, amountFcfa }) {
-  const res = await api("POST", "/v1/staff/purchases", {
+  const res = await callApi("POST", "/v1/staff/purchases", {
     headers: { authorization: `Bearer ${token}` },
     body: {
       ...(phone ? { phone_e164: phone } : {}),
@@ -374,25 +138,25 @@ async function recordPurchase(token, { phone, customerQr, amountFcfa }) {
 }
 
 async function otpSend(phone) {
-  await api("POST", "/v1/public/otp/send", { body: { phone_e164: phone } });
+  await callApi("POST", "/v1/public/otp/send", { body: { phone_e164: phone } });
 }
 
 async function otpVerify(phone, code) {
-  const res = await api("POST", "/v1/public/otp/verify", {
+  const res = await callApi("POST", "/v1/public/otp/verify", {
     body: { phone_e164: phone, code },
   });
   return requireString(asObject(data(res.json), "otp").phone_verify_token, "phone_verify_token");
 }
 
 async function customerLogin(phoneVerifyToken) {
-  const res = await api("POST", "/v1/auth/customer/login", {
+  const res = await callApi("POST", "/v1/auth/customer/login", {
     body: { phone_verify_token: phoneVerifyToken },
   });
   return asObject(data(res.json), "customer login");
 }
 
 async function customerSelectSession(accessToken, enrollmentId) {
-  const res = await api("POST", "/v1/auth/customer/session", {
+  const res = await callApi("POST", "/v1/auth/customer/session", {
     headers: { authorization: `Bearer ${accessToken}` },
     body: { enrollment_id: enrollmentId },
   });
@@ -400,14 +164,14 @@ async function customerSelectSession(accessToken, enrollmentId) {
 }
 
 async function customerListRewards(accessToken) {
-  const res = await api("GET", "/v1/customers/me/rewards", {
+  const res = await callApi("GET", "/v1/customers/me/rewards", {
     headers: { authorization: `Bearer ${accessToken}` },
   });
   return asObject(data(res.json), "customer rewards");
 }
 
 async function customerClaimReward(accessToken, rewardId) {
-  const res = await api("POST", `/v1/customers/me/rewards/${encodeURIComponent(rewardId)}/claims`, {
+  const res = await callApi("POST", `/v1/customers/me/rewards/${encodeURIComponent(rewardId)}/claims`, {
     headers: { authorization: `Bearer ${accessToken}` },
     body: {},
   });
@@ -415,7 +179,7 @@ async function customerClaimReward(accessToken, rewardId) {
 }
 
 async function staffValidateRedemption(token, claimQr) {
-  const res = await api("POST", "/v1/staff/redemptions/validate", {
+  const res = await callApi("POST", "/v1/staff/redemptions/validate", {
     headers: { authorization: `Bearer ${token}` },
     body: { claim_qr: claimQr },
   });
@@ -583,15 +347,25 @@ async function main() {
   if (config.dryRun) {
     console.log("SIM_DRY_RUN=true — logging actions only, no API mutations");
   }
-  await waitForApi();
+
+  log(`Health check ${config.apiBase}/health`);
+  try {
+    await waitForApi(config.apiBase);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err);
+    console.error("Run the API first, then `pnpm dev:seed` if the tenant is missing.");
+    process.exit(1);
+  }
 
   log(`Login merchant ${config.merchantEmail}`);
   const merchantSession = await loginScoped(
+    config.apiBase,
     config.merchantEmail,
     config.merchantPassword,
     config.tenantSlug,
   );
   const merchantToken = merchantSession.accessToken;
+  const tenantId = merchantSession.tenantId;
 
   const stores = await listOrgStores(merchantToken);
   const hq =
@@ -604,6 +378,7 @@ async function main() {
   let scopedMerchantToken = merchantToken;
   if (hqId) {
     const scoped = await loginScoped(
+      config.apiBase,
       config.merchantEmail,
       config.merchantPassword,
       config.tenantSlug,
@@ -612,16 +387,29 @@ async function main() {
     scopedMerchantToken = scoped.accessToken;
   }
 
-  const storeQr = config.dryRun ? "dry-run-qr" : await getStoreQr(scopedMerchantToken);
-  const beforeMetrics = config.dryRun ? {} : await getMetrics(scopedMerchantToken);
+  if (!config.dryRun) {
+    const smoke = await tenantAdminSmoke(config.apiBase, scopedMerchantToken, tenantId, config.tenantSlug);
+    log(smoke.logLine);
+  }
+
+  const storeQr = config.dryRun
+    ? "dry-run-qr"
+    : await tenantGetQrToken(config.apiBase, scopedMerchantToken, tenantId);
+  const beforeMetrics = config.dryRun
+    ? {}
+    : await tenantGetMetrics(config.apiBase, scopedMerchantToken, tenantId, { period: "7d" });
 
   /** @type {CustomerRow[]} */
-  let customers = config.dryRun ? [] : await listCustomers(scopedMerchantToken);
-  const rewards = config.dryRun ? [] : await listRewards(scopedMerchantToken);
+  let customers = config.dryRun
+    ? []
+    : await tenantListCustomers(config.apiBase, scopedMerchantToken, tenantId, { limit: 200 });
+  const rewards = config.dryRun
+    ? []
+    : await tenantListRewards(config.apiBase, scopedMerchantToken, tenantId, true);
 
   const enrolled = await simulateEnrollments(scopedMerchantToken, storeQr, config.newEnrollments);
   if (!config.dryRun && enrolled.length > 0) {
-    customers = await listCustomers(scopedMerchantToken);
+    customers = await tenantListCustomers(config.apiBase, scopedMerchantToken, tenantId, { limit: 200 });
   }
   const customerPool = [
     ...enrolled.map((e) => ({
@@ -636,11 +424,11 @@ async function main() {
 
   let purchaseToken = scopedMerchantToken;
   const boutique =
-    stores.find((s) => typeof s === "object" && s && s.slug && s.slug !== hqSlug && s.id) ??
-    null;
+    stores.find((s) => typeof s === "object" && s && s.slug && s.slug !== hqSlug && s.id) ?? null;
   if (boutique && typeof boutique === "object" && boutique.id) {
     try {
       const agentSession = await loginScoped(
+        config.apiBase,
         config.agentEmail,
         config.agentPassword,
         config.tenantSlug,
@@ -656,30 +444,39 @@ async function main() {
   const purchases = await simulatePurchases(purchaseToken, customerPool, config.purchases);
 
   if (!config.dryRun) {
-    customers = await listCustomers(scopedMerchantToken);
+    customers = await tenantListCustomers(config.apiBase, scopedMerchantToken, tenantId, { limit: 200 });
   }
   const refreshedPool = customers.map((c) => (typeof c === "object" && c ? c : {}));
 
-  const claims = await simulateClaims(
-    scopedMerchantToken,
-    refreshedPool,
-    rewards,
-    config.claims,
-  );
+  const claims = await simulateClaims(scopedMerchantToken, refreshedPool, rewards, config.claims);
 
-  const afterMetrics = config.dryRun ? {} : await getMetrics(scopedMerchantToken);
+  const afterMetrics = config.dryRun
+    ? {}
+    : await tenantGetMetrics(config.apiBase, scopedMerchantToken, tenantId, { period: "7d" });
+
+  let txSample = 0;
+  if (!config.dryRun) {
+    const tx = await tenantListTransactions(config.apiBase, scopedMerchantToken, tenantId, {
+      limit: 10,
+    });
+    txSample = tx.length;
+  }
 
   console.log("");
   console.log("Simulation summary:");
-  console.log(`  Tenant:           ${config.tenantSlug}`);
+  console.log(`  Tenant:           ${config.tenantSlug} (${tenantId})`);
+  console.log(`  API:              /v1/tenants/:id/* (merchant portal)`);
   console.log(`  New enrollments:  ${enrolled.length}`);
   console.log(`  Purchases:        ${purchases.length}`);
   console.log(`  Claims validated: ${claims.length}`);
+  if (!config.dryRun) {
+    console.log(`  Ledger sample:    ${txSample} recent transactions`);
+  }
   if (!config.dryRun && beforeMetrics && afterMetrics) {
     console.log(
-      `  Metrics: clients_today ${beforeMetrics.clients_served_today ?? "?"} → ${afterMetrics.clients_served_today ?? "?"}, ` +
-        `pts_today ${beforeMetrics.points_issued_today ?? "?"} → ${afterMetrics.points_issued_today ?? "?"}, ` +
-        `redemptions ${beforeMetrics.redemptions_today ?? "?"} → ${afterMetrics.redemptions_today ?? "?"}`,
+      `  Metrics (7d): active_customers ${metricsKpiValue(beforeMetrics, "active_customers") ?? "?"} → ${metricsKpiValue(afterMetrics, "active_customers") ?? "?"}, ` +
+        `points_distributed ${metricsKpiValue(beforeMetrics, "points_distributed") ?? "?"} → ${metricsKpiValue(afterMetrics, "points_distributed") ?? "?"}, ` +
+        `rewards_validated ${metricsKpiValue(beforeMetrics, "rewards_validated") ?? "?"} → ${metricsKpiValue(afterMetrics, "rewards_validated") ?? "?"}`,
     );
   }
   console.log("");

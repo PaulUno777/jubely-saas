@@ -74,23 +74,13 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		org.POST("/subscription/momo-invoice", s.OrgCreateMoMoInvoice)
 		org.POST("/subscription/confirm-momo", s.OrgConfirmMoMoInvoice)
 
+		// Legacy store scope — agent portal only until /agent migrates to tenant APIs.
 		store := v1.Group("/store")
 		store.Use(AuthMiddleware(signer), RequireMerchantAdmin())
 		store.GET("/metrics", s.StoreGetMetrics)
 		store.GET("/tenant", s.StoreGetTenant)
-		store.PATCH("/tenant", s.StorePatchTenant)
-		store.GET("/qr", s.StoreGetStoreQR)
-		store.GET("/users", s.StoreListUsers)
 		store.GET("/customers", s.StoreListCustomers)
 		store.GET("/transactions", s.StoreListPointEvents)
-		store.GET("/rewards", s.StoreListRewards)
-		store.POST("/rewards", s.StoreCreateReward)
-		store.PATCH("/rewards/:rewardId", s.StorePatchReward)
-		store.GET("/rules", s.StoreListRules)
-		store.POST("/rules", s.StoreCreateRule)
-		store.PATCH("/rules/:ruleId", s.StorePatchRule)
-		store.POST("/rules/simulate", s.StoreSimulateRules)
-		store.POST("/invitations", s.StoreCreateInvitation)
 
 		tenants := v1.Group("/tenants/:tenantId")
 		tenants.Use(AuthMiddleware(signer), RequireMerchantAdmin(), RequireTenantScope())
@@ -119,6 +109,8 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		tenants.PUT("/tiers", RequirePermission(domain.PermManageRules), s.TenantUpsertTier)
 
 		tenants.GET("/rewards", RequirePermission(domain.PermManageRewards), s.TenantListRewards)
+		tenants.POST("/rewards", RequirePermission(domain.PermManageRewards), s.TenantCreateReward)
+		tenants.PATCH("/rewards/:rewardId", RequirePermission(domain.PermManageRewards), s.TenantPatchReward)
 		tenants.POST("/rewards/:rewardId/image", RequirePermission(domain.PermManageRewards), s.TenantUploadRewardImage)
 
 		tenants.GET("/qr/branding", s.TenantGetQRBranding)
@@ -126,8 +118,12 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		tenants.GET("/qr/token", s.TenantGetStoreQR)
 		tenants.GET("/qr/render.svg", s.TenantRenderQR)
 
+		tenants.GET("/settings", s.TenantGetSettings)
+		tenants.PATCH("/settings", s.TenantPatchSettings)
 		tenants.GET("/settings/locales", s.TenantGetLocales)
 		tenants.PUT("/settings/locales", s.TenantPutLocales)
+
+		tenants.POST("/invitations", RequirePermission(domain.PermManageStaff), s.TenantCreateInvitation)
 
 		tenants.GET("/campaigns", RequirePermission(domain.PermViewAnalytics), s.TenantListCampaigns)
 		tenants.POST("/campaigns", RequirePermission(domain.PermManageStaff), s.TenantCreateCampaign)

@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
@@ -48,6 +49,7 @@ type staffPurchaseBody struct {
 	PhoneE164   string `json:"phone_e164"`
 	CustomerQR  string `json:"customer_qr"`
 	AmountFcfa  int64  `json:"amount_fcfa"`
+	OccurredAt  string `json:"occurred_at"`
 }
 
 func (s *Server) StaffRecordPurchase(c *gin.Context) {
@@ -65,12 +67,28 @@ func (s *Server) StaffRecordPurchase(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
 		return
 	}
+	var occurredAt *time.Time
+	if body.OccurredAt != "" {
+		parsed, err := time.Parse(time.RFC3339, body.OccurredAt)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_occurred_at"})
+			return
+		}
+		parsed = parsed.UTC()
+		now := time.Now().UTC()
+		if parsed.After(now.Add(5 * time.Minute)) {
+			respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "occurred_at_in_future"})
+			return
+		}
+		occurredAt = &parsed
+	}
 	out, err := s.StaffRecordPurchaseUC.Execute(c.Request.Context(), usecase.StaffRecordPurchaseInput{
 		TenantID:    *claims.TenantID,
 		StoreID:     claims.ActiveStoreID,
 		PhoneE164:   body.PhoneE164,
 		CustomerQR:  body.CustomerQR,
 		AmountFcfa:  body.AmountFcfa,
+		OccurredAt:  occurredAt,
 	})
 	if err != nil {
 		respondMapped(c, mapCustomerError(err))

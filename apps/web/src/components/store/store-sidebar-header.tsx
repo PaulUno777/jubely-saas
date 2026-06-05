@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { StoreLocationScope } from "@/components/store/store-location-scope";
 import { TenantLogo } from "@/components/root/tenant-logo";
 import { useMerchantLocationScope } from "@/hooks/useMerchantLocationScope";
-import { useStoreTenant } from "@/hooks/useStoreTenant";
+import { useTenantSettings } from "@/hooks/useTenantSettings";
 
 const SIDEBAR_PANEL_TRANSITION =
   "transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none";
@@ -16,7 +16,7 @@ export function StoreSidebarHeader() {
   const t = useTranslations("store.shell");
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const { data: tenant, isLoading } = useStoreTenant();
+  const { data: tenant, isLoading } = useTenantSettings();
   const { tenantName } = useMerchantLocationScope();
   const storeName = tenant?.name ?? (isLoading ? "…" : tenantName);
   const planLabel = tenant?.plan

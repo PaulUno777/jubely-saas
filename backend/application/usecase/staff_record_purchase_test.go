@@ -32,11 +32,16 @@ type memPointAppend struct {
 }
 
 func (m *memPointAppend) Append(ctx context.Context, tenantID uuid.UUID, storeID *uuid.UUID, enrollmentID *uuid.UUID, eventType string, delta int, payload json.RawMessage) error {
+	return m.AppendAt(ctx, tenantID, storeID, enrollmentID, eventType, delta, payload, time.Now().UTC())
+}
+
+func (m *memPointAppend) AppendAt(ctx context.Context, tenantID uuid.UUID, storeID *uuid.UUID, enrollmentID *uuid.UUID, eventType string, delta int, payload json.RawMessage, occurredAt time.Time) error {
 	m.lastDelta = delta
 	m.lastType = eventType
 	_ = tenantID
 	_ = enrollmentID
 	_ = payload
+	_ = occurredAt
 	return nil
 }
 

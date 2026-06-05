@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
@@ -29,6 +30,7 @@ type StaffRecordPurchaseInput struct {
 	PhoneE164   string
 	CustomerQR  string
 	AmountFcfa  int64
+	OccurredAt  *time.Time
 }
 
 type StaffRecordPurchaseOutput struct {
@@ -55,6 +57,9 @@ func (uc *StaffRecordPurchase) Execute(ctx context.Context, in StaffRecordPurcha
 		return nil, fmt.Errorf("%w", domain.ErrInvalid)
 	}
 	occurredAt := uc.Clock.Now().UTC()
+	if in.OccurredAt != nil {
+		occurredAt = in.OccurredAt.UTC()
+	}
 	evalOut, err := EvaluatePurchasePoints(ctx, uc.Rules, in.TenantID, in.AmountFcfa, enr.Tier, occurredAt)
 	if err != nil {
 		return nil, err
@@ -77,7 +82,7 @@ func (uc *StaffRecordPurchase) Execute(ctx context.Context, in StaffRecordPurcha
 		"event_type":  "earn",
 		"rules_eval":  evalOut,
 	})
-	if err := uc.Points.Append(ctx, in.TenantID, in.StoreID, &enr.ID, "earn", delta, payload); err != nil {
+	if err := uc.Points.AppendAt(ctx, in.TenantID, in.StoreID, &enr.ID, "earn", delta, payload, occurredAt); err != nil {
 		return nil, err
 	}
 	return &StaffRecordPurchaseOutput{

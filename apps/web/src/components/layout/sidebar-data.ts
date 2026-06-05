@@ -67,6 +67,11 @@ export function navGroupsForRole(
             icon: Receipt,
           },
           {
+            title: "items.analytics",
+            url: "/store/analytics",
+            icon: BarChart3,
+          },
+          {
             title: "items.locations",
             url: "/store/locations",
             icon: Building2,

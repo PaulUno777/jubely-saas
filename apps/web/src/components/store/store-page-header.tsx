@@ -18,6 +18,7 @@ export function StorePageHeader({ title, context }: StorePageHeaderProps) {
 
   const refreshDashboard = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["tenant"] });
+    void queryClient.invalidateQueries({ queryKey: ["tenant-admin"] });
   }, [queryClient]);
 
   return (

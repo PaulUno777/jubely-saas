@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   Badge,
   Card,
@@ -8,19 +8,15 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Input,
 } from "@jubely/ui";
-import { ApiResponseError } from "@jubely/api-schemas";
 import { useTranslations } from "next-intl";
-import { Main } from "@/components/layout/main";
-import { StorePageHeader } from "@/components/store/store-page-header";
-import { useSession } from "@/hooks/useSession";
-import { storeListCustomers } from "@/lib/storeApi";
+import { CustomerDetailSheet } from "@/components/store/customer-detail-sheet";
+import { MerchantDataTable } from "@/components/store/merchant-data-table";
+import { MerchantKpiStrip } from "@/components/store/merchant-kpi-strip";
+import { MerchantPageShell } from "@/components/store/merchant-page-shell";
+import { useMerchantLocationScope } from "@/hooks/useMerchantLocationScope";
+import { useTenantCustomers } from "@/hooks/tenant-admin-hooks";
 
 function formatDate(value: string | number | Date) {
   const d = value instanceof Date ? value : new Date(value);
@@ -30,73 +26,105 @@ function formatDate(value: string | number | Date) {
 
 export default function StoreCustomersPage() {
   const t = useTranslations("store.customers");
-  const { session } = useSession();
+  const { headerContext } = useMerchantLocationScope();
+  const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const q = useQuery({
-    queryKey: ["store", "customers"],
-    enabled: Boolean(session),
-    queryFn: () => storeListCustomers({ limit: 100, offset: 0 }),
-  });
+  const q = useTenantCustomers({ limit: 100, offset: 0, q: search || undefined });
+
+  const customers = q.data?.customers ?? [];
+  const total = q.data?.pagination?.total ?? customers.length;
 
   return (
-    <>
-      <StorePageHeader title={t("title")} />
-      <Main>
-        <Card>
-          <CardHeader>
+    <MerchantPageShell title={t("title")} context={headerContext} className="space-y-6">
+      <MerchantKpiStrip
+        items={[
+          {
+            key: "total",
+            label: t("kpiTotal"),
+            value: total,
+            tone: "teal",
+          },
+          {
+            key: "loaded",
+            label: t("kpiLoaded"),
+            value: customers.length,
+            tone: "growth",
+          },
+        ]}
+      />
+      <Card>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
             <CardTitle>{t("listTitle")}</CardTitle>
             <CardDescription>{t("listDescription")}</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("name")}</TableHead>
-                  <TableHead>{t("phone")}</TableHead>
-                  <TableHead>{t("tier")}</TableHead>
-                  <TableHead className="text-right">{t("points")}</TableHead>
-                  <TableHead>{t("enrolledAt")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {q.isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-sm text-muted-foreground">
-                      {t("loading")}
-                    </TableCell>
-                  </TableRow>
-                ) : q.error ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-sm text-destructive">
-                      {q.error instanceof ApiResponseError ? q.error.message : t("loadError")}
-                    </TableCell>
-                  </TableRow>
-                ) : q.data?.length ? (
-                  q.data.map((row) => (
-                    <TableRow key={row.enrollment_id}>
-                      <TableCell className="font-medium">{row.name}</TableCell>
-                      <TableCell className="font-mono text-sm">{row.phone}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{row.tier}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">{row.points_balance}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDate(row.enrolled_at)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-sm text-muted-foreground">
-                      {t("empty")}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </Main>
-    </>
+          </div>
+          <Input
+            className="max-w-xs"
+            placeholder={t("searchPlaceholder")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </CardHeader>
+        <CardContent className="p-0">
+          <MerchantDataTable
+            columns={[
+              {
+                key: "name",
+                header: t("name"),
+                cell: (row) => (
+                  <button
+                    type="button"
+                    className="font-medium text-left hover:underline"
+                    onClick={() => setSelectedId(row.enrollment_id)}
+                  >
+                    {row.name}
+                  </button>
+                ),
+              },
+              {
+                key: "phone",
+                header: t("phone"),
+                cell: (row) => <span className="font-mono text-sm">{row.phone}</span>,
+              },
+              {
+                key: "tier",
+                header: t("tier"),
+                cell: (row) => <Badge variant="outline">{row.tier.code}</Badge>,
+              },
+              {
+                key: "points",
+                header: t("points"),
+                className: "text-right",
+                cell: (row) => (
+                  <span className="font-mono tabular-nums">{row.points_balance}</span>
+                ),
+              },
+              {
+                key: "enrolledAt",
+                header: t("enrolledAt"),
+                cell: (row) => (
+                  <span className="text-sm text-muted-foreground">
+                    {formatDate(row.enrolled_at)}
+                  </span>
+                ),
+              },
+            ]}
+            rows={customers}
+            rowKey={(row) => row.enrollment_id}
+            loading={q.isLoading}
+            error={q.error}
+            loadingLabel={t("loading")}
+            errorLabel={t("loadError")}
+            emptyLabel={t("empty")}
+          />
+        </CardContent>
+      </Card>
+      <CustomerDetailSheet
+        enrollmentId={selectedId}
+        open={Boolean(selectedId)}
+        onOpenChange={(open) => !open && setSelectedId(null)}
+      />
+    </MerchantPageShell>
   );
 }
