@@ -38,6 +38,14 @@ var PostgresSet = wire.NewSet(
 	NewRewardRepository,
 	NewRedemptionRepository,
 	NewPointsRuleRepository,
+	NewLoyaltyTierRepository,
+	NewLocalizedStringRepository,
+	NewQRBrandingRepository,
+	NewCampaignRepository,
+	NewAuditRepository,
+	NewAnalyticsRepository,
+	NewTenantSupportedLocaleRepository,
+	NewTenantAnalyticsRepository,
 	wire.Bind(new(ports.TenantRepository), new(*postgres.TenantRepository)),
 	wire.Bind(new(ports.StoreRepository), new(*postgres.StoreRepository)),
 	wire.Bind(new(ports.StoreMembershipRepository), new(*postgres.StoreMembershipRepository)),
@@ -60,6 +68,14 @@ var PostgresSet = wire.NewSet(
 	wire.Bind(new(ports.PointsRuleRepository), new(*postgres.PointsRuleRepository)),
 	wire.Bind(new(ports.TenantLoyaltyMetrics), new(*postgres.StoreLoyaltyMetrics)),
 	wire.Bind(new(ports.LocationDiscoveryRepository), new(*postgres.LocationDiscoveryRepository)),
+	wire.Bind(new(ports.LoyaltyTierRepository), new(*postgres.LoyaltyTierRepository)),
+	wire.Bind(new(ports.LocalizedStringRepository), new(*postgres.LocalizedStringRepository)),
+	wire.Bind(new(ports.QRBrandingRepository), new(*postgres.QRBrandingRepository)),
+	wire.Bind(new(ports.CampaignRepository), new(*postgres.CampaignRepository)),
+	wire.Bind(new(ports.AuditRepository), new(*postgres.AuditRepository)),
+	wire.Bind(new(ports.AnalyticsRepository), new(*postgres.AnalyticsRepository)),
+	wire.Bind(new(ports.TenantSupportedLocaleRepository), new(*postgres.TenantSupportedLocaleRepository)),
+	wire.Bind(new(ports.TenantAnalyticsRepository), new(*postgres.TenantAnalyticsRepository)),
 )
 
 // ProvidePool runs migrations, opens the DB pool, and returns a close function for shutdown.
@@ -164,4 +180,36 @@ func NewRedemptionRepository(pool *pgxpool.Pool) *postgres.RedemptionRepository 
 
 func NewPointsRuleRepository(pool *pgxpool.Pool) *postgres.PointsRuleRepository {
 	return &postgres.PointsRuleRepository{Pool: pool}
+}
+
+func NewLoyaltyTierRepository(pool *pgxpool.Pool) *postgres.LoyaltyTierRepository {
+	return &postgres.LoyaltyTierRepository{Pool: pool}
+}
+
+func NewLocalizedStringRepository(pool *pgxpool.Pool) *postgres.LocalizedStringRepository {
+	return &postgres.LocalizedStringRepository{Pool: pool}
+}
+
+func NewQRBrandingRepository(pool *pgxpool.Pool) *postgres.QRBrandingRepository {
+	return &postgres.QRBrandingRepository{Pool: pool}
+}
+
+func NewCampaignRepository(pool *pgxpool.Pool) *postgres.CampaignRepository {
+	return &postgres.CampaignRepository{Pool: pool}
+}
+
+func NewAuditRepository(pool *pgxpool.Pool) *postgres.AuditRepository {
+	return &postgres.AuditRepository{Pool: pool}
+}
+
+func NewAnalyticsRepository(pool *pgxpool.Pool) *postgres.AnalyticsRepository {
+	return &postgres.AnalyticsRepository{Pool: pool}
+}
+
+func NewTenantSupportedLocaleRepository(pool *pgxpool.Pool) *postgres.TenantSupportedLocaleRepository {
+	return &postgres.TenantSupportedLocaleRepository{Pool: pool}
+}
+
+func NewTenantAnalyticsRepository(pool *pgxpool.Pool) *postgres.TenantAnalyticsRepository {
+	return &postgres.TenantAnalyticsRepository{Pool: pool}
 }

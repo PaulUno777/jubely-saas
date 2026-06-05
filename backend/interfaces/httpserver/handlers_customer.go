@@ -1,8 +1,10 @@
 package httpserver
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
 	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
@@ -190,4 +192,68 @@ func (s *Server) CustomerSelectSession(c *gin.Context) {
 		return
 	}
 	respondOK(c, authDataFromResult("ok", out.AccessToken, out.RefreshToken, out.UserID, claims.MembershipID, claims.TenantID, out.Role, out.Email, false, out.Workspaces, out.CustomerID, out.ActiveEnrollmentID, out.Enrollments, nil))
+}
+
+type customerPatchProfileBody struct {
+	Name              *string          `json:"name"`
+	Gender            *string          `json:"gender"`
+	DateOfBirth       *string          `json:"date_of_birth"`
+	Neighborhood      *string          `json:"neighborhood"`
+	JobTitle          *string          `json:"job_title"`
+	PreferredLocale   *string          `json:"preferred_locale"`
+	Interests         *[]string        `json:"interests"`
+	NotificationPrefs *json.RawMessage `json:"notification_prefs"`
+}
+
+func (s *Server) CustomerPatchProfile(c *gin.Context) {
+	if s.UpdateCustomerProfileUC == nil {
+		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
+		return
+	}
+	claims, ok := Claims(c)
+	if !ok || claims.CustomerID == nil {
+		respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
+		return
+	}
+	var body customerPatchProfileBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
+		return
+	}
+	var dob *time.Time
+	if body.DateOfBirth != nil && strings.TrimSpace(*body.DateOfBirth) != "" {
+		parsed, err := time.Parse("2006-01-02", strings.TrimSpace(*body.DateOfBirth))
+		if err != nil {
+			respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_date_of_birth"})
+			return
+		}
+		dob = &parsed
+	}
+	out, err := s.UpdateCustomerProfileUC.Execute(c.Request.Context(), usecase.UpdateCustomerProfileInput{
+		CustomerID:        *claims.CustomerID,
+		Name:              body.Name,
+		Gender:            body.Gender,
+		DateOfBirth:       dob,
+		Neighborhood:      body.Neighborhood,
+		JobTitle:          body.JobTitle,
+		PreferredLocale:   body.PreferredLocale,
+		Interests:         body.Interests,
+		NotificationPrefs: body.NotificationPrefs,
+	})
+	if err != nil {
+		respondMapped(c, mapCustomerError(err))
+		return
+	}
+	ci := out.Customer
+	respondOK(c, gin.H{
+		"customer_id": ci.ID.String(),
+		"name":        ci.Name,
+		"gender":      ci.Gender,
+		"date_of_birth": ci.DateOfBirth,
+		"neighborhood": ci.Neighborhood,
+		"job_title":   ci.JobTitle,
+		"preferred_locale": ci.PreferredLocale,
+		"interests":   ci.Interests,
+		"profile_completed_at": ci.ProfileCompletedAt,
+	})
 }

@@ -16,11 +16,17 @@ type RewardRepository struct {
 	Pool *pgxpool.Pool
 }
 
+const rewardSelectCols = `id, tenant_id, name, description, point_cost, min_tier, active, stock_limit, image_url, COALESCE(icon_key, 'gift'), created_at, updated_at`
+
+func scanReward(row pgx.Row) (domain.Reward, error) {
+	var rw domain.Reward
+	err := row.Scan(&rw.ID, &rw.TenantID, &rw.Name, &rw.Description, &rw.PointCost, &rw.MinTier, &rw.Active, &rw.StockLimit, &rw.ImageURL, &rw.IconKey, &rw.CreatedAt, &rw.UpdatedAt)
+	return rw, err
+}
+
 func (r *RewardRepository) ListByTenant(ctx context.Context, tenantID uuid.UUID, activeOnly bool) ([]domain.Reward, error) {
 	db := pickDB(ctx, r.Pool)
-	q := `
-SELECT id, tenant_id, name, description, point_cost, min_tier, active, stock_limit, created_at, updated_at
-FROM rewards WHERE tenant_id=$1`
+	q := `SELECT ` + rewardSelectCols + ` FROM rewards WHERE tenant_id=$1`
 	if activeOnly {
 		q += ` AND active=true`
 	}
@@ -32,8 +38,8 @@ FROM rewards WHERE tenant_id=$1`
 	defer rows.Close()
 	var out []domain.Reward
 	for rows.Next() {
-		var rw domain.Reward
-		if err := rows.Scan(&rw.ID, &rw.TenantID, &rw.Name, &rw.Description, &rw.PointCost, &rw.MinTier, &rw.Active, &rw.StockLimit, &rw.CreatedAt, &rw.UpdatedAt); err != nil {
+		rw, err := scanReward(rows)
+		if err != nil {
 			return nil, err
 		}
 		out = append(out, rw)
@@ -43,13 +49,8 @@ FROM rewards WHERE tenant_id=$1`
 
 func (r *RewardRepository) FindByID(ctx context.Context, tenantID, rewardID uuid.UUID) (*domain.Reward, error) {
 	db := pickDB(ctx, r.Pool)
-	const q = `
-SELECT id, tenant_id, name, description, point_cost, min_tier, active, stock_limit, created_at, updated_at
-FROM rewards WHERE tenant_id=$1 AND id=$2`
-	var rw domain.Reward
-	err := db.QueryRow(ctx, q, tenantID, rewardID).Scan(
-		&rw.ID, &rw.TenantID, &rw.Name, &rw.Description, &rw.PointCost, &rw.MinTier, &rw.Active, &rw.StockLimit, &rw.CreatedAt, &rw.UpdatedAt,
-	)
+	q := `SELECT ` + rewardSelectCols + ` FROM rewards WHERE tenant_id=$1 AND id=$2`
+	rw, err := scanReward(db.QueryRow(ctx, q, tenantID, rewardID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrNotFound
 	}
@@ -71,9 +72,9 @@ VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`
 func (r *RewardRepository) Update(ctx context.Context, rw *domain.Reward) error {
 	db := pickDB(ctx, r.Pool)
 	const q = `
-UPDATE rewards SET name=$3, description=$4, point_cost=$5, min_tier=$6, active=$7, stock_limit=$8, updated_at=$9
+UPDATE rewards SET name=$3, description=$4, point_cost=$5, min_tier=$6, active=$7, stock_limit=$8, image_url=$9, icon_key=$10, updated_at=$11
 WHERE tenant_id=$1 AND id=$2`
-	res, err := db.Exec(ctx, q, rw.TenantID, rw.ID, rw.Name, rw.Description, rw.PointCost, rw.MinTier, rw.Active, rw.StockLimit, rw.UpdatedAt)
+	res, err := db.Exec(ctx, q, rw.TenantID, rw.ID, rw.Name, rw.Description, rw.PointCost, rw.MinTier, rw.Active, rw.StockLimit, rw.ImageURL, rw.IconKey, rw.UpdatedAt)
 	if err != nil {
 		return err
 	}

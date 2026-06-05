@@ -2,7 +2,9 @@ package usecase
 
 import (
 	"context"
+	"time"
 
+	"github.com/PaulUno777/jubely-saas/backend/application/ports"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/google/uuid"
 )
@@ -126,6 +128,17 @@ func (m *memCustomerRepo) AssignUser(ctx context.Context, customerID, userID uui
 	return domain.ErrNotFound
 }
 
+func (m *memCustomerRepo) UpdateProfile(ctx context.Context, c *domain.CustomerIdentity) error {
+	for i, existing := range m.customers {
+		if existing.ID == c.ID {
+			cp := *c
+			m.customers[i] = &cp
+			return nil
+		}
+	}
+	return domain.ErrNotFound
+}
+
 func (m *memEnrollmentRepo) FindByID(ctx context.Context, enrollmentID uuid.UUID) (*domain.LoyaltyEnrollment, error) {
 	for _, e := range m.enrollments {
 		if e.ID == enrollmentID {
@@ -143,4 +156,37 @@ func (m *memEnrollmentRepo) ListByCustomer(ctx context.Context, customerID uuid.
 		}
 	}
 	return out, nil
+}
+
+func (m *memEnrollmentRepo) Update(ctx context.Context, e *domain.LoyaltyEnrollment) error {
+	for i, existing := range m.enrollments {
+		if existing.ID == e.ID {
+			cp := *e
+			m.enrollments[i] = &cp
+			return nil
+		}
+	}
+	return domain.ErrNotFound
+}
+
+func (m *memEnrollmentRepo) ListByTenant(ctx context.Context, tenantID uuid.UUID, filter ports.EnrollmentListFilter) ([]domain.LoyaltyEnrollment, error) {
+	var out []domain.LoyaltyEnrollment
+	for _, e := range m.enrollments {
+		if e.TenantID == tenantID {
+			out = append(out, *e)
+		}
+	}
+	return out, nil
+}
+
+func (m *memEnrollmentRepo) UpdateInteraction(ctx context.Context, enrollmentID uuid.UUID, at time.Time, locationID *uuid.UUID) error {
+	for _, e := range m.enrollments {
+		if e.ID == enrollmentID {
+			e.LastInteractionAt = &at
+			e.LastInteractionLocationID = locationID
+			e.VisitCount++
+			return nil
+		}
+	}
+	return domain.ErrNotFound
 }

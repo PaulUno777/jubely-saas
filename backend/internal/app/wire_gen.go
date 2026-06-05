@@ -116,6 +116,38 @@ func Initialize(ctx context.Context) (*App, func(), error) {
 		return nil, nil, err
 	}
 	uploadTenantLogo := providers.ProvideUploadTenantLogo(objectStorage)
+	updateCustomerProfile := providers.ProvideUpdateCustomerProfile(customerRepository, systemClock)
+	loyaltyTierRepository := providers.NewLoyaltyTierRepository(pool)
+	listTiers := providers.ProvideListTiers(loyaltyTierRepository)
+	upsertTier := providers.ProvideUpsertTier(loyaltyTierRepository, systemClock)
+	seedDefaultTiers := providers.ProvideSeedDefaultTiers(loyaltyTierRepository, systemClock)
+	validateStoreRules := providers.ProvideValidateStoreRules(pointsRuleRepository, subscriptionRepository, planCatalogRepository)
+	qrBrandingRepository := providers.NewQRBrandingRepository(pool)
+	localizedStringRepository := providers.NewLocalizedStringRepository(pool)
+	getQRBranding := providers.ProvideGetQRBranding(qrBrandingRepository, localizedStringRepository)
+	putQRBranding := providers.ProvidePutQRBranding(qrBrandingRepository, localizedStringRepository, systemClock)
+	tenantSupportedLocaleRepository := providers.NewTenantSupportedLocaleRepository(pool)
+	getTenantLocales := providers.ProvideGetTenantLocales(tenantSupportedLocaleRepository)
+	putTenantLocales := providers.ProvidePutTenantLocales(tenantSupportedLocaleRepository)
+	campaignRepository := providers.NewCampaignRepository(pool)
+	listCampaigns := providers.ProvideListCampaigns(campaignRepository)
+	getCampaign := providers.ProvideGetCampaign(campaignRepository)
+	createCampaign := providers.ProvideCreateCampaign(campaignRepository, subscriptionRepository, planCatalogRepository, systemClock)
+	updateCampaign := providers.ProvideUpdateCampaign(campaignRepository, subscriptionRepository, planCatalogRepository, systemClock)
+	launchCampaign := providers.ProvideLaunchCampaign(campaignRepository, subscriptionRepository, planCatalogRepository, systemClock)
+	pauseCampaign := providers.ProvidePauseCampaign(campaignRepository, subscriptionRepository, planCatalogRepository, systemClock)
+	enrollmentBalanceReader := providers.ProvideEnrollmentBalanceReader(storeCatalog)
+	getTenantCustomer := providers.ProvideGetTenantCustomer(enrollmentRepository, customerRepository, enrollmentBalanceReader, loyaltyTierRepository)
+	recalculateEnrollmentTier := providers.ProvideRecalculateEnrollmentTier(loyaltyTierRepository, enrollmentRepository, enrollmentBalanceReader)
+	adjustCustomerPoints := providers.ProvideAdjustCustomerPoints(enrollmentRepository, pointEventRepository, enrollmentBalanceReader, recalculateEnrollmentTier)
+	tenantAnalyticsRepository := providers.NewTenantAnalyticsRepository(pool)
+	tenantAnalyticsOverview := providers.ProvideTenantAnalyticsOverview(tenantAnalyticsRepository)
+	memberGrowth := providers.ProvideMemberGrowth(tenantAnalyticsRepository)
+	tierDistribution := providers.ProvideTierDistribution(tenantAnalyticsRepository)
+	hourlyHeatmap := providers.ProvideHourlyHeatmap(tenantAnalyticsRepository)
+	topRewards := providers.ProvideTopRewards(tenantAnalyticsRepository)
+	retentionCohorts := providers.ProvideRetentionCohorts(tenantAnalyticsRepository)
+	uploadRewardImage := providers.ProvideUploadRewardImage(objectStorage, rewardRepository, systemClock)
 	httpServerParams := providers.HTTPServerParams{
 		BootstrapUC:               bootstrapSuperadmin,
 		LoginUC:                   login,
@@ -174,15 +206,42 @@ func Initialize(ctx context.Context) (*App, func(), error) {
 		StoreMetrics:              storeLoyaltyMetrics,
 		LocationDiscovery:         locationDiscoveryRepository,
 		UploadTenantLogoUC:        uploadTenantLogo,
+		UpdateCustomerProfileUC:   updateCustomerProfile,
+		ListTiersUC:               listTiers,
+		UpsertTierUC:              upsertTier,
+		SeedDefaultTiersUC:        seedDefaultTiers,
+		ValidateStoreRulesUC:      validateStoreRules,
+		GetQRBrandingUC:           getQRBranding,
+		PutQRBrandingUC:           putQRBranding,
+		GetTenantLocalesUC:        getTenantLocales,
+		PutTenantLocalesUC:        putTenantLocales,
+		ListCampaignsUC:           listCampaigns,
+		GetCampaignUC:             getCampaign,
+		CreateCampaignUC:          createCampaign,
+		UpdateCampaignUC:          updateCampaign,
+		LaunchCampaignUC:          launchCampaign,
+		PauseCampaignUC:           pauseCampaign,
+		GetTenantCustomerUC:       getTenantCustomer,
+		AdjustCustomerPointsUC:    adjustCustomerPoints,
+		TenantAnalyticsOverviewUC: tenantAnalyticsOverview,
+		MemberGrowthUC:            memberGrowth,
+		TierDistributionUC:        tierDistribution,
+		HourlyHeatmapUC:           hourlyHeatmap,
+		TopRewardsUC:              topRewards,
+		RetentionCohortsUC:        retentionCohorts,
+		UploadRewardImageUC:       uploadRewardImage,
 	}
 	server := providers.ProvideHTTPServer(config, httpServerParams)
 	engine := providers.ProvideRouter(jwtSigner, server)
 	httpServer := providers.ProvideNetHTTPServer(config, engine)
+	analyticsRepository := providers.NewAnalyticsRepository(pool)
+	runner := providers.ProvideJobRunner(pool, campaignRepository, analyticsRepository, systemClock)
 	app := &App{
 		Config: config,
 		Server: httpServer,
 		Users:  userRepository,
 		Hasher: bcryptHasher,
+		Jobs:   runner,
 	}
 	return app, func() {
 		cleanup()

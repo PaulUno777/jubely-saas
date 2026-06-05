@@ -14,4 +14,5 @@ type CustomerIdentityRepository interface {
 	FindByEmail(ctx context.Context, email string) (*domain.CustomerIdentity, error)
 	FindByUserID(ctx context.Context, userID uuid.UUID) (*domain.CustomerIdentity, error)
 	AssignUser(ctx context.Context, customerID, userID uuid.UUID) error
+	UpdateProfile(ctx context.Context, c *domain.CustomerIdentity) error
 }

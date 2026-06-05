@@ -55,6 +55,8 @@ func mapTenantError(err error) MappedError {
 		return MappedError{http.StatusPaymentRequired, i18n.CodeQuotaExceeded, map[string]any{"reason": "quota_exceeded"}}
 	case errors.Is(err, domain.ErrSubscriptionInactive):
 		return MappedError{http.StatusPaymentRequired, i18n.CodeSubscriptionInactive, map[string]any{"reason": "subscription_inactive"}}
+	case errors.Is(err, domain.ErrForbidden):
+		return MappedError{http.StatusForbidden, i18n.CodeAuthForbidden, map[string]any{"reason": "forbidden"}}
 	default:
 		return MappedError{http.StatusInternalServerError, i18n.CodeInternal, nil}
 	}
@@ -93,6 +95,8 @@ func mapCustomerError(err error) MappedError {
 		return MappedError{http.StatusConflict, i18n.CodeCustomerEnrollmentActive, map[string]any{"reason": "already_enrolled"}}
 	case errors.Is(err, domain.ErrSubscriptionInactive):
 		return MappedError{http.StatusPaymentRequired, i18n.CodeSubscriptionInactive, map[string]any{"reason": "subscription_inactive"}}
+	case errors.Is(err, domain.ErrForbidden):
+		return MappedError{http.StatusForbidden, i18n.CodeAuthForbidden, map[string]any{"reason": "forbidden"}}
 	default:
 		return MappedError{http.StatusInternalServerError, i18n.CodeInternal, nil}
 	}

@@ -13,33 +13,99 @@ import (
 	"github.com/google/uuid"
 )
 
+type tenantDateRange struct {
+	From       time.Time
+	To         time.Time
+	Label      string
+	LocationID *uuid.UUID
+}
+
+func parseTenantDateRangeQuery(c *gin.Context) (tenantDateRange, bool) {
+	tenantID, ok := tenantIDFromScope(c)
+	if !ok {
+		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
+		return tenantDateRange{}, false
+	}
+	_ = tenantID
+
+	fromRaw := strings.TrimSpace(c.Query("from"))
+	toRaw := strings.TrimSpace(c.Query("to"))
+	period := strings.TrimSpace(c.Query("period"))
+
+	var from, to time.Time
+	var label string
+	var err error
+
+	switch {
+	case fromRaw != "" && toRaw != "":
+		from, err = parseISODate(fromRaw, false)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_from"})
+			return tenantDateRange{}, false
+		}
+		to, err = parseISODate(toRaw, true)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_to"})
+			return tenantDateRange{}, false
+		}
+		label = "custom"
+	case period != "":
+		from, to, label, err = periodWindow(period)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_period"})
+			return tenantDateRange{}, false
+		}
+	default:
+		from, to, label, _ = periodWindow("7d")
+	}
+
+	if to.Before(from) {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "to_before_from"})
+		return tenantDateRange{}, false
+	}
+
+	dr := tenantDateRange{From: from.UTC(), To: to.UTC(), Label: label}
+	if raw := strings.TrimSpace(c.Query("location_id")); raw != "" {
+		locID, err := uuid.Parse(raw)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_location_id"})
+			return tenantDateRange{}, false
+		}
+		dr.LocationID = &locID
+	}
+	return dr, true
+}
+
+func parseISODate(raw string, endOfDay bool) (time.Time, error) {
+	if t, err := time.Parse(time.RFC3339, raw); err == nil {
+		return t.UTC(), nil
+	}
+	t, err := time.Parse("2006-01-02", raw)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if endOfDay {
+		t = t.Add(24*time.Hour - time.Nanosecond)
+	}
+	return t.UTC(), nil
+}
+
 func parseTenantMetricsQuery(c *gin.Context) (ports.TenantMetricsInput, bool) {
+	dr, ok := parseTenantDateRangeQuery(c)
+	if !ok {
+		return ports.TenantMetricsInput{}, false
+	}
 	tenantID, ok := tenantIDFromScope(c)
 	if !ok {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
 		return ports.TenantMetricsInput{}, false
 	}
-	period := strings.TrimSpace(c.DefaultQuery("period", "7d"))
-	from, to, label, err := periodWindow(period)
-	if err != nil {
-		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_period"})
-		return ports.TenantMetricsInput{}, false
-	}
-	in := ports.TenantMetricsInput{
-		TenantID: tenantID,
-		From:     from,
-		To:       to,
-	}
-	if raw := strings.TrimSpace(c.Query("location_id")); raw != "" {
-		locID, err := uuid.Parse(raw)
-		if err != nil {
-			respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_location_id"})
-			return ports.TenantMetricsInput{}, false
-		}
-		in.LocationID = &locID
-	}
-	_ = label
-	return in, true
+	return ports.TenantMetricsInput{
+		TenantID:   tenantID,
+		From:       dr.From,
+		To:         dr.To,
+		LocationID: dr.LocationID,
+	}, true
 }
 
 func periodWindow(period string) (from, to time.Time, label string, err error) {
@@ -52,6 +118,12 @@ func periodWindow(period string) (from, to time.Time, label string, err error) {
 	case "30d":
 		from = now.AddDate(0, 0, -30)
 		label = "30d"
+	case "90d":
+		from = now.AddDate(0, 0, -90)
+		label = "90d"
+	case "1y", "year":
+		from = now.AddDate(-1, 0, 0)
+		label = "1y"
 	default:
 		return time.Time{}, time.Time{}, "", errInvalidPeriod
 	}

@@ -80,6 +80,30 @@ type HTTPServerParams struct {
 	StoreMetrics              ports.TenantLoyaltyMetrics
 	LocationDiscovery         ports.LocationDiscoveryRepository
 	UploadTenantLogoUC        *usecase.UploadTenantLogo
+	UpdateCustomerProfileUC   *usecase.UpdateCustomerProfile
+	ListTiersUC               *usecase.ListTiers
+	UpsertTierUC              *usecase.UpsertTier
+	SeedDefaultTiersUC        *usecase.SeedDefaultTiers
+	ValidateStoreRulesUC      *usecase.ValidateStoreRules
+	GetQRBrandingUC           *usecase.GetQRBranding
+	PutQRBrandingUC           *usecase.PutQRBranding
+	GetTenantLocalesUC        *usecase.GetTenantLocales
+	PutTenantLocalesUC        *usecase.PutTenantLocales
+	ListCampaignsUC           *usecase.ListCampaigns
+	GetCampaignUC             *usecase.GetCampaign
+	CreateCampaignUC          *usecase.CreateCampaign
+	UpdateCampaignUC          *usecase.UpdateCampaign
+	LaunchCampaignUC          *usecase.LaunchCampaign
+	PauseCampaignUC           *usecase.PauseCampaign
+	GetTenantCustomerUC       *usecase.GetTenantCustomer
+	AdjustCustomerPointsUC    *usecase.AdjustCustomerPoints
+	TenantAnalyticsOverviewUC *usecase.TenantAnalyticsOverview
+	MemberGrowthUC            *usecase.MemberGrowth
+	TierDistributionUC        *usecase.TierDistribution
+	HourlyHeatmapUC           *usecase.HourlyHeatmap
+	TopRewardsUC              *usecase.TopRewards
+	RetentionCohortsUC        *usecase.RetentionCohorts
+	UploadRewardImageUC       *usecase.UploadRewardImage
 }
 
 // ProvideHTTPServer maps injected use cases and ports onto the Gin server facade.
@@ -145,6 +169,30 @@ func ProvideHTTPServer(cfg config.Config, p HTTPServerParams) *httpserver.Server
 		CORSAllowAll:              cfg.CORSAllowAll,
 		AssetUploadDir:            cfg.AssetUploadDir,
 		UploadTenantLogoUC:        p.UploadTenantLogoUC,
+		UpdateCustomerProfileUC:   p.UpdateCustomerProfileUC,
+		ListTiersUC:               p.ListTiersUC,
+		UpsertTierUC:              p.UpsertTierUC,
+		SeedDefaultTiersUC:        p.SeedDefaultTiersUC,
+		ValidateStoreRulesUC:      p.ValidateStoreRulesUC,
+		GetQRBrandingUC:           p.GetQRBrandingUC,
+		PutQRBrandingUC:           p.PutQRBrandingUC,
+		GetTenantLocalesUC:        p.GetTenantLocalesUC,
+		PutTenantLocalesUC:        p.PutTenantLocalesUC,
+		ListCampaignsUC:           p.ListCampaignsUC,
+		GetCampaignUC:             p.GetCampaignUC,
+		CreateCampaignUC:          p.CreateCampaignUC,
+		UpdateCampaignUC:          p.UpdateCampaignUC,
+		LaunchCampaignUC:          p.LaunchCampaignUC,
+		PauseCampaignUC:           p.PauseCampaignUC,
+		GetTenantCustomerUC:       p.GetTenantCustomerUC,
+		AdjustCustomerPointsUC:    p.AdjustCustomerPointsUC,
+		TenantAnalyticsOverviewUC: p.TenantAnalyticsOverviewUC,
+		MemberGrowthUC:            p.MemberGrowthUC,
+		TierDistributionUC:        p.TierDistributionUC,
+		HourlyHeatmapUC:           p.HourlyHeatmapUC,
+		TopRewardsUC:              p.TopRewardsUC,
+		RetentionCohortsUC:        p.RetentionCohortsUC,
+		UploadRewardImageUC:       p.UploadRewardImageUC,
 	}
 }
 

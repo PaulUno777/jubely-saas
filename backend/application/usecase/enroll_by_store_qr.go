@@ -173,13 +173,20 @@ func (uc *EnrollByStoreQR) Execute(ctx context.Context, in EnrollByStoreQRInput)
 		if storeID != uuid.Nil {
 			homeStoreID = &storeID
 		}
+		var enrollmentLocID *uuid.UUID
+		if storeID != uuid.Nil {
+			enrollmentLocID = &storeID
+		}
 		e := &domain.LoyaltyEnrollment{
-			ID:          uuid.New(),
-			TenantID:    tenantID,
-			CustomerID:  ci.ID,
-			Tier:        "bronze",
-			HomeStoreID: homeStoreID,
-			CreatedAt:   now,
+			ID:                   uuid.New(),
+			TenantID:             tenantID,
+			CustomerID:           ci.ID,
+			Tier:                 "bronze",
+			HomeStoreID:          homeStoreID,
+			EnrollmentSource:     domain.EnrollmentSourceQRScan,
+			EnrollmentLocationID: enrollmentLocID,
+			Status:               domain.EnrollmentStatusActive.String(),
+			CreatedAt:            now,
 		}
 		if err := uc.Enrollments.Create(ctx, e); err != nil {
 			return err

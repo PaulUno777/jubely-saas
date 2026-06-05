@@ -62,6 +62,7 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 		customersMe := customers.Group("/me")
 		customersMe.Use(AuthMiddleware(signer))
 		customersMe.GET("/wallet", s.CustomerGetMyWallet)
+		customersMe.PATCH("/profile", s.CustomerPatchProfile)
 		customersMe.GET("/rewards", s.CustomerListRewards)
 		customersMe.POST("/rewards/:rewardId/claims", RequireWritableSubscription(), s.CustomerClaimReward)
 
@@ -93,12 +94,56 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 
 		tenants := v1.Group("/tenants/:tenantId")
 		tenants.Use(AuthMiddleware(signer), RequireMerchantAdmin(), RequireTenantScope())
-		tenants.GET("/metrics", s.TenantGetMetrics)
-		tenants.GET("/metrics/loyalty-activity", s.TenantGetLoyaltyActivity)
+		tenants.GET("/metrics", RequirePermission(domain.PermViewAnalytics), s.TenantGetMetrics)
+		tenants.GET("/metrics/loyalty-activity", RequirePermission(domain.PermViewAnalytics), s.TenantGetLoyaltyActivity)
 		tenants.GET("/stats", s.TenantGetStats)
 		tenants.GET("/locations", s.TenantListLocations)
 		tenants.POST("/locations", s.TenantCreateLocation)
 		tenants.PATCH("/locations/:locationId", s.TenantPatchLocation)
+
+		tenants.GET("/customers", RequirePermission(domain.PermViewAnalytics), s.TenantListCustomers)
+		tenants.GET("/customers/:enrollmentId", RequirePermission(domain.PermViewAnalytics), s.TenantGetCustomer)
+		tenants.POST("/customers/:enrollmentId/adjustments", RequirePermission(domain.PermManageStaff), s.TenantAdjustCustomerPoints)
+
+		tenants.GET("/transactions", RequirePermission(domain.PermViewAnalytics), s.TenantListTransactions)
+
+		tenants.GET("/agents", RequirePermission(domain.PermManageStaff), s.TenantListAgents)
+
+		tenants.GET("/rules", RequirePermission(domain.PermManageRules), s.TenantListRules)
+		tenants.POST("/rules", RequirePermission(domain.PermManageRules), s.TenantCreateRule)
+		tenants.PATCH("/rules/:ruleId", RequirePermission(domain.PermManageRules), s.TenantPatchRule)
+		tenants.POST("/rules/simulate", RequirePermission(domain.PermManageRules), s.TenantSimulateRules)
+		tenants.POST("/rules/validate", RequirePermission(domain.PermManageRules), s.TenantValidateRules)
+
+		tenants.GET("/tiers", RequirePermission(domain.PermManageRules), s.TenantListTiers)
+		tenants.PUT("/tiers", RequirePermission(domain.PermManageRules), s.TenantUpsertTier)
+
+		tenants.GET("/rewards", RequirePermission(domain.PermManageRewards), s.TenantListRewards)
+		tenants.POST("/rewards/:rewardId/image", RequirePermission(domain.PermManageRewards), s.TenantUploadRewardImage)
+
+		tenants.GET("/qr/branding", s.TenantGetQRBranding)
+		tenants.PUT("/qr/branding", s.TenantPutQRBranding)
+		tenants.GET("/qr/token", s.TenantGetStoreQR)
+		tenants.GET("/qr/render.svg", s.TenantRenderQR)
+
+		tenants.GET("/settings/locales", s.TenantGetLocales)
+		tenants.PUT("/settings/locales", s.TenantPutLocales)
+
+		tenants.GET("/campaigns", RequirePermission(domain.PermViewAnalytics), s.TenantListCampaigns)
+		tenants.POST("/campaigns", RequirePermission(domain.PermManageStaff), s.TenantCreateCampaign)
+		tenants.GET("/campaigns/:campaignId", RequirePermission(domain.PermViewAnalytics), s.TenantGetCampaign)
+		tenants.PATCH("/campaigns/:campaignId", RequirePermission(domain.PermManageStaff), s.TenantUpdateCampaign)
+		tenants.POST("/campaigns/:campaignId/launch", RequirePermission(domain.PermManageStaff), s.TenantLaunchCampaign)
+		tenants.POST("/campaigns/:campaignId/pause", RequirePermission(domain.PermManageStaff), s.TenantPauseCampaign)
+
+		analytics := tenants.Group("/analytics")
+		analytics.Use(RequirePermission(domain.PermViewAnalytics))
+		analytics.GET("/overview", s.TenantAnalyticsOverview)
+		analytics.GET("/member-growth", s.TenantAnalyticsMemberGrowth)
+		analytics.GET("/tier-distribution", s.TenantAnalyticsTierDistribution)
+		analytics.GET("/hourly-heatmap", s.TenantAnalyticsHeatmap)
+		analytics.GET("/top-rewards", s.TenantAnalyticsTopRewards)
+		analytics.GET("/retention-cohorts", s.TenantAnalyticsRetention)
 
 		staff := v1.Group("/staff")
 		staff.Use(AuthMiddleware(signer), RequireStaffOrMerchantAdmin(), RequireWritableSubscription())

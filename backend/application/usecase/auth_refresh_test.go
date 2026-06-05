@@ -104,7 +104,7 @@ func TestRefresh_rotates_token(t *testing.T) {
 		UserID:    user.ID,
 		TokenHash: hash,
 		UserAgent: "ua",
-		ExpiresAt: now.Add(30 * 24 * time.Hour),
+		ExpiresAt: now.Add(365 * 24 * time.Hour),
 	}); err != nil {
 		t.Fatalf("seed: %v", err)
 	}

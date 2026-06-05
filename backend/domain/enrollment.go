@@ -11,6 +11,8 @@ type EnrollmentStatus string
 const (
 	EnrollmentStatusActive   EnrollmentStatus = "active"
 	EnrollmentStatusInactive EnrollmentStatus = "inactive"
+	EnrollmentStatusDormant  EnrollmentStatus = "dormant"
+	EnrollmentStatusBlocked  EnrollmentStatus = "blocked"
 )
 
 // Enrollment links a customer to a tenant's program (one active enrollment at a time in Phase 1).

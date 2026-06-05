@@ -75,6 +75,31 @@ type Server struct {
 	AssetUploadDir string
 	// UploadTenantLogoUC optional; nil when object storage is not configured.
 	UploadTenantLogoUC *usecase.UploadTenantLogo
+
+	UpdateCustomerProfileUC   *usecase.UpdateCustomerProfile
+	ListTiersUC               *usecase.ListTiers
+	UpsertTierUC              *usecase.UpsertTier
+	SeedDefaultTiersUC        *usecase.SeedDefaultTiers
+	ValidateStoreRulesUC      *usecase.ValidateStoreRules
+	GetQRBrandingUC           *usecase.GetQRBranding
+	PutQRBrandingUC           *usecase.PutQRBranding
+	GetTenantLocalesUC        *usecase.GetTenantLocales
+	PutTenantLocalesUC        *usecase.PutTenantLocales
+	ListCampaignsUC           *usecase.ListCampaigns
+	GetCampaignUC             *usecase.GetCampaign
+	CreateCampaignUC          *usecase.CreateCampaign
+	UpdateCampaignUC          *usecase.UpdateCampaign
+	LaunchCampaignUC          *usecase.LaunchCampaign
+	PauseCampaignUC           *usecase.PauseCampaign
+	GetTenantCustomerUC       *usecase.GetTenantCustomer
+	AdjustCustomerPointsUC    *usecase.AdjustCustomerPoints
+	TenantAnalyticsOverviewUC *usecase.TenantAnalyticsOverview
+	MemberGrowthUC            *usecase.MemberGrowth
+	TierDistributionUC        *usecase.TierDistribution
+	HourlyHeatmapUC           *usecase.HourlyHeatmap
+	TopRewardsUC              *usecase.TopRewards
+	RetentionCohortsUC        *usecase.RetentionCohorts
+	UploadRewardImageUC       *usecase.UploadRewardImage
 }
 
 func (s *Server) Health(c *gin.Context) {

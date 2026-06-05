@@ -13,7 +13,7 @@ import (
 func Initialize(ctx context.Context) (*App, func(), error) {
 	wire.Build(
 		providers.AllSet,
-		wire.Struct(new(App), "Config", "Server", "Users", "Hasher"),
+		wire.Struct(new(App), "Config", "Server", "Users", "Hasher", "Jobs"),
 	)
 	return nil, nil, nil
 }

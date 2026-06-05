@@ -15,6 +15,8 @@ type Reward struct {
 	MinTier     string
 	Active      bool
 	StockLimit  *int
+	ImageURL    *string
+	IconKey     string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
