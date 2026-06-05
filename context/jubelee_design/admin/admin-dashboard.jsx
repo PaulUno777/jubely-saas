@@ -1,4 +1,79 @@
 /* eslint-disable */
+const DASH_RANGES = [
+  { id: 'today', label: "Aujourd'hui",         sub: '2 juin 2026' },
+  { id: '7d',    label: '7 derniers jours',     sub: '26 mai – 2 juin' },
+  { id: '30d',   label: '30 derniers jours',    sub: '3 mai – 2 juin' },
+  { id: 'month', label: 'Ce mois-ci',           sub: 'Juin 2026' },
+  { id: 'qtr',   label: 'Ce trimestre',         sub: 'Avr – Juin 2026' },
+  { id: 'ytd',   label: 'Depuis janvier',       sub: '1 jan – 2 juin' },
+];
+
+const DateRangeSelect = ({ value, onChange }) => {
+  const [open, setOpen] = React.useState(false);
+  const current = DASH_RANGES.find(r => r.id === value) || DASH_RANGES[1];
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="btn btn-soft"
+        style={{ display: 'flex', alignItems: 'center', gap: 9, height: 42, padding: '0 14px' }}
+      >
+        <Ico.cal size={16} style={{ color: 'var(--muted)' }}/>
+        <span style={{ lineHeight: 1.1, textAlign: 'left' }}>
+          <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--heading)' }}>{current.label}</span>
+          <span style={{ display: 'block', fontSize: 10.5, color: 'var(--muted)', fontWeight: 400 }}>{current.sub}</span>
+        </span>
+        <Ico.chevD size={14} style={{ color: 'var(--muted)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}/>
+      </button>
+
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }}/>
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 41,
+            width: 256, background: 'var(--surface)', borderRadius: 14,
+            border: '1px solid var(--border)', boxShadow: 'var(--shadow-pop, 0 18px 48px rgba(20,16,8,0.18))',
+            padding: 6,
+          }}>
+            <div style={{ padding: '8px 10px 6px', fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, color: 'var(--muted)' }}>
+              Période
+            </div>
+            {DASH_RANGES.map(r => {
+              const active = r.id === value;
+              return (
+                <button key={r.id} onClick={() => { onChange(r.id); setOpen(false); }} style={{
+                  appearance: 'none', border: 0, cursor: 'pointer', fontFamily: 'inherit',
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 11,
+                  padding: '9px 10px', borderRadius: 9, textAlign: 'left',
+                  background: active ? 'var(--g0)' : 'transparent', transition: 'background .12s',
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--n1)'; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
+                  <span style={{ flex: 1, lineHeight: 1.2 }}>
+                    <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: active ? 'var(--g4)' : 'var(--heading)' }}>{r.label}</span>
+                    <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)' }}>{r.sub}</span>
+                  </span>
+                  {active && <Ico.check size={15} style={{ color: 'var(--g3)' }}/>}
+                </button>
+              );
+            })}
+            <div style={{ borderTop: '1px solid var(--border)', margin: '6px 4px 2px' }}/>
+            <button onClick={() => { onChange('custom'); setOpen(false); }} style={{
+              appearance: 'none', border: 0, cursor: 'pointer', fontFamily: 'inherit',
+              width: '100%', display: 'flex', alignItems: 'center', gap: 9,
+              padding: '10px', borderRadius: 9, background: 'transparent', color: 'var(--body)', fontSize: 13, fontWeight: 500,
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--n1)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <Ico.cal size={14} style={{ color: 'var(--muted)' }}/> Plage personnalisée…
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 const KPI = ({ label, value, unit, delta, up, color, spark, sparkColor }) => (
   <div className="kpi">
     <div className="kpi-bar-left" style={{ background: color }}/>
@@ -16,6 +91,8 @@ const KPI = ({ label, value, unit, delta, up, color, spark, sparkColor }) => (
 );
 
 const Dashboard = ({ toast, openModal, openEditor }) => {
+  const [range, setRange] = React.useState('7d');
+  const curRange = DASH_RANGES.find(r => r.id === range);
   const monthBars = [
     { label: 'Lun', a: 4200, b: 1800 }, { label: 'Mar', a: 5100, b: 2100 },
     { label: 'Mer', a: 4800, b: 1600 }, { label: 'Jeu', a: 6200, b: 2800 },
@@ -53,7 +130,7 @@ const Dashboard = ({ toast, openModal, openEditor }) => {
             Bonjour, Kofi 👋
           </div>
           <div style={{ fontSize: 13.5, color: 'var(--muted)', marginTop: 4 }}>
-            Voici l'activité de fidélité de <strong style={{ color: 'var(--body)' }}>Chez Mama</strong> — semaine du 25 mai.
+            Voici l'activité de fidélité de <strong style={{ color: 'var(--body)' }}>Chez Mama</strong>{curRange ? <> — {curRange.label.toLowerCase()} <span style={{ color: 'var(--n4)' }}>·</span> {curRange.sub}</> : ''}.
           </div>
         </div>
         <button className="btn btn-ghost" onClick={() => toast('Rapport exporté', 'Le PDF hebdomadaire a été généré.', 'gd')}>
@@ -63,9 +140,7 @@ const Dashboard = ({ toast, openModal, openEditor }) => {
           <option>Toute l'enseigne</option>
           <option>Akwa</option><option>Bonanjo</option><option>Bonamoussadi</option>
         </select>
-        <button className="btn btn-primary btn-lg" onClick={() => openEditor()}>
-          <Ico.plus size={16}/> Nouvelle règle de points
-        </button>
+        <DateRangeSelect value={range} onChange={(id) => { if (id === 'custom') { toast('Plage personnalisée', 'Sélectionnez vos dates de début et de fin.', 'gd'); return; } setRange(id); const r = DASH_RANGES.find(x => x.id === id); toast('Période mise à jour', `Données affichées : ${r.label.toLowerCase()}.`, 'em'); }}/>
       </div>
 
       {/* KPIs */}

@@ -24,7 +24,7 @@ export function MerchantDashboardWelcome({ periodLabel }: MerchantDashboardWelco
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-4">
       <div className="min-w-0 flex-1">
-        <h2 className="font-(family-name:--jubely-font-display) text-2xl font-medium leading-tight text-foreground sm:text-3xl">
+        <h2 className="font-serif italic text-2xl font-medium leading-tight text-foreground sm:text-3xl">
           {t("welcome.greeting", { name })}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">

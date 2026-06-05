@@ -44,6 +44,86 @@ const LoadingState = () => (
   </div>
 );
 
+// ===== Interface language selector (topbar) =====
+const LangSelect = ({ toast }) => {
+  const { langs } = useLangs();
+  const options = ALL_LANGS.filter(l => langs.includes(l.id));
+  const [uiLang, setUiLang] = React.useState(langs[0] || 'fr');
+  const [open, setOpen] = React.useState(false);
+  React.useEffect(() => { if (!langs.includes(uiLang)) setUiLang(langs[0] || 'fr'); }, [langs]);
+  const current = ALL_LANGS.find(l => l.id === uiLang) || ALL_LANGS[0];
+
+  const pick = (l) => {
+    setUiLang(l.id);
+    setOpen(false);
+    if (l.id !== uiLang) toast('Langue de l\u2019interface', `Affichage en ${l.name}.`, 'em');
+  };
+
+  return (
+    <div style={{ position: 'relative', paddingLeft: 6 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        title="Langue de l'interface"
+        style={{
+          appearance: 'none', cursor: 'pointer', fontFamily: 'inherit',
+          display: 'flex', alignItems: 'center', gap: 8,
+          height: 38, padding: '0 10px', borderRadius: 10,
+          background: open ? 'var(--n1)' : 'transparent',
+          border: '1px solid ' + (open ? 'var(--border)' : 'transparent'),
+          transition: 'background .15s, border-color .15s',
+        }}
+      >
+        <span style={{ fontSize: 17, lineHeight: 1 }}>{current.flag}</span>
+        <span style={{ lineHeight: 1.15, whiteSpace: 'nowrap', textAlign: 'left' }}>
+          <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--heading)' }}>{current.name}</span>
+          <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)' }}>Interface</span>
+        </span>
+        <Ico.chevD size={14} style={{ color: 'var(--muted)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}/>
+      </button>
+
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }}/>
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 41,
+            width: 248, background: 'var(--surface)', borderRadius: 14,
+            border: '1px solid var(--border)', boxShadow: 'var(--shadow-pop, 0 18px 48px rgba(20,16,8,0.18))',
+            padding: 6, overflow: 'hidden',
+          }}>
+            <div style={{ padding: '8px 10px 6px', fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, color: 'var(--muted)' }}>
+              Langue de l'interface
+            </div>
+            {options.map(l => {
+              const active = l.id === uiLang;
+              return (
+                <button key={l.id} onClick={() => pick(l)} style={{
+                  appearance: 'none', border: 0, cursor: 'pointer', fontFamily: 'inherit',
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 11,
+                  padding: '9px 10px', borderRadius: 9, textAlign: 'left',
+                  background: active ? 'var(--g0)' : 'transparent', transition: 'background .12s',
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--n1)'; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
+                  <span style={{ fontSize: 18, lineHeight: 1 }}>{l.flag}</span>
+                  <span style={{ flex: 1, lineHeight: 1.2 }}>
+                    <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: active ? 'var(--g4)' : 'var(--heading)' }}>{l.name}</span>
+                    <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)' }}>{l.label}</span>
+                  </span>
+                  {active && <Ico.check size={15} style={{ color: 'var(--g3)' }}/>}
+                </button>
+              );
+            })}
+            <div style={{ borderTop: '1px solid var(--border)', margin: '6px 4px 2px' }}/>
+            <div style={{ padding: '8px 10px', fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.4 }}>
+              Gérez les langues disponibles dans <span style={{ color: 'var(--heading)', fontWeight: 600 }}>Paramètres → Marque</span>.
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 const App = () => {
   const [page, setPage] = React.useState('dashboard');
   const [loading, setLoading] = React.useState(false);
@@ -121,14 +201,7 @@ const App = () => {
               </button>
               {notifOpen && <NotifPanel onClose={() => setNotifOpen(false)}/>}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, paddingLeft: 6 }}>
-              <div className="ava ava-gd" style={{ width: 34, height: 34 }}>KM</div>
-              <div style={{ lineHeight: 1.15, whiteSpace: 'nowrap' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--heading)' }}>Kofi Mensah</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>Gérant</div>
-              </div>
-              <Ico.chevD size={14} style={{ color: 'var(--muted)' }}/>
-            </div>
+            <LangSelect toast={toast}/>
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }} onClick={() => notifOpen && setNotifOpen(false)}>
