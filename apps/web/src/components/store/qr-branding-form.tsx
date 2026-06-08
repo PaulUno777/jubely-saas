@@ -5,7 +5,7 @@ import { Button, Input, Label } from "@jubely/ui";
 import type { QrBranding } from "@jubely/api-schemas";
 import { ApiResponseError } from "@jubely/api-schemas";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useTenantId } from "@/hooks/useTenantId";
 import { putQRBranding } from "@/lib/tenant-admin";
@@ -14,20 +14,18 @@ type QRBrandingFormProps = {
   branding: QrBranding | undefined;
 };
 
-export function QRBrandingForm({ branding }: QRBrandingFormProps) {
+type QRBrandingFieldsProps = {
+  branding: QrBranding | undefined;
+};
+
+function QRBrandingFields({ branding }: QRBrandingFieldsProps) {
   const t = useTranslations("store.enrollmentQr");
   const tenantId = useTenantId();
   const qc = useQueryClient();
-  const [accentColor, setAccentColor] = useState("#2563eb");
-  const [variant, setVariant] = useState("default");
-  const [theme, setTheme] = useState("light");
-
-  useEffect(() => {
-    if (!branding?.branding) return;
-    setAccentColor(branding.branding.accent_color ?? accentColor);
-    setVariant(branding.branding.variant ?? variant);
-    setTheme(branding.branding.theme ?? theme);
-  }, [branding]);
+  const b = branding?.branding;
+  const [accentColor, setAccentColor] = useState(b?.accent_color ?? "#2563eb");
+  const [variant, setVariant] = useState(b?.variant ?? "default");
+  const [theme, setTheme] = useState(b?.theme ?? "light");
 
   const saveMut = useMutation({
     mutationFn: () =>
@@ -35,9 +33,9 @@ export function QRBrandingForm({ branding }: QRBrandingFormProps) {
         variant,
         theme,
         accent_color: accentColor,
-        font_family: branding?.branding.font_family ?? "system-ui",
-        layout_json: branding?.branding.layout_json ?? {},
-        section_toggles: branding?.branding.section_toggles ?? {},
+        font_family: b?.font_family ?? "system-ui",
+        layout_json: b?.layout_json ?? {},
+        section_toggles: b?.section_toggles ?? {},
         copy: branding?.copy ?? {},
       }),
     onSuccess: () => {
@@ -68,4 +66,12 @@ export function QRBrandingForm({ branding }: QRBrandingFormProps) {
       </Button>
     </div>
   );
+}
+
+export function QRBrandingForm({ branding }: QRBrandingFormProps) {
+  const formKey = branding?.branding
+    ? `${branding.branding.variant}-${branding.branding.theme}-${branding.branding.accent_color}`
+    : "default";
+
+  return <QRBrandingFields key={formKey} branding={branding} />;
 }

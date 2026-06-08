@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Badge,
   Button,
   Form,
   FormControl,
@@ -23,6 +22,8 @@ import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { InitialsAvatar } from "@/components/store/initials-avatar";
+import { TierBadge } from "@/components/store/tier-badge";
 import { useTenantId } from "@/hooks/useTenantId";
 import { adjustCustomerPoints, getCustomer } from "@/lib/tenant-admin";
 
@@ -76,22 +77,41 @@ export function CustomerDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>{customer?.name ?? t("detailTitle")}</SheetTitle>
-          <SheetDescription>{customer?.phone ?? ""}</SheetDescription>
+          <div className="flex items-center gap-3">
+            {customer ? <InitialsAvatar name={customer.name} size="lg" /> : null}
+            <div>
+              <SheetTitle>{customer?.name ?? t("detailTitle")}</SheetTitle>
+              <SheetDescription>{customer?.phone ?? ""}</SheetDescription>
+            </div>
+          </div>
         </SheetHeader>
         {detailQ.isLoading ? (
           <p className="mt-4 text-sm text-muted-foreground">{t("loading")}</p>
         ) : customer ? (
           <div className="mt-4 space-y-6">
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("points")}</span>
-                <span className="font-mono tabular-nums">{customer.points_balance}</span>
+            <div className="rounded-2xl border border-border bg-[var(--g0,#FBF0D4)] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold tracking-[0.1em] text-[var(--g4,#6B4510)] uppercase">
+                    {t("tier")}
+                  </p>
+                  {customer.tier && typeof customer.tier === "object" && "code" in customer.tier ? (
+                    <div className="mt-1">
+                      <TierBadge code={(customer.tier as { code: string }).code} />
+                    </div>
+                  ) : null}
+                </div>
+                <div className="text-right">
+                  <p className="font-mono text-2xl font-medium tabular-nums">{customer.points_balance}</p>
+                  <p className="text-xs text-muted-foreground">{t("points")}</p>
+                </div>
               </div>
-              {customer.tier && typeof customer.tier === "object" && "code" in customer.tier ? (
+            </div>
+            <div className="space-y-2 text-sm">
+              {customer.email ? (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t("tier")}</span>
-                  <Badge variant="outline">{(customer.tier as { code: string }).code}</Badge>
+                  <span className="text-muted-foreground">Email</span>
+                  <span>{customer.email}</span>
                 </div>
               ) : null}
             </div>

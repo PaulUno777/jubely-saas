@@ -7,27 +7,25 @@ import {
   Button,
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Input,
-  Label,
+  KpiTile,
+  KpiTileStrip,
 } from "@jubely/ui";
 import { ApiResponseError } from "@jubely/api-schemas";
+import { Gift, Pencil, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { MerchantDataTable } from "@/components/store/merchant-data-table";
+import type { z } from "zod";
+import { storeRewardSchema } from "@jubely/api-schemas";
 import { MerchantPageShell } from "@/components/store/merchant-page-shell";
+import { RewardFormDialog } from "@/components/store/reward-form-dialog";
+import { TierBadge } from "@/components/store/tier-badge";
 import { useMerchantLocationScope } from "@/hooks/useMerchantLocationScope";
 import { useTenantRewards } from "@/hooks/tenant-admin-hooks";
 import { useTenantId } from "@/hooks/useTenantId";
-import type { z } from "zod";
-import { storeRewardSchema } from "@jubely/api-schemas";
-import { createReward } from "@/lib/tenant-admin";
+import { patchReward } from "@/lib/tenant-admin";
 
 type RewardRow = z.infer<typeof storeRewardSchema> & {
   image_url?: string;
-  icon_key?: string;
 };
 
 export default function StoreRewardsPage() {
@@ -35,126 +33,126 @@ export default function StoreRewardsPage() {
   const { headerContext } = useMerchantLocationScope();
   const tenantId = useTenantId();
   const qc = useQueryClient();
-  const [name, setName] = useState("");
-  const [pointCost, setPointCost] = useState("100");
-  const [description, setDescription] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<RewardRow | null>(null);
 
   const q = useTenantRewards(false);
+  const rewards = (q.data ?? []) as RewardRow[];
+  const activeCount = rewards.filter((r) => r.active).length;
 
-  const createMut = useMutation({
-    mutationFn: () =>
-      createReward(tenantId!, {
-        name: name.trim(),
-        description: description.trim(),
-        point_cost: parseInt(pointCost, 10) || 0,
-        active: true,
-      }),
+  const toggleMut = useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) =>
+      patchReward(tenantId!, id, { active }),
     onSuccess: () => {
-      setName("");
-      setDescription("");
       void qc.invalidateQueries({ queryKey: ["tenant-admin", "rewards"] });
-      toast.success(t("created"));
     },
-    onError: (e) => toast.error(e instanceof ApiResponseError ? e.message : t("createError")),
+    onError: (e) =>
+      toast.error(e instanceof ApiResponseError ? e.message : t("saveError")),
   });
 
-  const rewards = (q.data ?? []) as RewardRow[];
+  const openCreate = () => {
+    setEditing(null);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (reward: RewardRow) => {
+    setEditing(reward);
+    setDialogOpen(true);
+  };
 
   return (
     <MerchantPageShell title={t("title")} context={headerContext} className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("addTitle")}</CardTitle>
-          <CardDescription>{t("addDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 max-w-md">
-          <div className="grid gap-2">
-            <Label htmlFor="reward-name">{t("name")}</Label>
-            <Input id="reward-name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="reward-cost">{t("pointCost")}</Label>
-            <Input
-              id="reward-cost"
-              type="number"
-              min={1}
-              value={pointCost}
-              onChange={(e) => setPointCost(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="reward-desc">{t("description")}</Label>
-            <Input
-              id="reward-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-          <Button
-            type="button"
-            disabled={!name.trim() || createMut.isPending}
-            onClick={() => createMut.mutate()}
-          >
-            {t("create")}
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+        <Button type="button" size="sm" className="gap-1.5" onClick={openCreate}>
+          <Plus size={14} />
+          {t("create")}
+        </Button>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("listTitle")}</CardTitle>
-          <CardDescription>{t("listDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <MerchantDataTable
-            columns={[
-              {
-                key: "name",
-                header: t("name"),
-                cell: (row) => (
-                  <div className="flex items-center gap-2">
-                    {row.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={row.image_url}
-                        alt=""
-                        className="size-8 rounded object-cover"
-                      />
-                    ) : null}
-                    <span className="font-medium">{row.name}</span>
+      <KpiTileStrip>
+        <KpiTile label={t("kpiTotal")} value={rewards.length} tone="emerald" />
+        <KpiTile label={t("kpiActive")} value={activeCount} tone="gold" />
+      </KpiTileStrip>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {rewards.map((reward) => (
+          <Card
+            key={reward.id}
+            className={reward.active ? "" : "opacity-60"}
+          >
+            <CardContent className="flex gap-4 p-5">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-[14px] bg-[var(--g0,#FBF0D4)] text-[var(--g4,#6B4510)]">
+                {reward.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={reward.image_url} alt="" className="size-12 rounded-[14px] object-cover" />
+                ) : (
+                  <Gift size={22} />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-serif text-xl font-medium italic">{reward.name}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                      {reward.description || "—"}
+                    </p>
                   </div>
-                ),
-              },
-              {
-                key: "pointCost",
-                header: t("pointCost"),
-                cell: (row) => <span className="font-mono tabular-nums">{row.point_cost}</span>,
-              },
-              {
-                key: "tier",
-                header: t("tier"),
-                cell: (row) => <Badge variant="outline">{row.min_tier}</Badge>,
-              },
-              {
-                key: "status",
-                header: t("status"),
-                cell: (row) => (
-                  <Badge variant={row.active ? "default" : "secondary"}>
-                    {row.active ? t("active") : t("inactive")}
+                  <div className="flex gap-1">
+                    <Button type="button" variant="ghost" size="icon" onClick={() => openEdit(reward)}>
+                      <Pencil size={14} />
+                    </Button>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <div>
+                    <div className="font-mono text-base font-semibold text-[var(--reward,#C89B3C)]">
+                      {reward.point_cost.toLocaleString()}
+                    </div>
+                    <div className="text-[10px] tracking-wider text-muted-foreground uppercase">
+                      {t("pointCost")}
+                    </div>
+                  </div>
+                  <TierBadge code={reward.min_tier} />
+                  <Badge variant={reward.active ? "default" : "secondary"}>
+                    {reward.active ? t("active") : t("inactive")}
                   </Badge>
-                ),
-              },
-            ]}
-            rows={rewards}
-            rowKey={(row) => row.id}
-            loading={q.isLoading}
-            error={q.error}
-            loadingLabel={t("loading")}
-            errorLabel={t("loadError")}
-            emptyLabel={t("empty")}
-          />
-        </CardContent>
-      </Card>
+                  <label className="ml-auto flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={reward.active}
+                      disabled={toggleMut.isPending}
+                      onChange={(e) =>
+                        toggleMut.mutate({ id: reward.id, active: e.target.checked })
+                      }
+                    />
+                    {t("toggleActive")}
+                  </label>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        <button
+          type="button"
+          onClick={openCreate}
+          className="flex min-h-29 items-center justify-center rounded-2xl border border-dashed border-border bg-[var(--surface-2,#F5F0E8)] p-6 text-center transition-colors hover:bg-muted/50"
+        >
+          <div>
+            <div className="mx-auto mb-2 flex size-11 items-center justify-center rounded-xl bg-background">
+              <Plus size={20} />
+            </div>
+            <p className="text-sm font-semibold">{t("addCardTitle")}</p>
+          </div>
+        </button>
+      </div>
+
+      <RewardFormDialog
+        reward={editing}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </MerchantPageShell>
   );
 }

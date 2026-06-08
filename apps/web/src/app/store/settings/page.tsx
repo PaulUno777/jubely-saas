@@ -3,7 +3,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Badge,
   Button,
   Card,
   CardContent,
@@ -25,7 +24,7 @@ import {
   Textarea,
 } from "@jubely/ui";
 import { useTranslations } from "next-intl";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -34,7 +33,7 @@ import { useMerchantLocationScope } from "@/hooks/useMerchantLocationScope";
 import { useTenantLocales } from "@/hooks/tenant-admin-hooks";
 import { useTenantSettings } from "@/hooks/useTenantSettings";
 import { useTenantId } from "@/hooks/useTenantId";
-import { patchSettings } from "@/lib/tenant-admin";
+import { patchSettings, putLocales } from "@/lib/tenant-admin";
 import { ApiResponseError } from "@jubely/api-schemas";
 
 const schema = z.object({
@@ -202,24 +201,15 @@ export default function StoreSettingsPage() {
               <CardTitle>{t("localesTitle")}</CardTitle>
               <CardDescription>{t("localesDescription")}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
               {localesQ.isLoading ? (
                 <p className="text-sm text-muted-foreground">{t("loading")}</p>
               ) : localesQ.data?.length ? (
-                localesQ.data.map((loc: { locale: string; is_primary: boolean; enabled: boolean }) => (
-                  <div
-                    key={loc.locale}
-                    className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
-                  >
-                    <span className="font-mono">{loc.locale}</span>
-                    <div className="flex gap-2">
-                      {loc.is_primary ? <Badge>{t("primaryLocale")}</Badge> : null}
-                      <Badge variant={loc.enabled ? "default" : "secondary"}>
-                        {loc.enabled ? t("localeEnabled") : t("localeDisabled")}
-                      </Badge>
-                    </div>
-                  </div>
-                ))
+                <LocalesEditor
+                  key={localesQ.data.map((loc) => loc.locale).join(",")}
+                  initialLocales={localesQ.data}
+                  tenantId={tenantId!}
+                />
               ) : (
                 <p className="text-sm text-muted-foreground">{t("localesEmpty")}</p>
               )}
@@ -228,5 +218,77 @@ export default function StoreSettingsPage() {
         </TabsContent>
       </Tabs>
     </MerchantPageShell>
+  );
+}
+
+type LocaleDraft = { locale: string; is_primary: boolean; enabled: boolean };
+
+function LocalesEditor({
+  initialLocales,
+  tenantId,
+}: {
+  initialLocales: LocaleDraft[];
+  tenantId: string;
+}) {
+  const t = useTranslations("store.settings");
+  const qc = useQueryClient();
+  const [localeDraft, setLocaleDraft] = useState(initialLocales);
+
+  const localesMut = useMutation({
+    mutationFn: async () => putLocales(tenantId, localeDraft),
+    onSuccess: () => {
+      toast.success(t("localesSaved"));
+      void qc.invalidateQueries({ queryKey: ["tenant-admin", "locales"] });
+    },
+    onError: (e) =>
+      toast.error(e instanceof ApiResponseError ? e.message : t("localesSaveError")),
+  });
+
+  return (
+    <>
+      {localeDraft.map((loc, index) => (
+        <div
+          key={loc.locale}
+          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm"
+        >
+          <span className="font-mono">{loc.locale}</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="primary-locale"
+                checked={loc.is_primary}
+                onChange={() =>
+                  setLocaleDraft((prev) =>
+                    prev.map((item, i) => ({
+                      ...item,
+                      is_primary: i === index,
+                    })),
+                  )
+                }
+              />
+              {t("primaryLocale")}
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={loc.enabled}
+                onChange={(event) =>
+                  setLocaleDraft((prev) =>
+                    prev.map((item, i) =>
+                      i === index ? { ...item, enabled: event.target.checked } : item,
+                    ),
+                  )
+                }
+              />
+              {t("localeEnabled")}
+            </label>
+          </div>
+        </div>
+      ))}
+      <Button type="button" disabled={localesMut.isPending} onClick={() => localesMut.mutate()}>
+        {localesMut.isPending ? t("saving") : t("saveLocales")}
+      </Button>
+    </>
   );
 }

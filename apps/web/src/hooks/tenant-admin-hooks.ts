@@ -1,12 +1,15 @@
 "use client";
 
-import type { Campaign, TenantLocale } from "@jubely/api-schemas";
 import { useTenantAdminQuery } from "@/hooks/useTenantAdminQuery";
 import type { TenantQueryBase } from "@/lib/tenant-admin/core";
 import {
+  getHeatmap,
   getLocales,
   getMemberGrowth,
   getOverview,
+  getRetention,
+  getTierDistribution,
+  getTopRewards,
   getQRBranding,
   getQRToken,
   listAgents,
@@ -85,6 +88,38 @@ export function useTenantMemberGrowth(params: Omit<TenantQueryBase, "tenantId"> 
     "analytics-member-growth",
     [params.from, params.to, params.locationId],
     (tenantId) => getMemberGrowth({ tenantId, ...params }),
+  );
+}
+
+export function useTenantTierDistribution(params: Omit<TenantQueryBase, "tenantId"> = {}) {
+  return useTenantAdminQuery(
+    "analytics-tier-distribution",
+    [params.from, params.to, params.locationId],
+    (tenantId) => getTierDistribution({ tenantId, ...params }),
+  );
+}
+
+export function useTenantHeatmap(params: Omit<TenantQueryBase, "tenantId"> = {}) {
+  return useTenantAdminQuery(
+    "analytics-heatmap",
+    [params.from, params.to, params.locationId],
+    (tenantId) => getHeatmap({ tenantId, ...params }),
+  );
+}
+
+export function useTenantTopRewards(params: Omit<TenantQueryBase, "tenantId"> = {}) {
+  return useTenantAdminQuery(
+    "analytics-top-rewards",
+    [params.from, params.to, params.locationId],
+    (tenantId) => getTopRewards({ tenantId, ...params }),
+  );
+}
+
+export function useTenantRetention(params: Omit<TenantQueryBase, "tenantId"> = {}) {
+  return useTenantAdminQuery(
+    "analytics-retention",
+    [params.from, params.to, params.locationId],
+    (tenantId) => getRetention({ tenantId, ...params }),
   );
 }
 

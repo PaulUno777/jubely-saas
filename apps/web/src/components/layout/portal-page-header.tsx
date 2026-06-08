@@ -2,13 +2,17 @@
 
 import { Input, cn } from "@jubely/ui";
 import { Search } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { Header } from "@/components/layout/header";
 
 export type PortalPageHeaderProps = {
   title: string;
   context?: string;
   searchPlaceholder?: string;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+  searchInputRef?: RefObject<HTMLInputElement | null>;
+  searchEnabled?: boolean;
   actions?: ReactNode;
   className?: string;
 };
@@ -17,9 +21,15 @@ export function PortalPageHeader({
   title,
   context,
   searchPlaceholder,
+  searchValue,
+  onSearchChange,
+  searchInputRef,
+  searchEnabled = true,
   actions,
   className,
 }: PortalPageHeaderProps) {
+  const showSearch = searchEnabled && searchPlaceholder;
+
   return (
     <Header
       fixed
@@ -41,10 +51,14 @@ export function PortalPageHeader({
         </div>
 
         <div className="ml-auto flex min-w-0 items-center gap-2 md:gap-3">
-          {searchPlaceholder ? (
+          {showSearch ? (
             <div className="relative hidden w-[min(100%,17.5rem)] shrink-0 md:block lg:w-80">
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                ref={searchInputRef}
+                value={searchValue ?? ""}
+                onChange={onSearchChange ? (e) => onSearchChange(e.target.value) : undefined}
+                readOnly={!onSearchChange}
                 className="h-9 w-full rounded-[10px] border-border bg-secondary pr-14 pl-9 text-sm shadow-none"
                 placeholder={searchPlaceholder}
                 aria-label={searchPlaceholder}

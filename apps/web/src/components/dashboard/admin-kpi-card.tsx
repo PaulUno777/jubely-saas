@@ -100,8 +100,7 @@ export function AdminKpiCard({
   trendUp,
   live,
   liveLabel,
-  portal: _portal = "admin",
-}: AdminKpiCardProps) {
+}: Omit<AdminKpiCardProps, "portal">) {
   const style = toneStyles[tone];
   const deltaClass =
     trendUp === undefined

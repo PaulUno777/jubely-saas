@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PortalPageHeader } from "@/components/layout/portal-page-header";
+import { usePortalSearchContext } from "@/components/layout/portal-search-provider";
 
 type StorePageHeaderProps = {
   title: string;
@@ -15,17 +16,24 @@ type StorePageHeaderProps = {
 export function StorePageHeader({ title, context }: StorePageHeaderProps) {
   const t = useTranslations("store.home");
   const queryClient = useQueryClient();
+  const { registration, inputRef } = usePortalSearchContext();
 
   const refreshDashboard = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["tenant"] });
     void queryClient.invalidateQueries({ queryKey: ["tenant-admin"] });
   }, [queryClient]);
 
+  const searchEnabled = registration?.enabled ?? false;
+
   return (
     <PortalPageHeader
       title={title}
       context={context}
-      searchPlaceholder={t("searchPlaceholder")}
+      searchEnabled={searchEnabled}
+      searchPlaceholder={registration?.placeholder ?? t("searchPlaceholder")}
+      searchValue={registration?.value}
+      onSearchChange={registration?.onChange}
+      searchInputRef={inputRef}
       className="merchant-portal-header"
       actions={
         <>

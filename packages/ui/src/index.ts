@@ -140,6 +140,24 @@ export {
   TableHeader,
   TableRow,
 } from "./components/ui/table";
+export {
+  Pagination,
+  type PaginationLabels,
+  type PaginationProps,
+} from "./components/ui/pagination";
+export {
+  DataTable,
+  type DataTableColumn,
+  type DataTableProps,
+} from "./components/jubely/data-table";
+export { ListCard, type ListCardProps } from "./components/jubely/list-card";
+export {
+  KpiTile,
+  KpiTileStrip,
+  type KpiTileProps,
+  type KpiTileStripProps,
+  type KpiTileTone,
+} from "./components/jubely/kpi-tile";
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 export { Textarea } from "./components/ui/textarea";
 export {

@@ -1,8 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { authedJson } from "@/lib/http";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  KpiTile,
+  KpiTileStrip,
+} from "@jubely/ui";
+import { useTranslations } from "next-intl";
 import { SubscriptionBanner } from "@/components/store/subscription-banner";
+import { MerchantPageShell } from "@/components/store/merchant-page-shell";
+import { useMerchantLocationScope } from "@/hooks/useMerchantLocationScope";
+import { authedJson } from "@/lib/http";
 
 type SubscriptionView = {
   plan_code: string;
@@ -19,70 +33,118 @@ type SubscriptionView = {
 };
 
 export default function StoreSubscriptionPage() {
+  const t = useTranslations("store.subscription");
+  const { headerContext } = useMerchantLocationScope();
   const [sub, setSub] = useState<SubscriptionView | null>(null);
-  const [invoice, setInvoice] = useState<{ pay_reference?: string; amount_fcfa?: number; instructions?: string } | null>(null);
+  const [invoice, setInvoice] = useState<{
+    pay_reference?: string;
+    amount_fcfa?: number;
+    instructions?: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [period, setPeriod] = useState<"month" | "year">("month");
 
   useEffect(() => {
     void authedJson<SubscriptionView>("/v1/organizations/me/subscription")
       .then(setSub)
-      .catch((e) => setError(e instanceof Error ? e.message : "Erreur"));
+      .catch((e) => setError(e instanceof Error ? e.message : "Error"));
   }, []);
 
   async function requestMoMo() {
     setError(null);
     try {
-      const inv = await authedJson<{ pay_reference: string; amount_fcfa: number; instructions: string }>(
-        "/v1/organizations/me/subscription/momo-invoice",
-        { method: "POST" },
-      );
+      const inv = await authedJson<{
+        pay_reference: string;
+        amount_fcfa: number;
+        instructions: string;
+      }>("/v1/organizations/me/subscription/momo-invoice", { method: "POST" });
       setInvoice(inv);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("invoiceError"));
     }
   }
 
+  const price =
+    period === "year"
+      ? sub?.plan?.price_yearly_fcfa
+      : sub?.plan?.price_monthly_fcfa;
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-6">
-      <h1 className="text-2xl font-semibold">Abonnement Jubelee</h1>
+    <MerchantPageShell title={t("title")} context={headerContext} className="space-y-6">
+      <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       <SubscriptionBanner />
-      {error && <p className="text-destructive text-sm">{error}</p>}
-      {sub && (
-        <div className="rounded-lg border p-4 space-y-2">
-          <p>
-            <span className="text-muted-foreground">Forfait</span> {sub.plan?.name ?? sub.plan_code}
-          </p>
-          <p>
-            <span className="text-muted-foreground">Statut</span> {sub.status}
-          </p>
-          {sub.trial_ends_at && (
-            <p>
-              <span className="text-muted-foreground">Fin d&apos;essai</span>{" "}
-              {new Date(sub.trial_ends_at).toLocaleDateString("fr-FR")}
-            </p>
-          )}
-          {sub.plan && (
-            <p className="text-sm text-muted-foreground">
-              {sub.plan.price_monthly_fcfa.toLocaleString("fr-FR")} FCFA / mois · jusqu&apos;à {sub.plan.max_stores}{" "}
-              boutique(s)
-            </p>
-          )}
-        </div>
-      )}
-      <button
-        type="button"
-        className="rounded-md bg-primary px-4 py-2 text-primary-foreground"
-        onClick={() => void requestMoMo()}
-      >
-        Obtenir une référence Mobile Money
-      </button>
-      {invoice?.pay_reference && (
-        <div className="rounded-lg border border-dashed p-4 text-sm">
-          <p className="font-mono text-lg">{invoice.pay_reference}</p>
-          <p>{invoice.amount_fcfa?.toLocaleString("fr-FR")} FCFA</p>
-          <p className="text-muted-foreground mt-2">{invoice.instructions}</p>
-        </div>
-      )}
-    </div>
+
+      <div className="flex gap-1 rounded-[10px] bg-secondary p-1 w-fit">
+        {(["month", "year"] as const).map((value) => (
+          <Button
+            key={value}
+            type="button"
+            size="sm"
+            variant={period === value ? "default" : "ghost"}
+            onClick={() => setPeriod(value)}
+          >
+            {value === "month" ? t("monthly") : t("yearly")}
+          </Button>
+        ))}
+      </div>
+
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+      {sub ? (
+        <>
+          <Card className="overflow-hidden border-0 bg-[#1A1610] text-[#F2EBDC]">
+            <CardContent className="flex flex-wrap items-center gap-4 p-5">
+              <div className="flex-1">
+                <p className="text-xs tracking-[0.1em] text-[#E8E2D5]/60 uppercase">{t("currentPlan")}</p>
+                <p className="font-serif text-3xl font-medium italic">{sub.plan?.name ?? sub.plan_code}</p>
+              </div>
+              <div className="text-right text-sm text-[#E8E2D5]/75">
+                <Badge variant="outline" className="border-[#E8E2D5]/20 text-[#F2EBDC]">
+                  {sub.status}
+                </Badge>
+                {sub.trial_ends_at ? (
+                  <p className="mt-2">
+                    {t("trialEnds")} {new Date(sub.trial_ends_at).toLocaleDateString()}
+                  </p>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+
+          <KpiTileStrip>
+            <KpiTile
+              label={t("priceLabel")}
+              value={price ? `${price.toLocaleString()} F` : "—"}
+              tone="gold"
+            />
+            <KpiTile
+              label={t("storesLimit")}
+              value={sub.plan?.max_stores ?? "—"}
+              tone="teal"
+            />
+            <KpiTile label={t("billingPeriod")} value={sub.billing_period} tone="emerald" />
+          </KpiTileStrip>
+        </>
+      ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("paymentTitle")}</CardTitle>
+          <CardDescription>{t("paymentDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button type="button" onClick={() => void requestMoMo()}>
+            {t("requestMomo")}
+          </Button>
+          {invoice?.pay_reference ? (
+            <div className="rounded-xl border border-dashed p-4 text-sm">
+              <p className="font-mono text-lg">{invoice.pay_reference}</p>
+              <p>{invoice.amount_fcfa?.toLocaleString()} FCFA</p>
+              <p className="mt-2 text-muted-foreground">{invoice.instructions}</p>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+    </MerchantPageShell>
   );
 }

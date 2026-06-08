@@ -4,8 +4,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { customerSelectContext, customerGetWallet } from "@/lib/customerApi";
-import { IconStore, IconChevronRight, IconSearch } from "@/components/agent/icons";
+import { customerSelectContext } from "@/lib/customerApi";
+import { IconStore, IconSearch } from "@/components/agent/icons";
 import { IconPin } from "@/components/customer/icons";
 import { useSession } from "@/hooks/useSession";
 import { bootstrapAuthFromServer } from "@/lib/session";
@@ -73,11 +73,6 @@ export default function StoresPage() {
   const t = useTranslations("customer.stores");
   const { session } = useSession();
   const nearbyOrigin = useNearbyOrigin();
-  const { data } = useQuery({
-    queryKey: ["pwa", "wallet", session?.activeEnrollmentId],
-    enabled: Boolean(session?.activeEnrollmentId),
-    queryFn: () => customerGetWallet(),
-  });
   const selectMut = useMutation({
     mutationFn: async (enrollmentId: string) => {
       await customerSelectContext(enrollmentId);

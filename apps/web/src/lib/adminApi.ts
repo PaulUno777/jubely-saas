@@ -9,7 +9,7 @@ import {
   type SuperadminStats,
   type Tenant,
 } from "@jubely/api-schemas";
-import { authedFetch, authedJson, joinUrl, joinUrlWithQuery } from "./http";
+import { authedFetch, authedJson, joinUrlWithQuery } from "./http";
 
 const SUPER = "/v1/superadmin";
 

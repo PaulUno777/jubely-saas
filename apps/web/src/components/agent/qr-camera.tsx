@@ -30,9 +30,15 @@ export function QrCamera({ onDetect }: QrCameraProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
+  const onDetectRef = useRef(onDetect);
+  const scheduleScanRef = useRef<() => void>(() => {});
   const [state, setState] = useState<CameraState>(() =>
     isBarcodeDetectorSupported() ? "idle" : "unsupported",
   );
+
+  useEffect(() => {
+    onDetectRef.current = onDetect;
+  }, [onDetect]);
 
   const stopCamera = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
@@ -42,7 +48,7 @@ export function QrCamera({ onDetect }: QrCameraProps) {
   const scheduleScan = useCallback(() => {
     rafRef.current = requestAnimationFrame(async () => {
       if (!videoRef.current || videoRef.current.readyState < 2) {
-        scheduleScan();
+        scheduleScanRef.current();
         return;
       }
       try {
@@ -51,15 +57,19 @@ export function QrCamera({ onDetect }: QrCameraProps) {
         const results = await detector.detect(videoRef.current);
         if (results.length > 0) {
           stopCamera();
-          onDetect(results[0].rawValue as string);
+          onDetectRef.current(results[0].rawValue as string);
           return;
         }
       } catch {
         // continue scanning
       }
-      scheduleScan();
+      scheduleScanRef.current();
     });
-  }, [onDetect, stopCamera]);
+  }, [stopCamera]);
+
+  useEffect(() => {
+    scheduleScanRef.current = scheduleScan;
+  }, [scheduleScan]);
 
   const startCamera = useCallback(async () => {
     setState("loading");
@@ -73,18 +83,23 @@ export function QrCamera({ onDetect }: QrCameraProps) {
         await videoRef.current.play();
       }
       setState("scanning");
-      scheduleScan();
+      scheduleScanRef.current();
     } catch {
       setState("denied");
     }
-  }, [scheduleScan]);
+  }, []);
 
   useEffect(() => {
     if (!isBarcodeDetectorSupported()) {
       return;
     }
-    void startCamera();
-    return () => stopCamera();
+    const frame = requestAnimationFrame(() => {
+      void startCamera();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      stopCamera();
+    };
   }, [startCamera, stopCamera]);
 
   if (state === "unsupported") {
