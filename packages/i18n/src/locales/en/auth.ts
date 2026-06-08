@@ -1,0 +1,63 @@
+const auth = {
+  login: {
+    hint: "Use your email and password to manage a store. If you belong to more than one workspace, you'll choose it after sign-in.",
+    accessEyebrow: "ACCESS",
+    title: "Hello.",
+    subtitle: "Sign in with your email and password.",
+    tenantSlugLabel: "Store identifier",
+    tenantSlugPlaceholder: "chez-mama",
+    tenantSlugHelp:
+      "Leave empty for superadmin access. Enter the store slug for a merchant admin, agent, or customer.",
+    mfaSteps: {
+      identity: "Identity",
+      method: "2FA method",
+      verification: "Verification",
+    },
+    method: {
+      eyebrow: "SECOND FACTOR",
+      title: "Choose a method",
+      subtitle: "How would you like to verify your identity?",
+      totpTitle: "TOTP app",
+      totpDescription: "Google Authenticator, Authy, 1Password",
+      passkeyTitle: "Passkey",
+      passkeyDescription: "Face ID, Touch ID, FIDO2 key",
+    },
+    totp: {
+      eyebrow: "AUTHENTICATOR APP",
+      title: "6-digit code",
+      subtitle: "Open Google Authenticator or Authy and enter the code.",
+      verify: "Verify code",
+    },
+    passkey: {
+      eyebrow: "PASSKEY",
+      title: "Biometric verification",
+      subtitle: "Use Face ID, Touch ID, or your security key to sign in without a code.",
+      authenticate: "Authenticate with passkey",
+    },
+  },
+  invite: {
+    title: "Activate your account",
+    subtitle: "Set a password to join the team.",
+    loading: "Loading invitation…",
+    invalidToken: "Missing invitation token.",
+    notFound: "This invitation link is invalid.",
+    expired: "This invitation has expired. Ask your manager for a new one.",
+    alreadyAccepted: "This invitation was already used. Sign in instead.",
+    storeLabel: "Store",
+    emailLabel: "Invited email",
+    roleLabel: "Role",
+    password: "Password",
+    passwordConfirm: "Confirm password",
+    passwordHint: "At least 8 characters.",
+    passwordMismatch: "Passwords do not match.",
+    activate: "Activate account",
+    activating: "Activating…",
+    successTitle: "Account ready",
+    successBody: "Sign in with your email and the password you just set. We'll take you to the right workspace next.",
+    storeSlugLabel: "Workspace hint",
+    goToLogin: "Go to sign in",
+    genericError: "Something went wrong",
+  },
+} as const;
+
+export default auth;

@@ -1,0 +1,7 @@
+FROM golang:1.26-alpine
+
+WORKDIR /workspace/backend
+
+RUN apk add --no-cache git ca-certificates tzdata
+
+EXPOSE 8080

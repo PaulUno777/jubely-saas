@@ -1,0 +1,65 @@
+name: jubely-local
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.dev
+    container_name: jubely-backend
+    working_dir: /workspace/backend
+    command: sh -c "/usr/local/go/bin/go run ./cmd/api"
+    ports:
+      - "8082:8080"
+    env_file:
+      - backend/.env
+    environment:
+      DATABASE_URL: postgresql://jubely:jubely@postgres:5432/jubely
+    volumes:
+      - ./backend:/workspace/backend
+      - ./backend/.uploads:/workspace/backend/.uploads
+      - jubely-go-cache:/go/pkg/mod
+      - jubely-go-build:/root/.cache/go-build
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - jubely
+
+  postgres:
+    image: postgres:17
+    container_name: jubely-postgres
+    environment:
+      POSTGRES_DB: jubely
+      POSTGRES_USER: jubely
+      POSTGRES_PASSWORD: jubely
+    ports:
+      - "5432:5432"
+    volumes:
+      - jubely-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jubely -d jubely"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - jubely
+
+  adminer:
+    image: adminer:4
+    container_name: jubely-adminer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
+    networks:
+      - jubely
+
+volumes:
+  jubely-postgres-data:
+  jubely-go-cache:
+  jubely-go-build:
+
+networks:
+  jubely:
+    driver: bridge

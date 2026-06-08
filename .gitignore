@@ -1,3 +1,20 @@
-.cursor
-/context
+# Cursor local workspace metadata
+# We intentionally do NOT ignore all of `.cursor/`, so we can commit selected project rules.
+.cursor/prompts/**
+.cursor/commands/**
+# Keep `.cursor/rules/` (except the intended file) clean locally
+.cursor/rules/**
+!.cursor/rules/architecture.md
+/context/template_inspirations
+**/node_modules/
+**/.next/
+**/dist/
+backend/.gocache/
+backend/.gopath/
+backend/bin/
+backend/.uploads/
 .DS_Store
+.vscode
+
+
+.env

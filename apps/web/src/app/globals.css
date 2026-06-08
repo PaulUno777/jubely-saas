@@ -1,0 +1,268 @@
+@import "tailwindcss";
+
+@source "../../**/*.{ts,tsx}";
+@source "../../../../packages/ui/src/**/*.{ts,tsx}";
+
+@import "@jubely/ui/styles.css";
+
+@theme inline {
+  --font-sans: var(--jubely-font-body);
+  --font-display: var(--jubely-font-display);
+  --font-mono: var(--jubely-font-mono);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-reward: var(--reward);
+  --color-reward-surface: var(--reward-surface);
+  --color-reward-foreground: var(--reward-foreground);
+  --color-human: var(--human);
+  --color-human-surface: var(--human-surface);
+  --color-human-foreground: var(--human-foreground);
+  --color-growth: var(--growth);
+  --color-growth-surface: var(--growth-surface);
+  --color-growth-foreground: var(--growth-foreground);
+
+  /* Sidebar tokens */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100svh;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+@layer utilities {
+  .admin-production-dot {
+    animation: admin-production-pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes admin-production-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0
+        color-mix(in srgb, var(--status-suspended) 55%, transparent);
+    }
+
+    50% {
+      opacity: 0.45;
+      box-shadow: 0 0 0 6px transparent;
+    }
+  }
+
+  .surface-human {
+    background-color: var(--human-surface);
+    color: var(--human-foreground);
+  }
+
+  .surface-growth {
+    background-color: var(--growth-surface);
+    color: var(--growth-foreground);
+  }
+
+  .surface-reward {
+    background-color: var(--reward-surface);
+    color: var(--reward-foreground);
+  }
+
+  .text-reward {
+    color: var(--reward);
+  }
+
+  .text-human {
+    color: var(--human);
+  }
+
+  .border-reward {
+    border-color: color-mix(in srgb, var(--reward) 35%, transparent);
+  }
+
+  .border-human {
+    border-color: color-mix(in srgb, var(--human) 35%, transparent);
+  }
+
+  .border-growth {
+    border-color: color-mix(in srgb, var(--growth) 35%, transparent);
+  }
+
+  .merchant-portal-inset {
+    background:
+      radial-gradient(
+        ellipse 120% 80% at 100% -20%,
+        color-mix(in srgb, var(--growth) 8%, transparent),
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 90% 60% at -10% 0%,
+        color-mix(in srgb, var(--reward) 6%, transparent),
+        transparent 50%
+      ),
+      var(--background);
+  }
+
+  .dark[data-profile="admin"] .admin-portal-inset {
+    background:
+      radial-gradient(
+        ellipse 110% 70% at 100% -15%,
+        color-mix(in srgb, var(--primary) 12%, transparent),
+        transparent 50%
+      ),
+      radial-gradient(
+        ellipse 80% 50% at 0% 0%,
+        color-mix(in srgb, var(--status-active) 8%, transparent),
+        transparent 45%
+      ),
+      var(--background);
+  }
+
+  .dark[data-profile="merchant"] .merchant-portal-inset {
+    background:
+      radial-gradient(
+        ellipse 120% 80% at 100% -20%,
+        color-mix(in srgb, var(--growth) 10%, transparent),
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 90% 60% at -10% 0%,
+        color-mix(in srgb, var(--reward) 8%, transparent),
+        transparent 50%
+      ),
+      var(--background);
+  }
+
+  .merchant-portal-toolbar {
+    background: color-mix(in srgb, var(--card) 72%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
+  .merchant-portal-header,
+  .admin-portal-header,
+  .portal-topbar {
+    margin: 0;
+    background: var(--background);
+  }
+
+  .portal-card {
+    background-color: var(--portal-card-bg);
+    border: 1px solid var(--portal-card-border);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--portal-card-border) 80%, transparent);
+  }
+
+  .portal-kpi-card {
+    background-color: var(--portal-card-bg);
+    border: 1px solid var(--portal-card-border);
+  }
+
+  .jb-surface-neutral {
+    background-color: var(--secondary);
+  }
+
+  .jb-topbar-meta::before {
+    content: "·";
+    margin-right: 0.5rem;
+    color: var(--muted-foreground);
+    opacity: 0.7;
+  }
+
+  @media (max-width: 639px) {
+    .jb-topbar-meta::before {
+      display: none;
+    }
+  }
+
+  .jb-sidebar-store-card {
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .group[data-collapsible="icon"]:has(.jb-merchant-sidebar-header) [data-sidebar="header"],
+  .group[data-collapsible="icon"]:has(.jb-merchant-sidebar-header) [data-sidebar="footer"] {
+    overflow: visible;
+  }
+
+  .group[data-collapsible="icon"]:has(.jb-merchant-sidebar-header) [data-sidebar="group"] {
+    padding-inline: 0.25rem;
+  }
+
+  .group[data-collapsible="icon"]:has(.jb-merchant-sidebar-header) [data-sidebar="menu"] {
+    align-items: center;
+  }
+
+  .group[data-collapsible="icon"]:has(.jb-merchant-sidebar-header) [data-sidebar="menu-button"] {
+    justify-content: center;
+  }
+
+  .group[data-collapsible="icon"]:has(.jb-merchant-sidebar-header) .jb-sidebar-store-mark {
+    flex-shrink: 0;
+  }
+
+  .group[data-collapsible="icon"] [data-sidebar="footer"] {
+    overflow: visible;
+  }
+
+  .group[data-collapsible="icon"] [data-sidebar="footer"] .jb-nav-user-mark {
+    display: flex !important;
+    flex-shrink: 0;
+    opacity: 1 !important;
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .group[data-collapsible="icon"] [data-sidebar="footer"] .jb-nav-user-trigger {
+    overflow: visible;
+  }
+
+  .group[data-collapsible="icon"] [data-sidebar="header"] .jb-sidebar-store-mark {
+    margin-inline: auto;
+  }
+}
