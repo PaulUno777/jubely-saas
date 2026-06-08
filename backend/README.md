@@ -132,11 +132,25 @@ Response includes `customer_qr` for client display.
 
 | Package | Role |
 |---------|------|
-| `interfaces/httpserver/` | Gin router (`router_*.go`), handlers (`handlers_*.go`, `handlers_tenantadmin_*.go`), `Server` deps |
+| `interfaces/httpserver/` | Gin router (`router_*.go`), handlers (`handlers_*.go`), `Server` deps |
 | `interfaces/http/response/` | JSON envelope + `respondOK` / `respondMapped` helpers |
 | `interfaces/http/middleware/` | Auth, CORS, locale, rate limit, subscription gate |
 | `interfaces/http/query/` | Shared query parsers (tenant date range, etc.) |
 | `interfaces/http/presenter/` | JSON DTO mappers for tenant-admin resources |
+
+### `httpserver` file naming
+
+One Go package (`httpserver`); files are grouped by **API surface** for quick navigation:
+
+| Pattern | Example | Registers / contains |
+|---------|---------|----------------------|
+| `router_{surface}.go` | `router_tenants.go`, `router_staff.go` | Route groups under `/v1/{surface}` |
+| `handlers_{surface}_{feature}.go` | `handlers_tenantadmin_rewards.go` | Handlers for that surface |
+| `handlers_tenantadmin_*.go` | `handlers_tenantadmin_billing.go` | Merchant admin (`/v1/tenants/:tenantId/*`) |
+
+**Surfaces:** `public`, `auth`, `superadmin`, `tenants` (tenant admin), `customers`, `staff`, `me`, `webhooks`.
+
+**DRY rule:** merchant admin uses `/v1/tenants/:tenantId/*` only — no `/organizations/me`. Platform ops stay on `/v1/superadmin/tenants/*`.
 
 REST conventions: [`docs/rest-conventions.md`](docs/rest-conventions.md). Route inventory: [`docs/api-routes.md`](docs/api-routes.md).
 

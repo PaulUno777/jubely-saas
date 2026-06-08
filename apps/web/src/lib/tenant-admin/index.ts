@@ -9,6 +9,7 @@ export * as tenantCampaigns from "./campaigns";
 export * as tenantAnalytics from "./analytics";
 export * as tenantQR from "./qr-branding";
 export * as tenantMetrics from "./metrics";
+export * as tenantBilling from "./billing";
 
 // Convenience re-exports for common call sites
 export { listCustomers, getCustomer, adjustCustomerPoints } from "./customers";
@@ -53,3 +54,4 @@ export {
   type TenantMetricsQuery,
   type NearbyLocationsQuery,
 } from "./metrics";
+export { getSubscription, createMoMoInvoice, type SubscriptionView, type MoMoInvoiceView } from "./billing";

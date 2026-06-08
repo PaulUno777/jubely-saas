@@ -11,6 +11,45 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func Tenant(t *domain.Tenant) gin.H {
+	var settings any
+	if len(t.Settings) > 0 && json.Valid(t.Settings) {
+		_ = json.Unmarshal(t.Settings, &settings)
+	}
+	if settings == nil {
+		settings = map[string]any{}
+	}
+	logoURL := ""
+	if m, ok := settings.(map[string]any); ok {
+		if v, ok := m["logo_url"].(string); ok {
+			logoURL = v
+		}
+	}
+	return gin.H{
+		"tenant_id":                  t.ID.String(),
+		"name":                       t.Name,
+		"slug":                       t.Slug,
+		"self_serve":                 t.SelfServe,
+		"active":                     t.Active,
+		"plan":                       t.Plan,
+		"conflict_policy":            t.ConflictPolicy,
+		"allow_staff_self_enrollment": t.AllowStaffSelfEnrollment,
+		"settings":                   settings,
+		"logo_url":                   logoURL,
+		"created_at":                 t.CreatedAt,
+		"updated_at":                 t.UpdatedAt,
+	}
+}
+
+func UserPublic(u domain.UserPublic) gin.H {
+	return gin.H{
+		"user_id":    u.ID.String(),
+		"email":      u.Email,
+		"role":       u.Role.String(),
+		"created_at": u.CreatedAt,
+	}
+}
+
 func TenantCustomerDetail(out *loyalty.TenantCustomerDetail) gin.H {
 	item := gin.H{
 		"enrollment_id":  out.Enrollment.ID.String(),

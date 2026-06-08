@@ -6,7 +6,7 @@ All JSON routes live under `/v1/`. Responses use the standard envelope (`data` +
 
 - **Collections use plural nouns**: `/tenants/:tenantId/customers`, `/campaigns`, `/rewards`.
 - **Tenant scope**: merchant and agent APIs are under `/v1/tenants/:tenantId/*`. The JWT `tenant_id` must match `:tenantId`.
-- **No duplicate surfaces**: legacy `/v1/store/*` was removed; use tenant-scoped routes instead.
+- **No duplicate surfaces**: legacy `/v1/store/*` and `/v1/organizations/me/*` were removed; merchant admin uses `/v1/tenants/:tenantId/*` only.
 - **UI route prefixes** (`/store/*`, `/agent/*`) are portal shells only—they are not API resource names.
 
 ## HTTP verbs
@@ -36,7 +36,9 @@ When an endpoint is not CRUD on a persistent entity, model it as a **sub-resourc
 | Phone OTP confirm | `POST /v1/public/phone-verifications/:id/confirmations` |
 | Staff redemption check | `POST /v1/staff/redemption-validations` |
 | Reward claim | `POST /v1/customers/me/reward-claims` with `{ "reward_id": "..." }` |
-| MoMo invoice confirm | `POST /organizations/me/subscription/invoices/:invoiceId/confirmations` |
+| MoMo subscription | `GET /tenants/:tenantId/subscription` |
+| MoMo invoice create | `POST /tenants/:tenantId/subscription/invoices` |
+| MoMo invoice confirm | `POST /tenants/:tenantId/subscription/invoices/:invoiceId/confirmations` |
 
 ## Auth and sessions
 

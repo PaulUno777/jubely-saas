@@ -9,7 +9,7 @@ Use this checklist after API and web are running with a fresh or known database.
 1. **Database** migrated (API runs goose on startup).
 2. **API** listening (e.g. `http://localhost:8082` if mapped via Docker).
 3. **Web** `NEXT_PUBLIC_API_BASE_URL` (or `API_BASE_URL`) points at that API origin.
-4. **Superadmin** exists (`POST /v1/bootstrap/superadmin` with bootstrap secret, or auto-seed env if enabled).
+4. **Superadmin** exists (`POST /v1/setup/superadmin` with bootstrap secret, or auto-seed env if enabled).
 
 ## Flow
 

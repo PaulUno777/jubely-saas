@@ -42,6 +42,7 @@ func TestRouter_registersKeyRoutes(t *testing.T) {
 		{"GET", "/v1/me/mfa"},
 		{"POST", "/v1/public/phone-verifications"},
 		{"GET", "/v1/tenants/:tenantId/enrollment-qr"},
+		{"GET", "/v1/tenants/:tenantId/subscription"},
 	}
 
 	for _, want := range required {
@@ -58,6 +59,8 @@ func TestRouter_registersKeyRoutes(t *testing.T) {
 		{"GET", "/v1/store/metrics"},
 		{"POST", "/v1/auth/login"},
 		{"POST", "/v1/staff/purchases"},
+		{"GET", "/v1/organizations/me/stores"},
+		{"GET", "/v1/organizations/me/subscription"},
 	}
 	for _, gone := range removed {
 		key := routeKey(gone.method, gone.path)
@@ -77,7 +80,7 @@ func TestRouter_routeCount(t *testing.T) {
 	}
 	r := NewRouter(signer, &Server{})
 
-	const wantMin = 88
+	const wantMin = 86
 	if n := len(r.Routes()); n < wantMin {
 		t.Errorf("expected at least %d routes, got %d", wantMin, n)
 	}

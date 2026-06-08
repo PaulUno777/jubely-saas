@@ -1,11 +1,12 @@
 package httpserver
 
 import (
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"encoding/json"
 	"net/http"
 
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
+	"github.com/PaulUno777/jubely-saas/backend/interfaces/http/presenter"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
 )
@@ -21,7 +22,7 @@ func (s *Server) TenantGetSettings(c *gin.Context) {
 		respondMapped(c, mapTenantError(err))
 		return
 	}
-	respondOK(c, tenantToGin(t))
+	respondOK(c, presenter.Tenant(t))
 }
 
 type tenantPatchSettingsBody struct {
@@ -57,7 +58,7 @@ func (s *Server) TenantPatchSettings(c *gin.Context) {
 		respondMapped(c, mapTenantError(err))
 		return
 	}
-	respondOK(c, tenantToGin(out.Tenant))
+	respondOK(c, presenter.Tenant(out.Tenant))
 }
 
 type tenantCreateInvitationBody struct {

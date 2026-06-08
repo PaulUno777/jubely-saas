@@ -2,16 +2,19 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { authedJson } from "@/lib/http";
+import { useTenantId } from "@/hooks/useTenantId";
+import { getSubscription } from "@/lib/tenant-admin/billing";
 
 export function SubscriptionBanner() {
+  const tenantId = useTenantId();
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    void authedJson<{ status: string }>("/v1/organizations/me/subscription")
+    if (!tenantId) return;
+    void getSubscription(tenantId)
       .then((sub) => setStatus(sub.status))
       .catch(() => {});
-  }, []);
+  }, [tenantId]);
 
   if (!status || status === "active" || status === "trialing") return null;
 

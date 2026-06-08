@@ -23,7 +23,7 @@ REST routes under `/v1/*` (proxied via BFF where cookies are needed). Full inven
 | Public signup | `POST /v1/public/merchant-applications` |
 | Sessions | `POST /v1/sessions`, `PUT /v1/sessions/current/workspace` |
 | Superadmin | `GET /v1/superadmin/tenants` |
-| Tenant admin | `GET /v1/tenants/:tenantId/metrics`, `customers`, `transactions`, `invitations` |
+| Tenant admin | `GET /v1/tenants/:tenantId/metrics`, `customers`, `transactions`, `subscription`, `invitations` |
 | Agent (staff) | `POST /v1/staff/customers`, `POST /v1/staff/transactions` |
 | Customer | `POST /v1/customer-sessions`, `GET /v1/customers/me/rewards` |
 

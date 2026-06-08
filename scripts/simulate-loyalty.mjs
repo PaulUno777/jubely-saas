@@ -88,11 +88,11 @@ function callApi(method, path, opts = {}) {
   return api(config.apiBase, method, path, opts);
 }
 
-async function listOrgStores(token) {
-  const res = await callApi("GET", "/v1/organizations/me/stores", {
+async function listTenantLocations(token, tenantId) {
+  const res = await callApi("GET", `/v1/tenants/${encodeURIComponent(tenantId)}/locations`, {
     headers: { authorization: `Bearer ${token}` },
   });
-  return asArray(asObject(data(res.json), "stores").stores);
+  return asArray(asObject(data(res.json), "locations").locations);
 }
 
 async function publicEnroll(storeQr, customer) {
@@ -371,7 +371,7 @@ async function main() {
   const merchantToken = merchantSession.accessToken;
   const tenantId = merchantSession.tenantId;
 
-  const stores = await listOrgStores(merchantToken);
+  const stores = await listTenantLocations(merchantToken, tenantId);
   const hq =
     stores.find((s) => typeof s === "object" && s && s.is_hq) ??
     stores.find((s) => typeof s === "object" && s && s.slug === "main") ??

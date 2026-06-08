@@ -54,21 +54,9 @@ Group `/v1/superadmin`.
 
 ## Authenticated — merchant admin (`tenant_id` = organization, optional `active_store_id`)
 
-Group `/v1/organizations/me` (org-wide billing & boutiques).
-
-| Method | Path                                      | Description                                      |
-| ------ | ----------------------------------------- | ------------------------------------------------ |
-| GET    | `/organizations/me/stores`                | List boutiques                                   |
-| POST   | `/organizations/me/stores`                  | Create boutique (quota-enforced)                 |
-| GET    | `/organizations/me/subscription`          | Subscription + plan limits                       |
-| POST   | `/organizations/me/subscription/invoices` | MoMo pay-by-reference (`JBE-PAY-*`)              |
-| POST   | `/organizations/me/subscription/invoices/:invoiceId/confirmations` | Mark invoice paid (MVP manual confirm) |
+Group `/v1/tenants/:tenantId`. Requires merchant admin JWT with matching `tenant_id` scope. This is the **only** merchant-admin API surface (billing, locations, loyalty, settings).
 
 JWT may include `active_store_id` (staff counter context) and `subscription_status` (`active`, `trialing`, `frozen`, …). Writes are blocked when status is not `active` or `trialing`.
-
-### Merchant tenant API (primary — `/store` portal)
-
-Group `/v1/tenants/:tenantId`. Requires merchant admin JWT with matching `tenant_id` scope.
 
 **Query conventions**
 
@@ -107,6 +95,9 @@ Group `/v1/tenants/:tenantId`. Requires merchant admin JWT with matching `tenant
 | GET/PATCH | `/tenants/:id/settings` | Tenant profile + policies |
 | GET/PUT | `/tenants/:id/settings/locales` | Supported locales |
 | GET/POST/PATCH | `/tenants/:id/campaigns` | Campaign CRUD; `PATCH` with `status` for launch/pause |
+| GET | `/tenants/:id/subscription` | Subscription + plan limits |
+| POST | `/tenants/:id/subscription/invoices` | MoMo pay-by-reference invoice |
+| POST | `/tenants/:id/subscription/invoices/:invoiceId/confirmations` | Mark invoice paid (MVP manual confirm) |
 | GET | `/tenants/:id/analytics/*` | Overview, member growth, tier distribution, heatmap, top rewards, retention |
 
 Zod wire schemas: `packages/api-schemas/src/tenant-admin.ts`.

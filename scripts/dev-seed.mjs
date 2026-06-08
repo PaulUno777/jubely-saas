@@ -4,7 +4,7 @@
  *
  * Seeds:
  * - superadmin + organizations (each new org gets HQ store `main` + Growth trialing subscription)
- * - Chez Mama: activate MoMo subscription, then extra boutiques via POST /organizations/me/stores
+ * - Chez Mama: activate MoMo subscription, then extra boutiques via POST /v1/tenants/:tenantId/locations
  * - separate single-store orgs for multi-workspace agent demo
  * - org-wide rules + rewards via /v1/tenants/:id/*; purchases tagged per boutique
  * - 15 days of backdated purchase activity (occurred_at) for charts / analytics
@@ -383,16 +383,16 @@ async function ensureTenant(superToken, org) {
   return found.tenant_id;
 }
 
-async function listOrgStores(merchantToken) {
-  const res = await callApi("GET", "/v1/organizations/me/stores", {
+async function listTenantLocations(merchantToken, tenantId) {
+  const res = await callApi("GET", `/v1/tenants/${encodeURIComponent(tenantId)}/locations`, {
     headers: { authorization: `Bearer ${merchantToken}` },
   });
-  const payload = asObject(data(res.json), "org stores");
-  return /** @type {OrgStoreRow[]} */ (asArray(payload.stores));
+  const payload = asObject(data(res.json), "tenant locations");
+  return /** @type {OrgStoreRow[]} */ (asArray(payload.locations));
 }
 
-async function createOrgStore(merchantToken, boutique) {
-  const res = await callApi("POST", "/v1/organizations/me/stores", {
+async function createTenantLocation(merchantToken, tenantId, boutique) {
+  const res = await callApi("POST", `/v1/tenants/${encodeURIComponent(tenantId)}/locations`, {
     headers: { authorization: `Bearer ${merchantToken}` },
     body: {
       slug: boutique.slug,
@@ -408,13 +408,13 @@ async function createOrgStore(merchantToken, boutique) {
   return asObject(data(res.json), `boutique ${boutique.slug}`);
 }
 
-async function ensureOrgBoutiques(merchantToken, boutiques) {
-  let stores = await listOrgStores(merchantToken);
+async function ensureOrgBoutiques(merchantToken, tenantId, boutiques) {
+  let stores = await listTenantLocations(merchantToken, tenantId);
   const slugs = new Set(stores.map((row) => row.slug).filter(Boolean));
   for (const boutique of boutiques) {
     if (slugs.has(boutique.slug)) continue;
     log(`Add boutique ${boutique.slug} (${boutique.name})`);
-    const created = await createOrgStore(merchantToken, boutique);
+    const created = await createTenantLocation(merchantToken, tenantId, boutique);
     stores.push({
       id: typeof created.id === "string" ? created.id : undefined,
       slug: typeof created.slug === "string" ? created.slug : boutique.slug,
@@ -426,29 +426,26 @@ async function ensureOrgBoutiques(merchantToken, boutiques) {
   return stores;
 }
 
-async function activateOrgSubscription(merchantToken) {
-  const subRes = await callApi("GET", "/v1/organizations/me/subscription", {
+async function activateTenantSubscription(merchantToken, tenantId) {
+  const base = `/v1/tenants/${encodeURIComponent(tenantId)}/subscription`;
+  const subRes = await callApi("GET", base, {
     headers: { authorization: `Bearer ${merchantToken}` },
   });
   const sub = asObject(data(subRes.json), "subscription");
   if (sub.status === "active") {
     return;
   }
-  log("Activate org subscription (dev MoMo confirm)");
-  const invRes = await callApi("POST", "/v1/organizations/me/subscription/invoices", {
+  log("Activate tenant subscription (dev MoMo confirm)");
+  const invRes = await callApi("POST", `${base}/invoices`, {
     headers: { authorization: `Bearer ${merchantToken}` },
   });
   const inv = asObject(data(invRes.json), "momo invoice");
   const invoiceId = requireString(inv.id, "invoice id");
   const payRef = requireString(inv.pay_reference, "pay_reference");
-  await callApi(
-    "POST",
-    `/v1/organizations/me/subscription/invoices/${encodeURIComponent(invoiceId)}/confirmations`,
-    {
-      headers: { authorization: `Bearer ${merchantToken}` },
-      body: { pay_reference: payRef },
-    },
-  );
+  await callApi("POST", `${base}/invoices/${encodeURIComponent(invoiceId)}/confirmations`, {
+    headers: { authorization: `Bearer ${merchantToken}` },
+    body: { pay_reference: payRef },
+  });
 }
 
 async function loginScopedWithStore(email, password, tenantSlug, activeStoreId = "") {
@@ -841,7 +838,7 @@ async function main() {
   await waitForApiReady();
 
   log(`Bootstrap superadmin (${config.superEmail})`);
-  await callApi("POST", "/v1/bootstrap/superadmin", {
+  await callApi("POST", "/v1/setup/superadmin", {
     allowError: true,
     headers: { "X-Bootstrap-Secret": config.bootstrapSecret },
     body: { email: config.superEmail, password: config.superPassword },
@@ -875,7 +872,7 @@ async function main() {
     );
 
     if (org.activateBilling) {
-      await activateOrgSubscription(merchantSession.accessToken);
+      await activateTenantSubscription(merchantSession.accessToken, tenantId);
       merchantSession = await loginScoped(
         config.apiBase,
         org.merchantEmail,
@@ -884,9 +881,9 @@ async function main() {
       );
     }
 
-    let orgStores = await listOrgStores(merchantSession.accessToken);
+    let orgStores = await listTenantLocations(merchantSession.accessToken, tenantId);
     if (org.boutiques?.length) {
-      orgStores = await ensureOrgBoutiques(merchantSession.accessToken, org.boutiques);
+      orgStores = await ensureOrgBoutiques(merchantSession.accessToken, tenantId, org.boutiques);
     }
 
     if (org.includeSharedAgent) {

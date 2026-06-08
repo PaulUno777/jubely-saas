@@ -1,46 +1,14 @@
 package httpserver
 
 import (
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
-	"encoding/json"
 	"net/http"
 
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
-
-type createTenantBody struct {
-	Name      string           `json:"name"`
-	Slug      string           `json:"slug"`
-	SelfServe bool             `json:"self_serve"`
-	Plan      string           `json:"plan"`
-	Settings  *json.RawMessage `json:"settings"`
-}
-
-func (s *Server) AdminCreateTenant(c *gin.Context) {
-	var body createTenantBody
-	if err := c.ShouldBindJSON(&body); err != nil {
-		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
-		return
-	}
-	// MVP Option 2: enforce self-serve off until Phase 3 explicitly enables it per tenant.
-	body.SelfServe = false
-
-	out, err := s.CreateTenantUC.Execute(c.Request.Context(), tenant.CreateTenantInput{
-		Name:      body.Name,
-		Slug:      body.Slug,
-		SelfServe: body.SelfServe,
-		Plan:      body.Plan,
-		Settings:  body.Settings,
-	})
-	if err != nil {
-		respondMapped(c, mapTenantError(err))
-		return
-	}
-	respondCreated(c, tenantToGin(out.Tenant))
-}
 
 type createInvitationBody struct {
 	Email string `json:"email"`

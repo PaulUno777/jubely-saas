@@ -22,7 +22,6 @@ func NewRouter(signer *authtoken.JWTSigner, s *Server) *gin.Engine {
 	registerInvitationRoutes(v1, s)
 	registerSuperadminRoutes(v1, signer, s)
 	registerCustomerRoutes(v1, signer, s)
-	registerOrganizationRoutes(v1, signer, s)
 	registerTenantRoutes(v1, signer, s)
 	registerStaffRoutes(v1, signer, s)
 	registerMeRoutes(v1, signer, s)

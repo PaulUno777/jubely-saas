@@ -74,17 +74,9 @@ Normalized routes registered in `interfaces/httpserver/router.go` (phases 5–9 
 | GET | `/v1/customers/me/rewards` |
 | POST | `/v1/customers/me/reward-claims` |
 
-## Organization (`/v1/organizations/me`)
-
-| Method | Path |
-|--------|------|
-| GET | `/v1/organizations/me/stores` |
-| POST | `/v1/organizations/me/stores` |
-| GET | `/v1/organizations/me/subscription` |
-| POST | `/v1/organizations/me/subscription/invoices` |
-| POST | `/v1/organizations/me/subscription/invoices/:invoiceId/confirmations` |
-
 ## Tenant admin (`/v1/tenants/:tenantId`)
+
+Merchant admin uses **only** this surface (DRY — no `/organizations/me`).
 
 | Method | Path |
 |--------|------|
@@ -123,6 +115,9 @@ Normalized routes registered in `interfaces/httpserver/router.go` (phases 5–9 
 | POST | `/v1/tenants/:tenantId/campaigns` |
 | GET | `/v1/tenants/:tenantId/campaigns/:campaignId` |
 | PATCH | `/v1/tenants/:tenantId/campaigns/:campaignId` |
+| GET | `/v1/tenants/:tenantId/subscription` |
+| POST | `/v1/tenants/:tenantId/subscription/invoices` |
+| POST | `/v1/tenants/:tenantId/subscription/invoices/:invoiceId/confirmations` |
 | GET | `/v1/tenants/:tenantId/analytics/overview` |
 | GET | `/v1/tenants/:tenantId/analytics/member-growth` |
 | GET | `/v1/tenants/:tenantId/analytics/tier-distribution` |
@@ -150,7 +145,7 @@ Normalized routes registered in `interfaces/httpserver/router.go` (phases 5–9 
 | POST | `/v1/me/mfa/passkey/register/begin` |
 | POST | `/v1/me/mfa/passkey/register/finish` |
 
-**Total:** 94 routes (1 health + 93 under `/v1`).
+**Total:** 92 routes (1 health + 91 under `/v1`).
 
 ## Removed legacy routes (phases 5–9)
 
@@ -189,3 +184,8 @@ Normalized routes registered in `interfaces/httpserver/router.go` (phases 5–9 
 | `POST …/subscription/confirm-momo` | `POST …/subscription/invoices/:invoiceId/confirmations` |
 | `POST /v1/me/password` | `PATCH /v1/me/credentials/password` |
 | `POST /v1/customers/me/rewards/:rewardId/claims` | `POST /v1/customers/me/reward-claims` `{reward_id}` |
+| `GET /v1/organizations/me/stores` | `GET /v1/tenants/:tenantId/locations` |
+| `POST /v1/organizations/me/stores` | `POST /v1/tenants/:tenantId/locations` |
+| `GET /v1/organizations/me/subscription` | `GET /v1/tenants/:tenantId/subscription` |
+| `POST /v1/organizations/me/subscription/invoices` | `POST /v1/tenants/:tenantId/subscription/invoices` |
+| `POST /v1/organizations/me/subscription/invoices/:invoiceId/confirmations` | `POST /v1/tenants/:tenantId/subscription/invoices/:invoiceId/confirmations` |

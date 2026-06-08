@@ -1,11 +1,12 @@
 package httpserver
 
 import (
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"net/http"
 	"strings"
 
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
+	"github.com/PaulUno777/jubely-saas/backend/interfaces/http/presenter"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
 )
@@ -55,4 +56,17 @@ func (s *Server) PublicStoreSignup(c *gin.Context) {
 		"user_id":      out.UserID.String(),
 		"access_token": out.AccessToken,
 	})
+}
+
+func (s *Server) PublicListPlans(c *gin.Context) {
+	plans, err := s.ListPlansUC.Execute(c.Request.Context())
+	if err != nil {
+		respondMapped(c, mapTenantError(err))
+		return
+	}
+	items := make([]gin.H, 0, len(plans))
+	for _, p := range plans {
+		items = append(items, presenter.PlanCatalog(p))
+	}
+	respondOK(c, gin.H{"plans": items})
 }

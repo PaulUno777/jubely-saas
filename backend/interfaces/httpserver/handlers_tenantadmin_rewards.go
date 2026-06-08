@@ -2,7 +2,6 @@ package httpserver
 
 import (
 	"github.com/PaulUno777/jubely-saas/backend/application/usecase/loyalty"
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"net/http"
 	"strings"
 
@@ -11,6 +10,24 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+type storeCreateRewardBody struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	PointCost   int    `json:"point_cost"`
+	MinTier     string `json:"min_tier"`
+	Active      bool   `json:"active"`
+	StockLimit  *int   `json:"stock_limit"`
+}
+
+type storePatchRewardBody struct {
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	PointCost   *int    `json:"point_cost"`
+	MinTier     *string `json:"min_tier"`
+	Active      *bool   `json:"active"`
+	StockLimit  *int    `json:"stock_limit"`
+}
 
 func (s *Server) TenantCreateReward(c *gin.Context) {
 	tenantID, ok := tenantIDFromScope(c)
@@ -89,27 +106,4 @@ func (s *Server) TenantListRewards(c *gin.Context) {
 		items = append(items, presenter.Reward(rw))
 	}
 	respondOK(c, gin.H{"rewards": items})
-}
-
-func (s *Server) TenantListAgents(c *gin.Context) {
-	tenantID, ok := tenantIDFromScope(c)
-	if !ok {
-		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
-		return
-	}
-	offset, limit := parsePageQuery(c)
-	out, err := s.ListTenantUsersUC.Execute(c.Request.Context(), tenant.ListTenantUsersInput{
-		TenantID: tenantID,
-		Offset:   offset,
-		Limit:    limit,
-	})
-	if err != nil {
-		respondMapped(c, mapTenantError(err))
-		return
-	}
-	items := make([]gin.H, 0, len(out.Users))
-	for _, u := range out.Users {
-		items = append(items, userPublicToGin(u))
-	}
-	respondPage(c, gin.H{"agents": items}, Pagination{Limit: out.Limit, Offset: out.Offset, Total: int(out.Total)})
 }

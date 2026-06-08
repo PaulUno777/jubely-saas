@@ -1,11 +1,10 @@
 package httpserver
 
 import (
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase/loyalty"
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase/staff"
 	"net/http"
 	"strings"
 
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/loyalty"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -95,7 +94,7 @@ func (s *Server) CustomerClaimReward(c *gin.Context) {
 		})
 	}
 	respondCreated(c, gin.H{
-		"redemption_id":      out.RedemptionID.String(),
+		"redemption_id":        out.RedemptionID.String(),
 		"claim_qr":             out.ClaimQR,
 		"display_code":         out.DisplayCode,
 		"expires_at":           out.ExpiresAt,
@@ -103,43 +102,5 @@ func (s *Server) CustomerClaimReward(c *gin.Context) {
 		"balance_after":        out.BalanceAfter,
 		"reward_name":          out.RewardName,
 		"fulfillment_stores":   fs,
-	})
-}
-
-type staffValidateRedemptionBody struct {
-	ClaimQR string `json:"claim_qr"`
-}
-
-func (s *Server) StaffValidateRedemption(c *gin.Context) {
-	claims, ok := Claims(c)
-	if !ok || claims.TenantID == nil {
-		respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
-		return
-	}
-	var body staffValidateRedemptionBody
-	if err := c.ShouldBindJSON(&body); err != nil {
-		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
-		return
-	}
-	out, err := s.StaffValidateRedemptionUC.Execute(c.Request.Context(), staff.StaffValidateRedemptionInput{
-		TenantID: *claims.TenantID,
-		ClaimQR:  body.ClaimQR,
-	})
-	if err != nil {
-		respondMapped(c, mapCustomerError(err))
-		return
-	}
-	fs := make([]gin.H, 0, len(out.FulfillmentStores))
-	for _, st := range out.FulfillmentStores {
-		fs = append(fs, gin.H{"id": st.ID.String(), "name": st.Name, "short": st.Short})
-	}
-	respondOK(c, gin.H{
-		"redemption_id":      out.RedemptionID.String(),
-		"reward_name":        out.RewardName,
-		"points_spent":       out.PointsSpent,
-		"display_code":       out.DisplayCode,
-		"customer_name":      out.CustomerName,
-		"customer_id":        out.CustomerID.String(),
-		"fulfillment_stores": fs,
 	})
 }

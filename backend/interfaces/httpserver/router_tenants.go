@@ -54,6 +54,10 @@ func registerTenantRoutes(v1 *gin.RouterGroup, signer *authtoken.JWTSigner, s *S
 	tenants.GET("/campaigns/:campaignId", RequirePermission(domain.PermViewAnalytics), s.TenantGetCampaign)
 	tenants.PATCH("/campaigns/:campaignId", RequirePermission(domain.PermManageStaff), s.TenantUpdateCampaign)
 
+	tenants.GET("/subscription", s.TenantGetSubscription)
+	tenants.POST("/subscription/invoices", RequireWritableSubscription(), s.TenantCreateMoMoInvoice)
+	tenants.POST("/subscription/invoices/:invoiceId/confirmations", RequireWritableSubscription(), s.TenantConfirmMoMoInvoice)
+
 	analytics := tenants.Group("/analytics")
 	analytics.Use(RequirePermission(domain.PermViewAnalytics))
 	analytics.GET("/overview", s.TenantAnalyticsOverview)
@@ -62,27 +66,4 @@ func registerTenantRoutes(v1 *gin.RouterGroup, signer *authtoken.JWTSigner, s *S
 	analytics.GET("/hourly-heatmap", s.TenantAnalyticsHeatmap)
 	analytics.GET("/top-rewards", s.TenantAnalyticsTopRewards)
 	analytics.GET("/retention-cohorts", s.TenantAnalyticsRetention)
-}
-
-func registerStaffRoutes(v1 *gin.RouterGroup, signer *authtoken.JWTSigner, s *Server) {
-	staff := v1.Group("/staff")
-	staff.Use(AuthMiddleware(signer), RequireStaffOrMerchantAdmin(), RequireWritableSubscription())
-	staff.POST("/customers", RequirePermission(domain.PermEnrollCustomer), s.StaffCreateCustomer)
-	staff.POST("/transactions", RequirePermission(domain.PermRecordTransaction), s.StaffRecordPurchase)
-	staff.POST("/redemption-validations", RequirePermission(domain.PermRecordTransaction), s.StaffValidateRedemption)
-}
-
-func registerMeRoutes(v1 *gin.RouterGroup, signer *authtoken.JWTSigner, s *Server) {
-	me := v1.Group("/me")
-	me.Use(AuthMiddleware(signer))
-	me.PATCH("/credentials/password", s.MeChangePassword)
-
-	meMFA := me.Group("/mfa")
-	meMFA.Use(RequireAdminPortal())
-	meMFA.GET("", s.MeListMFA)
-	meMFA.POST("/totp/setup", s.MeSetupTOTP)
-	meMFA.POST("/totp/confirm", s.MeConfirmTOTP)
-	meMFA.DELETE("/factors/:id", s.MeDeleteFactor)
-	meMFA.POST("/passkey/register/begin", s.MePasskeyRegisterBegin)
-	meMFA.POST("/passkey/register/finish", s.MePasskeyRegisterFinish)
 }

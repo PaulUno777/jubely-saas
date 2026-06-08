@@ -1,48 +1,19 @@
 package httpserver
 
 import (
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
+	"github.com/PaulUno777/jubely-saas/backend/interfaces/http/presenter"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
-
-func tenantToGin(t *domain.Tenant) gin.H {
-	var settings any
-	if len(t.Settings) > 0 && json.Valid(t.Settings) {
-		_ = json.Unmarshal(t.Settings, &settings)
-	}
-	if settings == nil {
-		settings = map[string]any{}
-	}
-	logoURL := ""
-	if m, ok := settings.(map[string]any); ok {
-		if v, ok := m["logo_url"].(string); ok {
-			logoURL = v
-		}
-	}
-	return gin.H{
-		"tenant_id":       t.ID.String(),
-		"name":            t.Name,
-		"slug":            t.Slug,
-		"self_serve":      t.SelfServe,
-		"active":          t.Active,
-		"plan":            t.Plan,
-		"conflict_policy": t.ConflictPolicy,
-		"allow_staff_self_enrollment": t.AllowStaffSelfEnrollment,
-		"settings":        settings,
-		"logo_url":        logoURL,
-		"created_at":      t.CreatedAt,
-		"updated_at":      t.UpdatedAt,
-	}
-}
 
 func parsePageQuery(c *gin.Context) (offset, limit int) {
 	limit, _ = strconv.Atoi(c.Query("limit"))
@@ -66,6 +37,36 @@ func parseTimeRangeQuery(c *gin.Context) (from, to *time.Time) {
 	return from, to
 }
 
+type createTenantBody struct {
+	Name      string           `json:"name"`
+	Slug      string           `json:"slug"`
+	SelfServe bool             `json:"self_serve"`
+	Plan      string           `json:"plan"`
+	Settings  *json.RawMessage `json:"settings"`
+}
+
+func (s *Server) AdminCreateTenant(c *gin.Context) {
+	var body createTenantBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
+		return
+	}
+	body.SelfServe = false
+
+	out, err := s.CreateTenantUC.Execute(c.Request.Context(), tenant.CreateTenantInput{
+		Name:      body.Name,
+		Slug:      body.Slug,
+		SelfServe: body.SelfServe,
+		Plan:      body.Plan,
+		Settings:  body.Settings,
+	})
+	if err != nil {
+		respondMapped(c, mapTenantError(err))
+		return
+	}
+	respondCreated(c, presenter.Tenant(out.Tenant))
+}
+
 func (s *Server) AdminListTenants(c *gin.Context) {
 	offset, limit := parsePageQuery(c)
 	out, err := s.ListTenantsUC.Execute(c.Request.Context(), tenant.ListTenantsInput{Offset: offset, Limit: limit})
@@ -75,7 +76,7 @@ func (s *Server) AdminListTenants(c *gin.Context) {
 	}
 	items := make([]gin.H, 0, len(out.Tenants))
 	for i := range out.Tenants {
-		items = append(items, tenantToGin(&out.Tenants[i]))
+		items = append(items, presenter.Tenant(&out.Tenants[i]))
 	}
 	respondPage(c, items, Pagination{
 		Limit:  out.Limit,
@@ -95,16 +96,16 @@ func (s *Server) AdminGetTenant(c *gin.Context) {
 		respondMapped(c, mapTenantError(err))
 		return
 	}
-	respondOK(c, tenantToGin(t))
+	respondOK(c, presenter.Tenant(t))
 }
 
 type patchTenantBody struct {
-	Name           *string          `json:"name"`
-	Active         *bool            `json:"active"`
-	Plan           *string          `json:"plan"`
-	ConflictPolicy *string          `json:"conflict_policy"`
-	AllowStaffSelfEnrollment *bool  `json:"allow_staff_self_enrollment"`
-	Settings       *json.RawMessage `json:"settings"`
+	Name                     *string          `json:"name"`
+	Active                   *bool            `json:"active"`
+	Plan                     *string          `json:"plan"`
+	ConflictPolicy           *string          `json:"conflict_policy"`
+	AllowStaffSelfEnrollment *bool            `json:"allow_staff_self_enrollment"`
+	Settings                 *json.RawMessage `json:"settings"`
 }
 
 func (s *Server) AdminPatchTenant(c *gin.Context) {
@@ -123,28 +124,19 @@ func (s *Server) AdminPatchTenant(c *gin.Context) {
 		return
 	}
 	out, err := s.UpdateTenantUC.Execute(c.Request.Context(), tenant.UpdateTenantInput{
-		TenantID:       id,
-		Name:           body.Name,
-		Active:         body.Active,
-		Plan:           body.Plan,
-		ConflictPolicy: body.ConflictPolicy,
+		TenantID:                 id,
+		Name:                     body.Name,
+		Active:                   body.Active,
+		Plan:                     body.Plan,
+		ConflictPolicy:           body.ConflictPolicy,
 		AllowStaffSelfEnrollment: body.AllowStaffSelfEnrollment,
-		Settings:       body.Settings,
+		Settings:                 body.Settings,
 	})
 	if err != nil {
 		respondMapped(c, mapTenantError(err))
 		return
 	}
-	respondOK(c, tenantToGin(out.Tenant))
-}
-
-func userPublicToGin(u domain.UserPublic) gin.H {
-	return gin.H{
-		"user_id":    u.ID.String(),
-		"email":      u.Email,
-		"role":       u.Role.String(),
-		"created_at": u.CreatedAt,
-	}
+	respondOK(c, presenter.Tenant(out.Tenant))
 }
 
 func (s *Server) AdminListTenantUsers(c *gin.Context) {
@@ -165,7 +157,7 @@ func (s *Server) AdminListTenantUsers(c *gin.Context) {
 	}
 	items := make([]gin.H, 0, len(out.Users))
 	for _, u := range out.Users {
-		items = append(items, userPublicToGin(u))
+		items = append(items, presenter.UserPublic(u))
 	}
 	respondPage(c, items, Pagination{
 		Limit:  out.Limit,

@@ -1,14 +1,35 @@
 package httpserver
 
 import (
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase/loyalty"
 	"net/http"
 	"time"
 
+	"github.com/PaulUno777/jubely-saas/backend/application/rules"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/loyalty"
+	"github.com/PaulUno777/jubely-saas/backend/interfaces/http/presenter"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+type storeCreateRuleBody struct {
+	Rule     rules.Rule `json:"rule"`
+	Priority int        `json:"priority"`
+	Active   bool       `json:"active"`
+}
+
+type storePatchRuleBody struct {
+	Rule     *rules.Rule `json:"rule"`
+	Active   *bool       `json:"active"`
+	Priority *int        `json:"priority"`
+}
+
+type simulateRulesBody struct {
+	AmountFcfa int64  `json:"amount_fcfa"`
+	OccurredAt string `json:"occurred_at"`
+	Tier       string `json:"tier"`
+	IsNew      bool   `json:"is_new"`
+}
 
 func (s *Server) TenantListRules(c *gin.Context) {
 	tenantID, ok := tenantIDFromScope(c)
@@ -23,7 +44,7 @@ func (s *Server) TenantListRules(c *gin.Context) {
 	}
 	items := make([]gin.H, 0, len(recs))
 	for _, rec := range recs {
-		items = append(items, ruleRecordToGin(rec.ID, rec.Active, rec.Priority, rec.RuleJSON))
+		items = append(items, presenter.RuleRecord(rec.ID, rec.Active, rec.Priority, rec.RuleJSON))
 	}
 	respondOK(c, gin.H{"rules": items})
 }
@@ -49,7 +70,7 @@ func (s *Server) TenantCreateRule(c *gin.Context) {
 		respondMapped(c, mapCustomerError(err))
 		return
 	}
-	respondCreated(c, ruleRecordToGin(rec.ID, rec.Active, rec.Priority, rec.RuleJSON))
+	respondCreated(c, presenter.RuleRecord(rec.ID, rec.Active, rec.Priority, rec.RuleJSON))
 }
 
 func (s *Server) TenantPatchRule(c *gin.Context) {
@@ -79,7 +100,7 @@ func (s *Server) TenantPatchRule(c *gin.Context) {
 		respondMapped(c, mapCustomerError(err))
 		return
 	}
-	respondOK(c, ruleRecordToGin(rec.ID, rec.Active, rec.Priority, rec.RuleJSON))
+	respondOK(c, presenter.RuleRecord(rec.ID, rec.Active, rec.Priority, rec.RuleJSON))
 }
 
 func (s *Server) TenantSimulateRules(c *gin.Context) {

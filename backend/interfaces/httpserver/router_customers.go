@@ -15,13 +15,3 @@ func registerCustomerRoutes(v1 *gin.RouterGroup, signer *authtoken.JWTSigner, s 
 	customersMe.GET("/rewards", s.CustomerListRewards)
 	customersMe.POST("/reward-claims", RequireWritableSubscription(), s.CustomerClaimReward)
 }
-
-func registerOrganizationRoutes(v1 *gin.RouterGroup, signer *authtoken.JWTSigner, s *Server) {
-	org := v1.Group("/organizations/me")
-	org.Use(AuthMiddleware(signer), RequireMerchantAdmin(), RequireWritableSubscription())
-	org.GET("/stores", s.OrgListStores)
-	org.POST("/stores", s.OrgCreateStore)
-	org.GET("/subscription", s.OrgGetSubscription)
-	org.POST("/subscription/invoices", s.OrgCreateMoMoInvoice)
-	org.POST("/subscription/invoices/:invoiceId/confirmations", s.OrgConfirmMoMoInvoice)
-}

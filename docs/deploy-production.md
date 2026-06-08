@@ -34,7 +34,7 @@ Health: `GET https://<app>.fly.dev/health`
 ## 4. Bootstrap superadmin
 
 ```bash
-curl -X POST https://<app>.fly.dev/v1/bootstrap/superadmin \
+curl -X POST https://<app>.fly.dev/v1/setup/superadmin \
   -H "X-Bootstrap-Secret: $BOOTSTRAP_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","password":"..."}'

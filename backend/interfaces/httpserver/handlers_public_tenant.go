@@ -1,10 +1,11 @@
 package httpserver
 
 import (
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"net/http"
 	"strings"
 
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
+	"github.com/PaulUno777/jubely-saas/backend/interfaces/http/presenter"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
 )
@@ -30,7 +31,7 @@ func (s *Server) PublicGetTenantBySlug(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
 		return
 	}
-	g := tenantToGin(t)
+	g := presenter.Tenant(t)
 	respondOK(c, gin.H{
 		"tenant_id": g["tenant_id"],
 		"name":      g["name"],

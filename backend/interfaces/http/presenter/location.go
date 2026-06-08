@@ -1,11 +1,11 @@
-package httpserver
+package presenter
 
 import (
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/gin-gonic/gin"
 )
 
-func locationToJSON(st domain.Store) gin.H {
+func Location(st domain.Store) gin.H {
 	out := gin.H{
 		"id":           st.ID.String(),
 		"tenant_id":    st.TenantID.String(),

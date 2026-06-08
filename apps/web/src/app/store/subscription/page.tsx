@@ -16,25 +16,17 @@ import { useTranslations } from "next-intl";
 import { SubscriptionBanner } from "@/components/store/subscription-banner";
 import { MerchantPageShell } from "@/components/store/merchant-page-shell";
 import { useMerchantLocationScope } from "@/hooks/useMerchantLocationScope";
-import { authedJson } from "@/lib/http";
-
-type SubscriptionView = {
-  plan_code: string;
-  status: string;
-  billing_period: string;
-  trial_ends_at?: string;
-  current_period_end?: string;
-  plan?: {
-    name: string;
-    max_stores: number;
-    price_monthly_fcfa: number;
-    price_yearly_fcfa: number;
-  };
-};
+import { useTenantId } from "@/hooks/useTenantId";
+import {
+  createMoMoInvoice,
+  getSubscription,
+  type SubscriptionView,
+} from "@/lib/tenant-admin/billing";
 
 export default function StoreSubscriptionPage() {
   const t = useTranslations("store.subscription");
   const { headerContext } = useMerchantLocationScope();
+  const tenantId = useTenantId();
   const [sub, setSub] = useState<SubscriptionView | null>(null);
   const [invoice, setInvoice] = useState<{
     pay_reference?: string;
@@ -45,19 +37,17 @@ export default function StoreSubscriptionPage() {
   const [period, setPeriod] = useState<"month" | "year">("month");
 
   useEffect(() => {
-    void authedJson<SubscriptionView>("/v1/organizations/me/subscription")
+    if (!tenantId) return;
+    void getSubscription(tenantId)
       .then(setSub)
       .catch((e) => setError(e instanceof Error ? e.message : "Error"));
-  }, []);
+  }, [tenantId]);
 
   async function requestMoMo() {
+    if (!tenantId) return;
     setError(null);
     try {
-      const inv = await authedJson<{
-        pay_reference: string;
-        amount_fcfa: number;
-        instructions: string;
-      }>("/v1/organizations/me/subscription/invoices", { method: "POST" });
+      const inv = await createMoMoInvoice(tenantId);
       setInvoice(inv);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("invoiceError"));
@@ -133,7 +123,7 @@ export default function StoreSubscriptionPage() {
           <CardDescription>{t("paymentDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button type="button" onClick={() => void requestMoMo()}>
+          <Button type="button" onClick={() => void requestMoMo()} disabled={!tenantId}>
             {t("requestMomo")}
           </Button>
           {invoice?.pay_reference ? (

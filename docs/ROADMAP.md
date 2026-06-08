@@ -41,7 +41,7 @@ Living tracker aligned with [context/NEW_PLANING.md](../context/NEW_PLANING.md),
 | Go API, Postgres, migrations | ✅ | `backend/cmd/api` |
 | JWT access + refresh | ✅ | HttpOnly cookies via Next BFF |
 | RBAC middleware | ✅ | Role + `perms` on JWT |
-| Superadmin bootstrap | ✅ | `POST /v1/bootstrap/superadmin` |
+| Superadmin bootstrap | ✅ | `POST /v1/setup/superadmin` |
 | Tenant CRUD + merchant users | ✅ | `/v1/superadmin/tenants` |
 | Web login + role routing | ✅ | `/login`, `proxy.ts` |
 | Superadmin UI (tenants, wizard, detail) | ✅ | `/root/*` |
