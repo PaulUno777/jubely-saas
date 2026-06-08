@@ -45,7 +45,7 @@ export async function login(values: AgentLoginForm): Promise<LoginResponseData> 
     tenant_slug: parsed.tenantSlug?.trim() ?? "",
   });
 
-  const res = await fetch(joinUrl("/v1/auth/login"), {
+  const res = await fetch(joinUrl("/v1/sessions"), {
     method: "POST",
     headers: jsonHeaders(),
     body: JSON.stringify(body),

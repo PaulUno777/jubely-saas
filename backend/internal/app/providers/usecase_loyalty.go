@@ -2,7 +2,8 @@ package providers
 
 import (
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/loyalty"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/staff"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/persistence/postgres"
 )
 
@@ -14,8 +15,8 @@ func ProvideCreateCustomerByStaff(
 	customers ports.CustomerIdentityRepository,
 	enrollments ports.LoyaltyEnrollmentRepository,
 	qrCodec ports.QRCodec,
-) *usecase.CreateCustomerByStaff {
-	return &usecase.CreateCustomerByStaff{
+) *loyalty.CreateCustomerByStaff {
+	return &loyalty.CreateCustomerByStaff{
 		Tx:          tx,
 		Tenants:     tenants,
 		Users:       users,
@@ -31,8 +32,8 @@ func ProvideGetCustomerWallet(
 	tenants ports.TenantRepository,
 	enrollments ports.LoyaltyEnrollmentRepository,
 	catalog *postgres.StoreCatalog,
-) *usecase.GetCustomerWallet {
-	return &usecase.GetCustomerWallet{
+) *loyalty.GetCustomerWallet {
+	return &loyalty.GetCustomerWallet{
 		QRCodec:     qrCodec,
 		Tenants:     tenants,
 		Enrollments: enrollments,
@@ -53,8 +54,8 @@ func ProvideEnrollByStoreQR(
 	qrCodec ports.QRCodec,
 	phoneProof ports.PhoneEnrollmentProofParser,
 	requirePhone bool,
-) *usecase.EnrollByStoreQR {
-	return &usecase.EnrollByStoreQR{
+) *loyalty.EnrollByStoreQR {
+	return &loyalty.EnrollByStoreQR{
 		Tx:                       tx,
 		Clock:                    clock,
 		Tenants:                  tenants,
@@ -70,24 +71,24 @@ func ProvideEnrollByStoreQR(
 	}
 }
 
-func ProvideListStoreRewards(rewards ports.RewardRepository) *usecase.ListStoreRewards {
-	return &usecase.ListStoreRewards{Rewards: rewards}
+func ProvideListStoreRewards(rewards ports.RewardRepository) *loyalty.ListStoreRewards {
+	return &loyalty.ListStoreRewards{Rewards: rewards}
 }
 
 func ProvideCreateStoreReward(
 	rewards ports.RewardRepository,
 	rewardStores ports.RewardStoreAvailabilityRepository,
 	clock ports.Clock,
-) *usecase.CreateStoreReward {
-	return &usecase.CreateStoreReward{Rewards: rewards, RewardStores: rewardStores, Clock: clock}
+) *loyalty.CreateStoreReward {
+	return &loyalty.CreateStoreReward{Rewards: rewards, RewardStores: rewardStores, Clock: clock}
 }
 
 func ProvidePatchStoreReward(
 	rewards ports.RewardRepository,
 	rewardStores ports.RewardStoreAvailabilityRepository,
 	clock ports.Clock,
-) *usecase.PatchStoreReward {
-	return &usecase.PatchStoreReward{Rewards: rewards, RewardStores: rewardStores, Clock: clock}
+) *loyalty.PatchStoreReward {
+	return &loyalty.PatchStoreReward{Rewards: rewards, RewardStores: rewardStores, Clock: clock}
 }
 
 func ProvideListCustomerRewards(
@@ -95,8 +96,8 @@ func ProvideListCustomerRewards(
 	rewardStores ports.RewardStoreAvailabilityRepository,
 	enrollments ports.LoyaltyEnrollmentRepository,
 	catalog *postgres.StoreCatalog,
-) *usecase.ListCustomerRewards {
-	return &usecase.ListCustomerRewards{
+) *loyalty.ListCustomerRewards {
+	return &loyalty.ListCustomerRewards{
 		Rewards:      rewards,
 		RewardStores: rewardStores,
 		Enrollments:  enrollments,
@@ -114,8 +115,8 @@ func ProvideCustomerClaimReward(
 	catalog *postgres.StoreCatalog,
 	points ports.PointEventWriter,
 	clock ports.Clock,
-) *usecase.CustomerClaimReward {
-	return &usecase.CustomerClaimReward{
+) *loyalty.CustomerClaimReward {
+	return &loyalty.CustomerClaimReward{
 		Tx:           tx,
 		QRCodec:      qrCodec,
 		Rewards:      rewards,
@@ -135,8 +136,8 @@ func ProvideStaffValidateRedemption(
 	enrollments ports.LoyaltyEnrollmentRepository,
 	customers ports.CustomerIdentityRepository,
 	clock ports.Clock,
-) *usecase.StaffValidateRedemption {
-	return &usecase.StaffValidateRedemption{
+) *staff.StaffValidateRedemption {
+	return &staff.StaffValidateRedemption{
 		QRCodec:     qrCodec,
 		Redemptions: redemptions,
 		Rewards:     rewards,
@@ -146,20 +147,20 @@ func ProvideStaffValidateRedemption(
 	}
 }
 
-func ProvideListStoreRules(rules ports.PointsRuleRepository) *usecase.ListStoreRules {
-	return &usecase.ListStoreRules{Rules: rules}
+func ProvideListStoreRules(rules ports.PointsRuleRepository) *loyalty.ListStoreRules {
+	return &loyalty.ListStoreRules{Rules: rules}
 }
 
-func ProvideCreateStoreRule(rules ports.PointsRuleRepository) *usecase.CreateStoreRule {
-	return &usecase.CreateStoreRule{Rules: rules}
+func ProvideCreateStoreRule(rules ports.PointsRuleRepository) *loyalty.CreateStoreRule {
+	return &loyalty.CreateStoreRule{Rules: rules}
 }
 
-func ProvidePatchStoreRule(rules ports.PointsRuleRepository) *usecase.PatchStoreRule {
-	return &usecase.PatchStoreRule{Rules: rules}
+func ProvidePatchStoreRule(rules ports.PointsRuleRepository) *loyalty.PatchStoreRule {
+	return &loyalty.PatchStoreRule{Rules: rules}
 }
 
-func ProvideSimulateStoreRules(rules ports.PointsRuleRepository) *usecase.SimulateStoreRules {
-	return &usecase.SimulateStoreRules{Rules: rules}
+func ProvideSimulateStoreRules(rules ports.PointsRuleRepository) *loyalty.SimulateStoreRules {
+	return &loyalty.SimulateStoreRules{Rules: rules}
 }
 
 func ProvideStaffRecordPurchase(
@@ -171,8 +172,8 @@ func ProvideStaffRecordPurchase(
 	catalog *postgres.StoreCatalog,
 	rules ports.PointsRuleRepository,
 	clock ports.Clock,
-) *usecase.StaffRecordPurchase {
-	return &usecase.StaffRecordPurchase{
+) *staff.StaffRecordPurchase {
+	return &staff.StaffRecordPurchase{
 		QRCodec:     qrCodec,
 		Tenants:     tenants,
 		Customers:   customers,

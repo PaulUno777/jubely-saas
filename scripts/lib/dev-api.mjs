@@ -203,7 +203,7 @@ export async function waitForApi(apiBase) {
 
 export async function login(apiBase, email, password, preferredTenantSlug = "") {
   for (let attempt = 0; attempt < 6; attempt++) {
-    const res = await api(apiBase, "POST", "/v1/auth/login", {
+    const res = await api(apiBase, "POST", "/v1/sessions", {
       allowError: true,
       body: {
         email,
@@ -219,7 +219,7 @@ export async function login(apiBase, email, password, preferredTenantSlug = "") 
       continue;
     }
     const message = res.json?.error?.message ?? res.text.slice(0, 200);
-    throw new Error(`POST /v1/auth/login failed (${res.res.status}): ${String(message)}`);
+    throw new Error(`POST /v1/sessions failed (${res.res.status}): ${String(message)}`);
   }
   throw new Error(`login retries exhausted for ${email}`);
 }
@@ -229,7 +229,7 @@ export async function selectWorkspace(apiBase, accessToken, membershipId, active
   if (activeStoreId) {
     body.active_store_id = activeStoreId;
   }
-  const res = await api(apiBase, "POST", "/v1/auth/workspace", {
+  const res = await api(apiBase, "PUT", "/v1/sessions/current/workspace", {
     headers: { authorization: `Bearer ${accessToken}` },
     body,
   });
@@ -321,7 +321,7 @@ export async function tenantListCustomers(apiBase, token, tenantId, query = {}) 
 }
 
 export async function tenantGetQrToken(apiBase, token, tenantId) {
-  const res = await api(apiBase, "GET", tenantPath(tenantId, "qr/token"), {
+  const res = await api(apiBase, "GET", tenantPath(tenantId, "enrollment-qr"), {
     headers: { authorization: `Bearer ${token}` },
   });
   return requireString(asObject(data(res.json), "qr token").store_qr, "store_qr");
@@ -433,25 +433,6 @@ export async function tenantGetQrBranding(apiBase, token, tenantId) {
   });
   if (!res.res.ok) return null;
   return asObject(data(res.json), "qr branding");
-}
-
-// --- Legacy store API (agent portal reads until /agent migrates) ---
-
-export async function storeListCustomers(apiBase, token, query = {}) {
-  const params = new URLSearchParams();
-  if (query.limit != null) params.set("limit", String(query.limit));
-  const qs = params.toString();
-  const res = await api(apiBase, "GET", `/v1/store/customers${qs ? `?${qs}` : ""}`, {
-    headers: { authorization: `Bearer ${token}` },
-  });
-  return asArray(data(res.json));
-}
-
-export async function storeGetMetrics(apiBase, token) {
-  const res = await api(apiBase, "GET", "/v1/store/metrics", {
-    headers: { authorization: `Bearer ${token}` },
-  });
-  return asObject(data(res.json), "store metrics");
 }
 
 /**

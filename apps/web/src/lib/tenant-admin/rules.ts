@@ -62,7 +62,7 @@ export async function simulateRules(
 ) {
   const payload = tenantSimulateRulesWireSchema.parse(input);
   return tenantMutate(
-    buildTenantPath(tenantId, "rules/simulate"),
+    buildTenantPath(tenantId, "rule-simulations"),
     tenantSimulateRulesSuccessEnvelopeSchema,
     jsonPost(payload),
   );
@@ -70,7 +70,7 @@ export async function simulateRules(
 
 export async function validateRules(tenantId: string) {
   return tenantMutate(
-    buildTenantPath(tenantId, "rules/validate"),
+    buildTenantPath(tenantId, "rule-validations"),
     validateRulesSuccessEnvelopeSchema,
     { method: "POST" },
   );
@@ -90,7 +90,7 @@ export async function upsertTier(
 ) {
   const payload = tenantUpsertTierWireSchema.parse(body);
   return tenantMutate(
-    buildTenantPath(tenantId, "tiers"),
+    buildTenantPath(tenantId, `tiers/${encodeURIComponent(payload.code)}`),
     tenantTiersSuccessEnvelopeSchema,
     jsonPut(payload),
   );

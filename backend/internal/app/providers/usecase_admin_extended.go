@@ -2,66 +2,69 @@ package providers
 
 import (
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/analytics"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/campaign"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/loyalty"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/persistence/postgres"
 )
 
 func ProvideUpdateCustomerProfile(
 	customers ports.CustomerIdentityRepository,
 	clock ports.Clock,
-) *usecase.UpdateCustomerProfile {
-	return &usecase.UpdateCustomerProfile{Customers: customers, Clock: clock}
+) *loyalty.UpdateCustomerProfile {
+	return &loyalty.UpdateCustomerProfile{Customers: customers, Clock: clock}
 }
 
-func ProvideListTiers(tiers ports.LoyaltyTierRepository) *usecase.ListTiers {
-	return &usecase.ListTiers{Tiers: tiers}
+func ProvideListTiers(tiers ports.LoyaltyTierRepository) *loyalty.ListTiers {
+	return &loyalty.ListTiers{Tiers: tiers}
 }
 
-func ProvideUpsertTier(tiers ports.LoyaltyTierRepository, clock ports.Clock) *usecase.UpsertTier {
-	return &usecase.UpsertTier{Tiers: tiers, Clock: clock}
+func ProvideUpsertTier(tiers ports.LoyaltyTierRepository, clock ports.Clock) *loyalty.UpsertTier {
+	return &loyalty.UpsertTier{Tiers: tiers, Clock: clock}
 }
 
-func ProvideSeedDefaultTiers(tiers ports.LoyaltyTierRepository, clock ports.Clock) *usecase.SeedDefaultTiers {
-	return &usecase.SeedDefaultTiers{Tiers: tiers, Clock: clock}
+func ProvideSeedDefaultTiers(tiers ports.LoyaltyTierRepository, clock ports.Clock) *loyalty.SeedDefaultTiers {
+	return &loyalty.SeedDefaultTiers{Tiers: tiers, Clock: clock}
 }
 
 func ProvideValidateStoreRules(
 	rules ports.PointsRuleRepository,
 	subs ports.SubscriptionRepository,
 	plans ports.PlanCatalogRepository,
-) *usecase.ValidateStoreRules {
-	return &usecase.ValidateStoreRules{Rules: rules, Subs: subs, Plans: plans}
+) *loyalty.ValidateStoreRules {
+	return &loyalty.ValidateStoreRules{Rules: rules, Subs: subs, Plans: plans}
 }
 
 func ProvideGetQRBranding(
 	branding ports.QRBrandingRepository,
 	strings ports.LocalizedStringRepository,
-) *usecase.GetQRBranding {
-	return &usecase.GetQRBranding{Branding: branding, Strings: strings}
+) *tenant.GetQRBranding {
+	return &tenant.GetQRBranding{Branding: branding, Strings: strings}
 }
 
 func ProvidePutQRBranding(
 	branding ports.QRBrandingRepository,
 	strings ports.LocalizedStringRepository,
 	clock ports.Clock,
-) *usecase.PutQRBranding {
-	return &usecase.PutQRBranding{Branding: branding, Strings: strings, Clock: clock}
+) *tenant.PutQRBranding {
+	return &tenant.PutQRBranding{Branding: branding, Strings: strings, Clock: clock}
 }
 
-func ProvideGetTenantLocales(locales ports.TenantSupportedLocaleRepository) *usecase.GetTenantLocales {
-	return &usecase.GetTenantLocales{Locales: locales}
+func ProvideGetTenantLocales(locales ports.TenantSupportedLocaleRepository) *tenant.GetTenantLocales {
+	return &tenant.GetTenantLocales{Locales: locales}
 }
 
-func ProvidePutTenantLocales(locales ports.TenantSupportedLocaleRepository) *usecase.PutTenantLocales {
-	return &usecase.PutTenantLocales{Locales: locales}
+func ProvidePutTenantLocales(locales ports.TenantSupportedLocaleRepository) *tenant.PutTenantLocales {
+	return &tenant.PutTenantLocales{Locales: locales}
 }
 
-func ProvideListCampaigns(campaigns ports.CampaignRepository) *usecase.ListCampaigns {
-	return &usecase.ListCampaigns{Campaigns: campaigns}
+func ProvideListCampaigns(campaigns ports.CampaignRepository) *campaign.ListCampaigns {
+	return &campaign.ListCampaigns{Campaigns: campaigns}
 }
 
-func ProvideGetCampaign(campaigns ports.CampaignRepository) *usecase.GetCampaign {
-	return &usecase.GetCampaign{Campaigns: campaigns}
+func ProvideGetCampaign(campaigns ports.CampaignRepository) *campaign.GetCampaign {
+	return &campaign.GetCampaign{Campaigns: campaigns}
 }
 
 func ProvideCreateCampaign(
@@ -69,8 +72,8 @@ func ProvideCreateCampaign(
 	subs ports.SubscriptionRepository,
 	plans ports.PlanCatalogRepository,
 	clock ports.Clock,
-) *usecase.CreateCampaign {
-	return &usecase.CreateCampaign{Campaigns: campaigns, Subs: subs, Plans: plans, Clock: clock}
+) *campaign.CreateCampaign {
+	return &campaign.CreateCampaign{Campaigns: campaigns, Subs: subs, Plans: plans, Clock: clock}
 }
 
 func ProvideUpdateCampaign(
@@ -78,8 +81,8 @@ func ProvideUpdateCampaign(
 	subs ports.SubscriptionRepository,
 	plans ports.PlanCatalogRepository,
 	clock ports.Clock,
-) *usecase.UpdateCampaign {
-	return &usecase.UpdateCampaign{Campaigns: campaigns, Subs: subs, Plans: plans, Clock: clock}
+) *campaign.UpdateCampaign {
+	return &campaign.UpdateCampaign{Campaigns: campaigns, Subs: subs, Plans: plans, Clock: clock}
 }
 
 func ProvideLaunchCampaign(
@@ -87,8 +90,8 @@ func ProvideLaunchCampaign(
 	subs ports.SubscriptionRepository,
 	plans ports.PlanCatalogRepository,
 	clock ports.Clock,
-) *usecase.LaunchCampaign {
-	return &usecase.LaunchCampaign{Campaigns: campaigns, Subs: subs, Plans: plans, Clock: clock}
+) *campaign.LaunchCampaign {
+	return &campaign.LaunchCampaign{Campaigns: campaigns, Subs: subs, Plans: plans, Clock: clock}
 }
 
 func ProvidePauseCampaign(
@@ -96,8 +99,8 @@ func ProvidePauseCampaign(
 	subs ports.SubscriptionRepository,
 	plans ports.PlanCatalogRepository,
 	clock ports.Clock,
-) *usecase.PauseCampaign {
-	return &usecase.PauseCampaign{Campaigns: campaigns, Subs: subs, Plans: plans, Clock: clock}
+) *campaign.PauseCampaign {
+	return &campaign.PauseCampaign{Campaigns: campaigns, Subs: subs, Plans: plans, Clock: clock}
 }
 
 func ProvideGetTenantCustomer(
@@ -105,8 +108,8 @@ func ProvideGetTenantCustomer(
 	customers ports.CustomerIdentityRepository,
 	balances ports.EnrollmentBalanceReader,
 	tiers ports.LoyaltyTierRepository,
-) *usecase.GetTenantCustomer {
-	return &usecase.GetTenantCustomer{
+) *loyalty.GetTenantCustomer {
+	return &loyalty.GetTenantCustomer{
 		Enrollments: enrollments,
 		Customers:   customers,
 		Balances:    balances,
@@ -118,8 +121,8 @@ func ProvideRecalculateEnrollmentTier(
 	tiers ports.LoyaltyTierRepository,
 	enrollments ports.LoyaltyEnrollmentRepository,
 	balances ports.EnrollmentBalanceReader,
-) *usecase.RecalculateEnrollmentTier {
-	return &usecase.RecalculateEnrollmentTier{
+) *loyalty.RecalculateEnrollmentTier {
+	return &loyalty.RecalculateEnrollmentTier{
 		Tiers:       tiers,
 		Enrollments: enrollments,
 		Balances:    balances,
@@ -130,9 +133,9 @@ func ProvideAdjustCustomerPoints(
 	enrollments ports.LoyaltyEnrollmentRepository,
 	points ports.PointEventWriter,
 	balances ports.EnrollmentBalanceReader,
-	recalc *usecase.RecalculateEnrollmentTier,
-) *usecase.AdjustCustomerPoints {
-	return &usecase.AdjustCustomerPoints{
+	recalc *loyalty.RecalculateEnrollmentTier,
+) *loyalty.AdjustCustomerPoints {
+	return &loyalty.AdjustCustomerPoints{
 		Enrollments: enrollments,
 		Points:      points,
 		Balances:    balances,
@@ -140,28 +143,28 @@ func ProvideAdjustCustomerPoints(
 	}
 }
 
-func ProvideTenantAnalyticsOverview(analytics ports.TenantAnalyticsRepository) *usecase.TenantAnalyticsOverview {
-	return &usecase.TenantAnalyticsOverview{Analytics: analytics}
+func ProvideTenantAnalyticsOverview(analyticsRepo ports.TenantAnalyticsRepository) *analytics.TenantAnalyticsOverview {
+	return &analytics.TenantAnalyticsOverview{Analytics: analyticsRepo}
 }
 
-func ProvideMemberGrowth(analytics ports.TenantAnalyticsRepository) *usecase.MemberGrowth {
-	return &usecase.MemberGrowth{Analytics: analytics}
+func ProvideMemberGrowth(analyticsRepo ports.TenantAnalyticsRepository) *analytics.MemberGrowth {
+	return &analytics.MemberGrowth{Analytics: analyticsRepo}
 }
 
-func ProvideTierDistribution(analytics ports.TenantAnalyticsRepository) *usecase.TierDistribution {
-	return &usecase.TierDistribution{Analytics: analytics}
+func ProvideTierDistribution(analyticsRepo ports.TenantAnalyticsRepository) *analytics.TierDistribution {
+	return &analytics.TierDistribution{Analytics: analyticsRepo}
 }
 
-func ProvideHourlyHeatmap(analytics ports.TenantAnalyticsRepository) *usecase.HourlyHeatmap {
-	return &usecase.HourlyHeatmap{Analytics: analytics}
+func ProvideHourlyHeatmap(analyticsRepo ports.TenantAnalyticsRepository) *analytics.HourlyHeatmap {
+	return &analytics.HourlyHeatmap{Analytics: analyticsRepo}
 }
 
-func ProvideTopRewards(analytics ports.TenantAnalyticsRepository) *usecase.TopRewards {
-	return &usecase.TopRewards{Analytics: analytics}
+func ProvideTopRewards(analyticsRepo ports.TenantAnalyticsRepository) *analytics.TopRewards {
+	return &analytics.TopRewards{Analytics: analyticsRepo}
 }
 
-func ProvideRetentionCohorts(analytics ports.TenantAnalyticsRepository) *usecase.RetentionCohorts {
-	return &usecase.RetentionCohorts{Analytics: analytics}
+func ProvideRetentionCohorts(analyticsRepo ports.TenantAnalyticsRepository) *analytics.RetentionCohorts {
+	return &analytics.RetentionCohorts{Analytics: analyticsRepo}
 }
 
 // ProvideEnrollmentBalanceReader binds StoreCatalog as the balance reader for admin extended flows.
@@ -169,6 +172,6 @@ func ProvideEnrollmentBalanceReader(catalog *postgres.StoreCatalog) ports.Enroll
 	return catalog
 }
 
-func ProvideUploadRewardImage(storage ports.ObjectStorage, rewards ports.RewardRepository, clock ports.Clock) *usecase.UploadRewardImage {
-	return &usecase.UploadRewardImage{Storage: storage, Rewards: rewards, Clock: clock}
+func ProvideUploadRewardImage(storage ports.ObjectStorage, rewards ports.RewardRepository, clock ports.Clock) *loyalty.UploadRewardImage {
+	return &loyalty.UploadRewardImage{Storage: storage, Rewards: rewards, Clock: clock}
 }

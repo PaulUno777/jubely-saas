@@ -108,8 +108,14 @@ func Initialize(ctx context.Context) (*App, func(), error) {
 	verifyLoginTOTP := providers.ProvideVerifyLoginTOTP(userRepository, mfaFactorRepository, refreshTokenRepository, tenantMembershipRepository, customerRepository, storeCatalog, jwtSigner, jwtSigner, systemClock, timing, v)
 	finishLoginPasskey := providers.ProvideFinishLoginPasskey(userRepository, mfaFactorRepository, refreshTokenRepository, tenantMembershipRepository, customerRepository, storeCatalog, jwtSigner, jwtSigner, systemClock, timing, finishPasskeyAuthentication)
 	changePassword := providers.ProvideChangePassword(userRepository, bcryptHasher)
-	storeLoyaltyMetrics := providers.NewStoreLoyaltyMetrics(pool)
+	getTenant := providers.ProvideGetTenant(tenantRepository)
+	previewInvitation := providers.ProvidePreviewInvitation(invitationRepository, tenantRepository)
+	getEnrollmentQR := providers.ProvideGetEnrollmentQR(storeRepository, hmacqrCodec)
 	locationDiscoveryRepository := providers.NewLocationDiscoveryRepository(pool)
+	listNearbyLocations := providers.ProvideListNearbyLocations(locationDiscoveryRepository)
+	setLocationHQ := providers.ProvideSetLocationHQ(storeRepository)
+	storeLoyaltyMetrics := providers.NewStoreLoyaltyMetrics(pool)
+	queryTenantMetrics := providers.ProvideQueryTenantMetrics(storeLoyaltyMetrics)
 	objectStorage, err := providers.ProvideObjectStorage(config)
 	if err != nil {
 		cleanup()
@@ -198,13 +204,13 @@ func Initialize(ctx context.Context) (*App, func(), error) {
 		FinishPasskeyLoginUC:      finishLoginPasskey,
 		MFASigner:                 jwtSigner,
 		ChangePasswordUC:          changePassword,
-		QRCodec:                   hmacqrCodec,
 		AccessSigner:              jwtSigner,
-		Tenants:                   tenantRepository,
-		Stores:                    storeRepository,
-		Invitations:               invitationRepository,
-		StoreMetrics:              storeLoyaltyMetrics,
-		LocationDiscovery:         locationDiscoveryRepository,
+		GetTenantUC:               getTenant,
+		PreviewInvitationUC:       previewInvitation,
+		GetEnrollmentQRUC:         getEnrollmentQR,
+		ListNearbyLocationsUC:     listNearbyLocations,
+		SetLocationHQUC:           setLocationHQ,
+		QueryTenantMetricsUC:      queryTenantMetrics,
 		UploadTenantLogoUC:        uploadTenantLogo,
 		UpdateCustomerProfileUC:   updateCustomerProfile,
 		ListTiersUC:               listTiers,

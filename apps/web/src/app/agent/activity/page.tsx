@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { storeListPointEvents } from "@/lib/storeApi";
+import { useTenantId } from "@/hooks/useTenantId";
+import { agentListPointEvents } from "@/lib/agentApi";
 import { ActivityRow } from "@/components/agent/activity-row";
 import type { StorePointEvent } from "@jubely/api-schemas";
 
@@ -23,9 +24,11 @@ export default function ActivityPage() {
   const t = useTranslations("agent.activity");
   const [filter, setFilter] = useState<FilterKey>("filterAll");
 
+  const tenantId = useTenantId();
   const { data = [], isLoading } = useQuery({
-    queryKey: ["agent", "activity"],
-    queryFn: () => storeListPointEvents({ limit: 50 }),
+    queryKey: ["agent", "activity", tenantId],
+    enabled: Boolean(tenantId),
+    queryFn: () => agentListPointEvents(tenantId!, { limit: 50 }),
   });
 
   const filtered = data.filter((ev) => {

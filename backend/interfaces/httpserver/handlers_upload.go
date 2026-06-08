@@ -1,13 +1,13 @@
 package httpserver
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
@@ -37,7 +37,7 @@ func (s *Server) AdminUploadTenantLogo(c *gin.Context) {
 	}
 	defer func() { _ = src.Close() }()
 
-	out, err := s.UploadTenantLogoUC.Execute(c.Request.Context(), usecase.UploadTenantLogoInput{
+	out, err := s.UploadTenantLogoUC.Execute(c.Request.Context(), tenant.UploadTenantLogoInput{
 		Filename:    fh.Filename,
 		ContentType: fh.Header.Get("Content-Type"),
 		Body:        src,
@@ -45,7 +45,7 @@ func (s *Server) AdminUploadTenantLogo(c *gin.Context) {
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, usecase.ErrUploadNotConfigured):
+		case errors.Is(err, tenant.ErrUploadNotConfigured):
 			respondError(c, http.StatusServiceUnavailable, i18n.CodeInternal, gin.H{"reason": "upload_not_configured"})
 		case errors.Is(err, domain.ErrInvalid):
 			respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_file"})

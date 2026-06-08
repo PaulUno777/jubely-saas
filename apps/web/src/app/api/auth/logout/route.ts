@@ -10,8 +10,8 @@ export async function POST(req: NextRequest) {
   const refresh = req.cookies.get(AUTH_REFRESH_COOKIE)?.value ?? "";
   const origin = upstreamApiOrigin();
   if (refresh) {
-    await fetch(`${origin}/v1/auth/logout`, {
-      method: "POST",
+    await fetch(`${origin}/v1/sessions/current`, {
+      method: "DELETE",
       headers: {
         "content-type": "application/json",
         "accept-language": req.headers.get("accept-language") ?? "en",

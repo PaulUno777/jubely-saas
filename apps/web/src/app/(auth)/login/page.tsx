@@ -137,6 +137,7 @@ export default function LoginPage() {
   const [otp, setOtp] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerCode, setCustomerCode] = useState("");
+  const [customerVerificationId, setCustomerVerificationId] = useState<string | null>(null);
   const [customerVerifyToken, setCustomerVerifyToken] = useState<string | null>(null);
 
   const form = useForm<AgentLoginForm>({
@@ -276,13 +277,17 @@ export default function LoginPage() {
 
   const sendCustomerOtpMut = useMutation({
     mutationFn: async () => publicOtpSend(customerPhone.trim()),
-    onSuccess: () => toast.success("Code sent."),
+    onSuccess: (data) => {
+      setCustomerVerificationId(data.id);
+      toast.success("Code sent.");
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : tErrors("generic")),
   });
 
   const verifyCustomerOtpMut = useMutation({
     mutationFn: async () => {
-      const verified = await publicOtpVerify(customerPhone.trim(), customerCode.trim());
+      if (!customerVerificationId) throw new Error("Send OTP first");
+      const verified = await publicOtpVerify(customerVerificationId, customerCode.trim());
       return customerAuthLogin(verified.phone_verify_token);
     },
     onSuccess: (json) => {
@@ -572,7 +577,7 @@ export default function LoginPage() {
                 className="flex-1"
                 onClick={async () => {
                   try {
-                    const begin = (await postUpstreamJson("/v1/auth/mfa/passkey/begin", {
+                    const begin = (await postUpstreamJson("/v1/sessions/mfa/passkey/challenges", {
                       challenge_token: flow.challengeToken,
                     })) as { challenge_id: string; options: Parameters<typeof startAuthentication>[0] };
                     const assertion = await startAuthentication(begin.options);

@@ -1,10 +1,10 @@
 package httpserver
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"encoding/json"
 	"net/http"
 
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
@@ -28,7 +28,7 @@ func (s *Server) AdminCreateTenant(c *gin.Context) {
 	// MVP Option 2: enforce self-serve off until Phase 3 explicitly enables it per tenant.
 	body.SelfServe = false
 
-	out, err := s.CreateTenantUC.Execute(c.Request.Context(), usecase.CreateTenantInput{
+	out, err := s.CreateTenantUC.Execute(c.Request.Context(), tenant.CreateTenantInput{
 		Name:      body.Name,
 		Slug:      body.Slug,
 		SelfServe: body.SelfServe,
@@ -63,7 +63,7 @@ func (s *Server) AdminCreateMerchantInvitation(c *gin.Context) {
 		role = domain.RoleMerchantAdmin
 	}
 
-	out, err := s.CreateInvitationUC.Execute(c.Request.Context(), usecase.CreateMerchantInvitationInput{
+	out, err := s.CreateInvitationUC.Execute(c.Request.Context(), tenant.CreateMerchantInvitationInput{
 		TenantID: tenantID,
 		Email:    body.Email,
 		Role:     role,
@@ -85,7 +85,7 @@ func (s *Server) AdminGetStoreQR(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_tenant_id"})
 		return
 	}
-	if _, err := s.Tenants.FindByID(c.Request.Context(), tenantID); err != nil {
+	if _, err := s.GetTenantUC.Execute(c.Request.Context(), tenant.GetTenantInput{TenantID: &tenantID}); err != nil {
 		respondMapped(c, mapTenantError(err))
 		return
 	}

@@ -1,10 +1,10 @@
 package httpserver
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"net/http"
 	"time"
 
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
@@ -16,7 +16,7 @@ func (s *Server) TenantGetMetrics(c *gin.Context) {
 	if !ok {
 		return
 	}
-	out, err := s.StoreMetrics.TenantMetrics(c.Request.Context(), in)
+	out, err := s.QueryTenantMetricsUC.TenantMetrics(c.Request.Context(), in)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
 		return
@@ -51,7 +51,7 @@ func (s *Server) TenantGetLoyaltyActivity(c *gin.Context) {
 	if !ok {
 		return
 	}
-	out, err := s.StoreMetrics.TenantLoyaltyActivity(c.Request.Context(), in)
+	out, err := s.QueryTenantMetricsUC.LoyaltyActivity(c.Request.Context(), in)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
 		return
@@ -81,7 +81,7 @@ func (s *Server) TenantGetStats(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
 		return
 	}
-	stats, err := s.StoreMetrics.TenantNavStats(c.Request.Context(), tenantID)
+	stats, err := s.QueryTenantMetricsUC.NavStats(c.Request.Context(), tenantID)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
 		return
@@ -138,7 +138,7 @@ func (s *Server) TenantCreateLocation(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
-	st, err := s.CreateOrgStoreUC.Execute(c.Request.Context(), usecase.CreateOrgStoreInput{
+	st, err := s.CreateOrgStoreUC.Execute(c.Request.Context(), tenant.CreateOrgStoreInput{
 		TenantID:    tenantID,
 		Slug:        body.Slug,
 		Name:        body.Name,
@@ -182,7 +182,10 @@ func (s *Server) TenantPatchLocation(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "is_hq_true_required"})
 		return
 	}
-	st, err := s.Stores.SetAsHQ(c.Request.Context(), tenantID, locationID)
+	st, err := s.SetLocationHQUC.Execute(c.Request.Context(), tenant.SetLocationHQInput{
+		TenantID:   tenantID,
+		LocationID: locationID,
+	})
 	if err != nil {
 		respondMapped(c, mapTenantError(err))
 		return
@@ -195,11 +198,7 @@ func (s *Server) PublicListNearbyLocations(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if s.LocationDiscovery == nil {
-		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
-		return
-	}
-	rows, mode, err := s.LocationDiscovery.ListNearby(c.Request.Context(), q)
+	rows, mode, err := s.ListNearbyLocationsUC.Execute(c.Request.Context(), q)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
 		return

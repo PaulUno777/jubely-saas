@@ -2,7 +2,7 @@ package providers
 
 import (
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/auth"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/authtoken"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/memory"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/persistence/postgres"
@@ -13,8 +13,8 @@ func ProvideBootstrapSuperadmin(
 	users ports.UserRepository,
 	hasher ports.PasswordHasher,
 	secret string,
-) *usecase.BootstrapSuperadmin {
-	return &usecase.BootstrapSuperadmin{Users: users, Hasher: hasher, Secret: secret}
+) *auth.BootstrapSuperadmin {
+	return &auth.BootstrapSuperadmin{Users: users, Hasher: hasher, Secret: secret}
 }
 
 func ProvideLogin(
@@ -29,8 +29,8 @@ func ProvideLogin(
 	clock ports.Clock,
 	timing Timing,
 	mfaSigner *authtoken.JWTSigner,
-) *usecase.Login {
-	return &usecase.Login{
+) *auth.Login {
+	return &auth.Login{
 		Users:           users,
 		Memberships:     memberships,
 		Customers:       customers,
@@ -56,8 +56,8 @@ func ProvideRefreshAuth(
 	signer ports.TokenSigner,
 	clock ports.Clock,
 	timing Timing,
-) *usecase.RefreshAuth {
-	return &usecase.RefreshAuth{
+) *auth.RefreshAuth {
+	return &auth.RefreshAuth{
 		Users:         users,
 		RefreshTokens: refresh,
 		Memberships:   memberships,
@@ -70,16 +70,16 @@ func ProvideRefreshAuth(
 	}
 }
 
-func ProvideLogout(refresh ports.RefreshTokenRepository, clock ports.Clock) *usecase.Logout {
-	return &usecase.Logout{RefreshTokens: refresh, Clock: clock}
+func ProvideLogout(refresh ports.RefreshTokenRepository, clock ports.Clock) *auth.Logout {
+	return &auth.Logout{RefreshTokens: refresh, Clock: clock}
 }
 
-func ProvideSetupTOTP(factors ports.MFAFactorRepository, clock ports.Clock, key []byte) *usecase.SetupTOTP {
-	return &usecase.SetupTOTP{Factors: factors, Clock: clock, Key: key, Issuer: "Jubely"}
+func ProvideSetupTOTP(factors ports.MFAFactorRepository, clock ports.Clock, key []byte) *auth.SetupTOTP {
+	return &auth.SetupTOTP{Factors: factors, Clock: clock, Key: key, Issuer: "Jubely"}
 }
 
-func ProvideConfirmTOTP(factors ports.MFAFactorRepository, clock ports.Clock, key []byte) *usecase.ConfirmTOTP {
-	return &usecase.ConfirmTOTP{Factors: factors, Clock: clock, Key: key}
+func ProvideConfirmTOTP(factors ports.MFAFactorRepository, clock ports.Clock, key []byte) *auth.ConfirmTOTP {
+	return &auth.ConfirmTOTP{Factors: factors, Clock: clock, Key: key}
 }
 
 func ProvideBeginPasskeyRegistration(
@@ -89,8 +89,8 @@ func ProvideBeginPasskeyRegistration(
 	challenges ports.WebAuthnChallengeRepository,
 	clock ports.Clock,
 	timing Timing,
-) *usecase.BeginPasskeyRegistration {
-	return &usecase.BeginPasskeyRegistration{
+) *auth.BeginPasskeyRegistration {
+	return &auth.BeginPasskeyRegistration{
 		WebAuthn:     wa,
 		Users:        users,
 		Factors:      factors,
@@ -106,8 +106,8 @@ func ProvideFinishPasskeyRegistration(
 	factors ports.MFAFactorRepository,
 	challenges ports.WebAuthnChallengeRepository,
 	clock ports.Clock,
-) *usecase.FinishPasskeyRegistration {
-	return &usecase.FinishPasskeyRegistration{
+) *auth.FinishPasskeyRegistration {
+	return &auth.FinishPasskeyRegistration{
 		WebAuthn:   wa,
 		Users:      users,
 		Factors:    factors,
@@ -123,8 +123,8 @@ func ProvideBeginPasskeyAuthentication(
 	challenges ports.WebAuthnChallengeRepository,
 	clock ports.Clock,
 	timing Timing,
-) *usecase.BeginPasskeyAuthentication {
-	return &usecase.BeginPasskeyAuthentication{
+) *auth.BeginPasskeyAuthentication {
+	return &auth.BeginPasskeyAuthentication{
 		WebAuthn:     wa,
 		Users:        users,
 		Factors:      factors,
@@ -140,8 +140,8 @@ func ProvideFinishPasskeyAuthentication(
 	factors ports.MFAFactorRepository,
 	challenges ports.WebAuthnChallengeRepository,
 	clock ports.Clock,
-) *usecase.FinishPasskeyAuthentication {
-	return &usecase.FinishPasskeyAuthentication{
+) *auth.FinishPasskeyAuthentication {
+	return &auth.FinishPasskeyAuthentication{
 		WebAuthn:   wa,
 		Users:      users,
 		Factors:    factors,
@@ -162,8 +162,8 @@ func ProvideVerifyLoginTOTP(
 	clock ports.Clock,
 	timing Timing,
 	key []byte,
-) *usecase.VerifyLoginTOTP {
-	return &usecase.VerifyLoginTOTP{
+) *auth.VerifyLoginTOTP {
+	return &auth.VerifyLoginTOTP{
 		Users:         users,
 		Factors:       factors,
 		RefreshTokens: refresh,
@@ -189,9 +189,9 @@ func ProvideFinishLoginPasskey(
 	mfaSigner *authtoken.JWTSigner,
 	clock ports.Clock,
 	timing Timing,
-	passkeyAuth *usecase.FinishPasskeyAuthentication,
-) *usecase.FinishLoginPasskey {
-	return &usecase.FinishLoginPasskey{
+	passkeyAuth *auth.FinishPasskeyAuthentication,
+) *auth.FinishLoginPasskey {
+	return &auth.FinishLoginPasskey{
 		Users:         users,
 		Factors:       factors,
 		RefreshTokens: refresh,
@@ -206,8 +206,8 @@ func ProvideFinishLoginPasskey(
 	}
 }
 
-func ProvideChangePassword(users ports.UserRepository, hasher ports.PasswordHasher) *usecase.ChangePassword {
-	return &usecase.ChangePassword{Users: users, Hasher: hasher}
+func ProvideChangePassword(users ports.UserRepository, hasher ports.PasswordHasher) *auth.ChangePassword {
+	return &auth.ChangePassword{Users: users, Hasher: hasher}
 }
 
 func ProvideSelectWorkspace(
@@ -222,8 +222,8 @@ func ProvideSelectWorkspace(
 	signer ports.TokenSigner,
 	clock ports.Clock,
 	timing Timing,
-) *usecase.SelectWorkspace {
-	return &usecase.SelectWorkspace{
+) *auth.SelectWorkspace {
+	return &auth.SelectWorkspace{
 		Users:         users,
 		Memberships:   memberships,
 		Customers:     customers,
@@ -242,8 +242,8 @@ func ProvidePublicCustomerOTP(
 	store *memory.PhoneOTPStore,
 	signer ports.PhoneEnrollmentProofSigner,
 	clock ports.Clock,
-) *usecase.PublicCustomerOTP {
-	return &usecase.PublicCustomerOTP{Store: store, ProofSigner: signer, Clock: clock}
+) *auth.PublicCustomerOTP {
+	return &auth.PublicCustomerOTP{Store: store, ProofSigner: signer, Clock: clock}
 }
 
 func ProvideCustomerLogin(
@@ -257,8 +257,8 @@ func ProvideCustomerLogin(
 	catalog *postgres.StoreCatalog,
 	clock ports.Clock,
 	timing Timing,
-) *usecase.CustomerLogin {
-	return &usecase.CustomerLogin{
+) *auth.CustomerLogin {
+	return &auth.CustomerLogin{
 		Tx:               tx,
 		Users:            users,
 		Customers:        customers,
@@ -281,8 +281,8 @@ func ProvideSelectCustomerContext(
 	signer ports.TokenSigner,
 	clock ports.Clock,
 	timing Timing,
-) *usecase.SelectCustomerContext {
-	return &usecase.SelectCustomerContext{
+) *auth.SelectCustomerContext {
+	return &auth.SelectCustomerContext{
 		Users:         users,
 		Memberships:   memberships,
 		Customers:     customers,

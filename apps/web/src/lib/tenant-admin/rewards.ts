@@ -66,6 +66,6 @@ export async function uploadRewardImage(tenantId: string, rewardId: string, file
   return tenantMutate(
     buildTenantPath(tenantId, `rewards/${encodeURIComponent(rewardId)}/image`),
     tenantRewardSuccessEnvelopeSchema,
-    { method: "POST", body: form },
+    { method: "PUT", body: form },
   );
 }

@@ -94,7 +94,6 @@ export function AdminDashboardOverview({ stats, tenants }: { stats?: SuperadminS
         {kpis.map((kpi) => (
           <AdminKpiCard
             key={kpi.labelKey}
-            portal="admin"
             label={t(kpi.labelKey)}
             value={kpi.value}
             delta={kpi.delta}

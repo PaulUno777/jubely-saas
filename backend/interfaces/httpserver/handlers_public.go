@@ -1,10 +1,10 @@
 package httpserver
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"net/http"
 	"strings"
 
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
@@ -27,7 +27,7 @@ func (s *Server) PublicStoreSignup(c *gin.Context) {
 		return
 	}
 
-	out, err := s.StoreSignupUC.Execute(c.Request.Context(), usecase.StoreSignupInput{
+	out, err := s.StoreSignupUC.Execute(c.Request.Context(), tenant.StoreSignupInput{
 		TenantName:    body.TenantName,
 		TenantSlug:    body.TenantSlug,
 		Plan:          body.Plan,

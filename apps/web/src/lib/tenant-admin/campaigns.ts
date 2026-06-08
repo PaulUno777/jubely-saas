@@ -48,16 +48,16 @@ export async function updateCampaign(
 
 export async function launchCampaign(tenantId: string, campaignId: string) {
   return tenantMutate(
-    buildTenantPath(tenantId, `campaigns/${encodeURIComponent(campaignId)}/launch`),
+    buildTenantPath(tenantId, `campaigns/${encodeURIComponent(campaignId)}`),
     tenantCampaignSuccessEnvelopeSchema,
-    { method: "POST" },
+    jsonPatch({ status: "active" }),
   );
 }
 
 export async function pauseCampaign(tenantId: string, campaignId: string) {
   return tenantMutate(
-    buildTenantPath(tenantId, `campaigns/${encodeURIComponent(campaignId)}/pause`),
+    buildTenantPath(tenantId, `campaigns/${encodeURIComponent(campaignId)}`),
     tenantCampaignSuccessEnvelopeSchema,
-    { method: "POST" },
+    jsonPatch({ status: "paused" }),
   );
 }

@@ -126,7 +126,7 @@ async function staffEnroll(token, customer) {
 }
 
 async function recordPurchase(token, { phone, customerQr, amountFcfa }) {
-  const res = await callApi("POST", "/v1/staff/purchases", {
+  const res = await callApi("POST", "/v1/staff/transactions", {
     headers: { authorization: `Bearer ${token}` },
     body: {
       ...(phone ? { phone_e164: phone } : {}),
@@ -138,25 +138,29 @@ async function recordPurchase(token, { phone, customerQr, amountFcfa }) {
 }
 
 async function otpSend(phone) {
-  await callApi("POST", "/v1/public/otp/send", { body: { phone_e164: phone } });
+  const res = await callApi("POST", "/v1/public/phone-verifications", { body: { phone_e164: phone } });
+  const payload = asObject(data(res.json), "otp send");
+  return requireString(payload.id, "verification_id");
 }
 
-async function otpVerify(phone, code) {
-  const res = await callApi("POST", "/v1/public/otp/verify", {
-    body: { phone_e164: phone, code },
-  });
+async function otpVerify(verificationId, code) {
+  const res = await callApi(
+    "POST",
+    `/v1/public/phone-verifications/${encodeURIComponent(verificationId)}/confirmations`,
+    { body: { code } },
+  );
   return requireString(asObject(data(res.json), "otp").phone_verify_token, "phone_verify_token");
 }
 
 async function customerLogin(phoneVerifyToken) {
-  const res = await callApi("POST", "/v1/auth/customer/login", {
+  const res = await callApi("POST", "/v1/customer-sessions", {
     body: { phone_verify_token: phoneVerifyToken },
   });
   return asObject(data(res.json), "customer login");
 }
 
 async function customerSelectSession(accessToken, enrollmentId) {
-  const res = await callApi("POST", "/v1/auth/customer/session", {
+  const res = await callApi("PUT", "/v1/customer-sessions/current", {
     headers: { authorization: `Bearer ${accessToken}` },
     body: { enrollment_id: enrollmentId },
   });
@@ -171,15 +175,15 @@ async function customerListRewards(accessToken) {
 }
 
 async function customerClaimReward(accessToken, rewardId) {
-  const res = await callApi("POST", `/v1/customers/me/rewards/${encodeURIComponent(rewardId)}/claims`, {
+  const res = await callApi("POST", "/v1/customers/me/reward-claims", {
     headers: { authorization: `Bearer ${accessToken}` },
-    body: {},
+    body: { reward_id: rewardId },
   });
   return asObject(data(res.json), "claim");
 }
 
 async function staffValidateRedemption(token, claimQr) {
-  const res = await callApi("POST", "/v1/staff/redemptions/validate", {
+  const res = await callApi("POST", "/v1/staff/redemption-validations", {
     headers: { authorization: `Bearer ${token}` },
     body: { claim_qr: claimQr },
   });
@@ -290,8 +294,8 @@ async function simulateClaims(merchantToken, customers, rewardCatalog, maxClaims
     }
 
     try {
-      await otpSend(customer.phone);
-      const proof = await otpVerify(customer.phone, config.devOtpCode);
+      const verificationId = await otpSend(customer.phone);
+      const proof = await otpVerify(verificationId, config.devOtpCode);
       const loginPayload = await customerLogin(proof);
       const access0 = requireString(loginPayload.access_token, "customer access");
       const session = await customerSelectSession(

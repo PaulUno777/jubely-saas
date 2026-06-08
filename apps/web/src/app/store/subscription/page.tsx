@@ -57,7 +57,7 @@ export default function StoreSubscriptionPage() {
         pay_reference: string;
         amount_fcfa: number;
         instructions: string;
-      }>("/v1/organizations/me/subscription/momo-invoice", { method: "POST" });
+      }>("/v1/organizations/me/subscription/invoices", { method: "POST" });
       setInvoice(inv);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("invoiceError"));

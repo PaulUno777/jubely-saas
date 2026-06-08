@@ -350,8 +350,8 @@ async function inviteAndAccept(auth, email, role, password, invPath) {
     body: { email, role },
   });
   const token = requireString(asObject(data(inv.json), `invite ${email}`).token, `invite token for ${email}`);
-  await callApi("POST", `/v1/invitations/${encodeURIComponent(token)}/accept`, {
-    body: { password },
+  await callApi("PATCH", `/v1/invitations/${encodeURIComponent(token)}`, {
+    body: { status: "accepted", password },
   });
 }
 
@@ -435,15 +435,20 @@ async function activateOrgSubscription(merchantToken) {
     return;
   }
   log("Activate org subscription (dev MoMo confirm)");
-  const invRes = await callApi("POST", "/v1/organizations/me/subscription/momo-invoice", {
+  const invRes = await callApi("POST", "/v1/organizations/me/subscription/invoices", {
     headers: { authorization: `Bearer ${merchantToken}` },
   });
   const inv = asObject(data(invRes.json), "momo invoice");
+  const invoiceId = requireString(inv.id, "invoice id");
   const payRef = requireString(inv.pay_reference, "pay_reference");
-  await callApi("POST", "/v1/organizations/me/subscription/confirm-momo", {
-    headers: { authorization: `Bearer ${merchantToken}` },
-    body: { pay_reference: payRef },
-  });
+  await callApi(
+    "POST",
+    `/v1/organizations/me/subscription/invoices/${encodeURIComponent(invoiceId)}/confirmations`,
+    {
+      headers: { authorization: `Bearer ${merchantToken}` },
+      body: { pay_reference: payRef },
+    },
+  );
 }
 
 async function loginScopedWithStore(email, password, tenantSlug, activeStoreId = "") {
@@ -583,7 +588,7 @@ async function staffCreateCustomer(authToken, merchantAuthToken, tenantId, custo
 }
 
 async function recordPurchase(authToken, { phone, customerQr, amountFcfa, occurredAt }) {
-  const res = await callApi("POST", "/v1/staff/purchases", {
+  const res = await callApi("POST", "/v1/staff/transactions", {
     headers: { authorization: `Bearer ${authToken}` },
     body: {
       ...(phone ? { phone_e164: phone } : {}),
@@ -596,13 +601,17 @@ async function recordPurchase(authToken, { phone, customerQr, amountFcfa, occurr
 }
 
 async function otpSend(phone) {
-  await callApi("POST", "/v1/public/otp/send", { body: { phone_e164: phone } });
+  const res = await callApi("POST", "/v1/public/phone-verifications", { body: { phone_e164: phone } });
+  const payload = asObject(data(res.json), "otp send");
+  return requireString(payload.id, "verification_id");
 }
 
-async function otpVerify(phone, code) {
-  const res = await callApi("POST", "/v1/public/otp/verify", {
-    body: { phone_e164: phone, code },
-  });
+async function otpVerify(verificationId, code) {
+  const res = await callApi(
+    "POST",
+    `/v1/public/phone-verifications/${encodeURIComponent(verificationId)}/confirmations`,
+    { body: { code } },
+  );
   const payload = asObject(data(res.json), "otp verify");
   return requireString(payload.phone_verify_token, "phone_verify_token");
 }
@@ -614,19 +623,19 @@ async function resolvePhoneVerifyToken(phone, explicitToken = "") {
       `No phone_verify_token for ${phone}. Set CUSTOMER_PHONE_VERIFY_TOKEN or PUBLIC_OTP_DEV_CODE=000000 in backend/.env and DEV_OTP_CODE in seed.`,
     );
   }
-  await otpSend(phone);
-  return otpVerify(phone, config.devOtpCode);
+  const verificationId = await otpSend(phone);
+  return otpVerify(verificationId, config.devOtpCode);
 }
 
 async function customerLogin(phoneVerifyToken) {
-  const res = await callApi("POST", "/v1/auth/customer/login", {
+  const res = await callApi("POST", "/v1/customer-sessions", {
     body: { phone_verify_token: phoneVerifyToken },
   });
   return asObject(data(res.json), "customer login");
 }
 
 async function customerSelectSession(accessToken, enrollmentId) {
-  const res = await callApi("POST", "/v1/auth/customer/session", {
+  const res = await callApi("PUT", "/v1/customer-sessions/current", {
     headers: { authorization: `Bearer ${accessToken}` },
     body: { enrollment_id: enrollmentId },
   });
@@ -641,15 +650,15 @@ async function customerListRewards(accessToken) {
 }
 
 async function customerClaimReward(accessToken, rewardId) {
-  const res = await callApi("POST", `/v1/customers/me/rewards/${encodeURIComponent(rewardId)}/claims`, {
+  const res = await callApi("POST", "/v1/customers/me/reward-claims", {
     headers: { authorization: `Bearer ${accessToken}` },
-    body: {},
+    body: { reward_id: rewardId },
   });
   return asObject(data(res.json), "claim reward");
 }
 
 async function staffValidateRedemption(authToken, claimQr) {
-  const res = await callApi("POST", "/v1/staff/redemptions/validate", {
+  const res = await callApi("POST", "/v1/staff/redemption-validations", {
     headers: { authorization: `Bearer ${authToken}` },
     body: { claim_qr: claimQr },
   });

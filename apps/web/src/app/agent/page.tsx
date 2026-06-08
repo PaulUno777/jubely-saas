@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useSession } from "@/hooks/useSession";
-import { storeGetMetrics, storeListPointEvents } from "@/lib/storeApi";
+import { useTenantId } from "@/hooks/useTenantId";
+import { agentGetMetrics, agentListPointEvents } from "@/lib/agentApi";
 import { ActivityRow } from "@/components/agent/activity-row";
 import {
   IconBell,
@@ -38,14 +39,17 @@ function formatTime(d: string | number | Date) {
 export default function AgentHomePage() {
   const t = useTranslations("agent.home");
   const { session } = useSession();
+  const tenantId = useTenantId();
 
   const metricsQ = useQuery({
-    queryKey: ["agent", "metrics"],
-    queryFn: storeGetMetrics,
+    queryKey: ["agent", "metrics", tenantId],
+    enabled: Boolean(tenantId),
+    queryFn: () => agentGetMetrics(tenantId!),
   });
   const feedQ = useQuery({
-    queryKey: ["agent", "feed"],
-    queryFn: () => storeListPointEvents({ limit: 4 }),
+    queryKey: ["agent", "feed", tenantId],
+    enabled: Boolean(tenantId),
+    queryFn: () => agentListPointEvents(tenantId!, { limit: 4 }),
   });
 
   const displayName = session?.email?.split("@")[0] ?? "—";

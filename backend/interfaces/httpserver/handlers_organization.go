@@ -2,9 +2,9 @@ package httpserver
 
 import (
 	"net/http"
+	"strings"
 
-	"github.com/PaulUno777/jubely-saas/backend/application/ports"
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
@@ -12,12 +12,7 @@ import (
 )
 
 func (s *Server) orgIDFromClaims(c *gin.Context) (uuid.UUID, bool) {
-	claims, ok := c.Get(ginKeyAuthClaims)
-	if !ok {
-		respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
-		return uuid.Nil, false
-	}
-	tc, ok := claims.(ports.TokenClaims)
+	tc, ok := Claims(c)
 	if !ok || tc.TenantID == nil {
 		respondError(c, http.StatusForbidden, i18n.CodeAuthForbidden, nil)
 		return uuid.Nil, false
@@ -65,7 +60,7 @@ func (s *Server) OrgCreateStore(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, nil)
 		return
 	}
-	st, err := s.CreateOrgStoreUC.Execute(c.Request.Context(), usecase.CreateOrgStoreInput{
+	st, err := s.CreateOrgStoreUC.Execute(c.Request.Context(), tenant.CreateOrgStoreInput{
 		TenantID:    orgID,
 		Slug:        body.Slug,
 		Name:        body.Name,
@@ -141,6 +136,7 @@ func (s *Server) OrgCreateMoMoInvoice(c *gin.Context) {
 		return
 	}
 	respondCreated(c, gin.H{
+		"id":             out.Invoice.ID.String(),
 		"pay_reference":  out.Invoice.PayReference,
 		"amount_fcfa":    out.Invoice.AmountFCFA,
 		"currency":       out.Invoice.Currency,
@@ -154,16 +150,27 @@ type confirmMoMoBody struct {
 }
 
 func (s *Server) OrgConfirmMoMoInvoice(c *gin.Context) {
+	invoiceID, err := uuid.Parse(strings.TrimSpace(c.Param("invoiceId")))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_invoice_id"})
+		return
+	}
 	var body confirmMoMoBody
 	if err := c.ShouldBindJSON(&body); err != nil {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, nil)
 		return
 	}
-	if err := s.ConfirmMoMoInvoiceUC.Execute(c.Request.Context(), body.PayReference); err != nil {
+	payRef := strings.TrimSpace(body.PayReference)
+	if payRef == "" {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "missing_pay_reference"})
+		return
+	}
+	if err := s.ConfirmMoMoInvoiceUC.Execute(c.Request.Context(), payRef); err != nil {
 		respondMapped(c, mapTenantError(err))
 		return
 	}
-	respondOK(c, gin.H{"status": "paid"})
+	_ = invoiceID
+	respondOK(c, gin.H{"status": "paid", "invoice_id": invoiceID.String()})
 }
 
 func (s *Server) PublicListPlans(c *gin.Context) {

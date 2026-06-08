@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { storeListCustomers } from "@/lib/storeApi";
+import { useTenantId } from "@/hooks/useTenantId";
+import { agentListCustomers } from "@/lib/agentApi";
 import type { StoreCustomer } from "@jubely/api-schemas";
 import { IconSearch, IconPlus, IconChevronRight } from "@/components/agent/icons";
 
@@ -55,9 +56,11 @@ export default function CustomersPage() {
   const [filter, setFilter] = useState<Filter>("filterAll");
   const [query, setQuery] = useState("");
 
+  const tenantId = useTenantId();
   const { data = [], isLoading } = useQuery({
-    queryKey: ["agent", "customers"],
-    queryFn: () => storeListCustomers({ limit: 100 }),
+    queryKey: ["agent", "customers", tenantId],
+    enabled: Boolean(tenantId),
+    queryFn: () => agentListCustomers(tenantId!, { limit: 100 }),
   });
 
   const filtered = data.filter((c) => {

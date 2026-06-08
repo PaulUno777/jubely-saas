@@ -2,31 +2,31 @@ package providers
 
 import (
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 )
 
 func ProvideCreateTenant(
 	tenants ports.TenantRepository,
-	provision *usecase.ProvisionOrganization,
+	provision *tenant.ProvisionOrganization,
 	clock ports.Clock,
-) *usecase.CreateTenant {
-	return &usecase.CreateTenant{Tenants: tenants, Provision: provision, Clock: clock}
+) *tenant.CreateTenant {
+	return &tenant.CreateTenant{Tenants: tenants, Provision: provision, Clock: clock}
 }
 
-func ProvideListTenants(tenants ports.TenantRepository) *usecase.ListTenants {
-	return &usecase.ListTenants{Tenants: tenants}
+func ProvideListTenants(tenants ports.TenantRepository) *tenant.ListTenants {
+	return &tenant.ListTenants{Tenants: tenants}
 }
 
-func ProvideUpdateTenant(tenants ports.TenantRepository, clock ports.Clock) *usecase.UpdateTenant {
-	return &usecase.UpdateTenant{Tenants: tenants, Clock: clock}
+func ProvideUpdateTenant(tenants ports.TenantRepository, clock ports.Clock) *tenant.UpdateTenant {
+	return &tenant.UpdateTenant{Tenants: tenants, Clock: clock}
 }
 
 func ProvideListTenantUsers(
 	tenants ports.TenantRepository,
 	memberships ports.TenantMembershipRepository,
-) *usecase.ListTenantUsers {
-	return &usecase.ListTenantUsers{Tenants: tenants, Memberships: memberships}
+) *tenant.ListTenantUsers {
+	return &tenant.ListTenantUsers{Tenants: tenants, Memberships: memberships}
 }
 
 func ProvideCreateMerchantInvitation(
@@ -34,8 +34,8 @@ func ProvideCreateMerchantInvitation(
 	invitations ports.InvitationRepository,
 	clock ports.Clock,
 	timing Timing,
-) *usecase.CreateMerchantInvitation {
-	return &usecase.CreateMerchantInvitation{
+) *tenant.CreateMerchantInvitation {
+	return &tenant.CreateMerchantInvitation{
 		Tenants:     tenants,
 		Invitations: invitations,
 		Clock:       clock,
@@ -52,8 +52,8 @@ func ProvideAcceptMerchantInvitation(
 	invitations ports.InvitationRepository,
 	hasher ports.PasswordHasher,
 	clock ports.Clock,
-) *usecase.AcceptMerchantInvitation {
-	return &usecase.AcceptMerchantInvitation{
+) *tenant.AcceptMerchantInvitation {
+	return &tenant.AcceptMerchantInvitation{
 		Tx:          tx,
 		Users:       users,
 		Memberships: memberships,
@@ -69,8 +69,8 @@ func ProvideCreateTenantUser(
 	users ports.UserRepository,
 	memberships ports.TenantMembershipRepository,
 	hasher ports.PasswordHasher,
-) *usecase.CreateTenantUser {
-	return &usecase.CreateTenantUser{
+) *tenant.CreateTenantUser {
+	return &tenant.CreateTenantUser{
 		Tenants:     tenants,
 		Users:       users,
 		Memberships: memberships,
@@ -78,22 +78,22 @@ func ProvideCreateTenantUser(
 	}
 }
 
-func ProvideSuperadminStats(tenants ports.TenantRepository) *usecase.SuperadminStats {
-	return &usecase.SuperadminStats{Tenants: tenants}
+func ProvideSuperadminStats(tenants ports.TenantRepository) *tenant.SuperadminStats {
+	return &tenant.SuperadminStats{Tenants: tenants}
 }
 
 func ProvideStoreSignup(
 	tx ports.TxManager,
 	tenants ports.TenantRepository,
-	provision *usecase.ProvisionOrganization,
+	provision *tenant.ProvisionOrganization,
 	users ports.UserRepository,
 	memberships ports.TenantMembershipRepository,
 	customers ports.CustomerIdentityRepository,
 	hasher ports.PasswordHasher,
 	signer ports.TokenSigner,
 	clock ports.Clock,
-) *usecase.StoreSignup {
-	return &usecase.StoreSignup{
+) *tenant.StoreSignup {
+	return &tenant.StoreSignup{
 		Tx:          tx,
 		Tenants:     tenants,
 		Provision:   provision,

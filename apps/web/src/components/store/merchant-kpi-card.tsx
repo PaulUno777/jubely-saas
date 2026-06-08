@@ -13,5 +13,5 @@ export type MerchantKpiCardProps = Omit<AdminKpiCardProps, "portal" | "tone" | "
 };
 
 export function MerchantKpiCard(props: MerchantKpiCardProps) {
-  return <AdminKpiCard portal="merchant" {...props} />;
+  return <AdminKpiCard {...props} />;
 }

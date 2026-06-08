@@ -36,16 +36,23 @@ export default function JoinBySlugPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [verificationId, setVerificationId] = useState<string | null>(null);
   const [verifyToken, setVerifyToken] = useState<string | null>(null);
 
   const sendMut = useMutation({
     mutationFn: () => publicOtpSend(phone.trim()),
-    onSuccess: () => toast.success(t("otpSent")),
+    onSuccess: (data) => {
+      setVerificationId(data.id);
+      toast.success(t("otpSent"));
+    },
     onError: (e) => toast.error(e instanceof ApiResponseError ? e.message : t("genericError")),
   });
 
   const verifyMut = useMutation({
-    mutationFn: () => publicOtpVerify(phone.trim(), otp.trim()),
+    mutationFn: () => {
+      if (!verificationId) throw new Error("Send OTP first");
+      return publicOtpVerify(verificationId, otp.trim());
+    },
     onSuccess: (data) => {
       setVerifyToken(data.phone_verify_token);
       toast.success(t("otpVerified"));

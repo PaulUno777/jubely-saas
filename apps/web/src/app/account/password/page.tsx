@@ -22,8 +22,8 @@ export default function PasswordPage() {
   async function submit() {
     setLoading(true);
     try {
-      const res = await authedFetch("/v1/me/password", {
-        method: "POST",
+      const res = await authedFetch("/v1/me/credentials/password", {
+        method: "PATCH",
         body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
       });
       const raw = await res.text();

@@ -8,21 +8,22 @@ Base URL is configured per environment (e.g. `http://localhost:8082/v1`). Respon
 
 | Method | Path                         | Description                                                                                      |
 | ------ | ---------------------------- | ------------------------------------------------------------------------------------------------ |
-| POST   | `/public/store/signup`       | Self-serve store signup (tenant + first admin)                                                   |
+| POST   | `/public/merchant-applications` | Self-serve store signup (tenant + first admin)                                                |
 | GET    | `/public/files/*filepath`    | Serve uploaded assets                                                                            |
 | GET    | `/public/tenant/:slug`       | Public tenant card: name, slug, logo, `store_qr` token for enrollment                            |
-| POST   | `/public/otp/send`           | Request SMS-style OTP (in-memory MVP; use `PUBLIC_OTP_LOG_CODE=true` on API to log codes in dev) |
-| POST   | `/public/otp/verify`         | Verify OTP; returns `phone_verify_token` JWT for optional `phone_verify_token` on enroll         |
+| POST   | `/public/phone-verifications` | Request SMS-style OTP (in-memory MVP; use `PUBLIC_OTP_LOG_CODE=true` on API to log codes in dev) |
+| POST   | `/public/phone-verifications/:id/confirmations` | Verify OTP; returns `phone_verify_token` for enroll / customer login              |
 | POST   | `/public/enrollments`        | Enroll customer via signed `store_qr` (org + store) + phone + name                             |
 | GET    | `/public/plans`              | Plan catalog (Standard / Growth / Scale)                                                         |
-| POST   | `/auth/login`                | Email + password; optional `tenant_slug` for tenant-scoped users                                 |
-| POST   | `/auth/customer/login`       | Customer login after OTP verify (`phone_verify_token`)                                           |
-| POST   | `/auth/refresh`              | Refresh access token                                                                             |
-| POST   | `/auth/logout`               | Revoke refresh session                                                                           |
-| POST   | `/auth/mfa/totp/verify`      | Complete MFA login                                                                               |
-| POST   | `/bootstrap/superadmin`      | One-shot bootstrap (requires `X-Bootstrap-Secret`)                                               |
+| POST   | `/sessions`                  | Email + password; optional `tenant_slug` for tenant-scoped users                                 |
+| POST   | `/customer-sessions`         | Customer login after OTP verify (`phone_verify_token`)                                           |
+| POST   | `/sessions/refresh`          | Refresh access token                                                                             |
+| DELETE | `/sessions/current`          | Revoke refresh session                                                                           |
+| PUT    | `/sessions/current/workspace`| Select workspace (`membership_id`, optional `active_store_id`)                                   |
+| POST   | `/sessions/mfa/totp/verifications` | Complete MFA login                                                                         |
+| POST   | `/setup/superadmin`          | One-shot bootstrap (requires `X-Bootstrap-Secret`)                                               |
 | GET    | `/invitations/:token`        | Invitation preview                                                                               |
-| POST   | `/invitations/:token/accept` | Accept invitation                                                                                |
+| PATCH  | `/invitations/:token`        | Accept invitation (`{ "status": "accepted", "password": "..." }`)                              |
 
 ## Customers (loyalty member)
 
@@ -31,7 +32,8 @@ Base URL is configured per environment (e.g. `http://localhost:8082/v1`). Respon
 | GET    | `/customers/wallet`          | —    | Wallet by query `customer_qr` (MVP device-local QR access) |
 | GET    | `/customers/me/wallet`       | Bearer (customer JWT, `active_enrollment_id` set) | Wallet for active enrollment |
 | PATCH  | `/customers/me/profile`      | Bearer (customer JWT) | Update customer profile fields |
-| POST   | `/auth/customer/session`     | Bearer (customer JWT) | Set active enrollment in session (`enrollment_id`) |
+| PUT    | `/customer-sessions/current` | Bearer (customer JWT) | Set active enrollment in session (`enrollment_id`) |
+| POST   | `/customers/me/reward-claims`| Bearer (customer JWT) | Claim reward (`reward_id` in body) |
 
 ## Authenticated — superadmin (`Authorization: Bearer`, role `superadmin`)
 
@@ -46,7 +48,7 @@ Group `/v1/superadmin`.
 | GET    | `/superadmin/tenants/:tenantId/users`       | List tenant users                                              |
 | POST   | `/superadmin/tenants/:tenantId/users`       | Create tenant user (e.g. merchant admin)                       |
 | POST   | `/superadmin/tenants/:tenantId/invitations` | Create invitation                                              |
-| GET    | `/superadmin/tenants/:tenantId/store-qr`    | Signed store QR token                                          |
+| GET    | `/superadmin/tenants/:tenantId/enrollment-qr` | Signed store QR token                                       |
 | GET    | `/superadmin/stats`                         | Dashboard stats                                                |
 | POST   | `/superadmin/uploads/tenant-logo`           | Multipart tenant logo upload                                   |
 
@@ -59,8 +61,8 @@ Group `/v1/organizations/me` (org-wide billing & boutiques).
 | GET    | `/organizations/me/stores`                | List boutiques                                   |
 | POST   | `/organizations/me/stores`                  | Create boutique (quota-enforced)                 |
 | GET    | `/organizations/me/subscription`          | Subscription + plan limits                       |
-| POST   | `/organizations/me/subscription/momo-invoice` | MoMo pay-by-reference (`JBE-PAY-*`)          |
-| POST   | `/organizations/me/subscription/confirm-momo` | Mark invoice paid (MVP manual confirm)       |
+| POST   | `/organizations/me/subscription/invoices` | MoMo pay-by-reference (`JBE-PAY-*`)              |
+| POST   | `/organizations/me/subscription/invoices/:invoiceId/confirmations` | Mark invoice paid (MVP manual confirm) |
 
 JWT may include `active_store_id` (staff counter context) and `subscription_status` (`active`, `trialing`, `frozen`, …). Writes are blocked when status is not `active` or `trialing`.
 
@@ -93,30 +95,21 @@ Group `/v1/tenants/:tenantId`. Requires merchant admin JWT with matching `tenant
 | GET | `/tenants/:id/transactions` | Point event ledger |
 | GET | `/tenants/:id/agents` | Staff / agent list |
 | POST | `/tenants/:id/invitations` | Create staff invitation |
-| GET/POST/PATCH | `/tenants/:id/rules` | Rules CRUD + simulate + validate |
-| GET/PUT | `/tenants/:id/tiers` | Loyalty tier config |
+| GET/POST/PATCH | `/tenants/:id/rules` | Rules CRUD |
+| POST | `/tenants/:id/rule-simulations` | Simulate rule against sample purchase |
+| POST | `/tenants/:id/rule-validations` | Validate rule JSON |
+| GET/PUT | `/tenants/:id/tiers/:tierCode` | Upsert loyalty tier by code |
 | GET/POST/PATCH | `/tenants/:id/rewards` | Rewards CRUD |
-| POST | `/tenants/:id/rewards/:rewardId/image` | Reward image upload |
+| PUT | `/tenants/:id/rewards/:rewardId/image` | Reward image upload |
 | GET/PUT | `/tenants/:id/qr/branding` | Enrollment QR branding |
-| GET | `/tenants/:id/qr/token` | Signed store QR token |
-| GET | `/tenants/:id/qr/render.svg` | Branded QR SVG preview |
+| GET | `/tenants/:id/enrollment-qr` | Signed store QR token |
+| GET | `/tenants/:id/enrollment-qr/render` | Branded QR SVG preview (`Accept: image/svg+xml`) |
 | GET/PATCH | `/tenants/:id/settings` | Tenant profile + policies |
 | GET/PUT | `/tenants/:id/settings/locales` | Supported locales |
-| GET/POST/PATCH | `/tenants/:id/campaigns` | Campaign CRUD + launch/pause |
+| GET/POST/PATCH | `/tenants/:id/campaigns` | Campaign CRUD; `PATCH` with `status` for launch/pause |
 | GET | `/tenants/:id/analytics/*` | Overview, member growth, tier distribution, heatmap, top rewards, retention |
 
 Zod wire schemas: `packages/api-schemas/src/tenant-admin.ts`.
-
-### Legacy store scope (`/v1/store` — agent portal only)
-
-Removed from merchant portal. Kept until `/agent` migrates to tenant APIs:
-
-| Method | Path                 | Description                    |
-| ------ | -------------------- | ------------------------------ |
-| GET    | `/store/tenant`      | Current tenant profile         |
-| GET    | `/store/metrics`     | Legacy metrics snapshot        |
-| GET    | `/store/customers`   | Paginated customers            |
-| GET    | `/store/transactions`| Paginated point events         |
 
 ## Authenticated — staff or merchant admin
 
@@ -125,10 +118,10 @@ Group `/v1/staff`.
 | Method | Path               | Description                                                         |
 | ------ | ------------------ | ------------------------------------------------------------------- |
 | POST   | `/staff/customers` | Create customer identity + enrollment + customer QR                 |
-| POST   | `/staff/purchases` | Record purchase amount; awards points (rules engine; `store_id` on ledger) |
-| POST   | `/staff/redemptions/validate` | Burn claim QR (org-wide; no store gate on reward pickup) |
+| POST   | `/staff/transactions` | Record purchase amount; awards points (rules engine; `store_id` on ledger) |
+| POST   | `/staff/redemption-validations` | Burn claim QR (org-wide; no store gate on reward pickup) |
 
-`POST /staff/purchases` requires permission `record_transaction` on the JWT (merchant admins implicitly have all store permissions).
+`POST /staff/transactions` requires permission `record_transaction` on the JWT (merchant admins implicitly have all store permissions).
 
 ## Authenticated — agent/staff portal (MFA, password, etc.)
 
@@ -143,13 +136,15 @@ Group `/v1/staff`.
 | API client | `apps/web/src/lib/tenant-admin/` | `core.ts` + domain modules; barrel `index.ts` |
 | Hooks | `apps/web/src/hooks/useTenantAdminQuery.ts`, `tenant-admin-hooks.ts` | Query key prefix `["tenant-admin", domain, tenantId, …]` |
 | Metrics (dashboard) | `["tenant", …]` | `useTenantMetrics` — supports `from`/`to` via `toIsoRange` |
-| Legacy agent | `apps/web/src/lib/storeApi.ts` | `/v1/store/*` shim only |
+| Agent portal | `apps/web/src/lib/agentApi.ts` | Tenant-scoped reads (`/tenants/:id/metrics`, etc.) |
 
-Page → endpoint map: customers → `GET …/customers`; transactions → `GET …/transactions`; agents → `GET …/agents` + `POST …/invitations`; points-rules → `…/rules`, `…/tiers`; rewards → `…/rewards`; enrollment QR → `…/qr/*`; campaigns → `…/campaigns`; analytics → `…/analytics/*`; settings → `…/settings`, `…/settings/locales`.
+Page → endpoint map: customers → `GET …/customers`; transactions → `GET …/transactions`; agents → `GET …/agents` + `POST …/invitations`; points-rules → `…/rules`, `…/rule-simulations`, `…/tiers/:tierCode`; rewards → `…/rewards`; enrollment QR → `…/enrollment-qr`; campaigns → `…/campaigns`; analytics → `…/analytics/*`; settings → `…/settings`, `…/settings/locales`.
+
+REST conventions: [`backend/docs/rest-conventions.md`](../backend/docs/rest-conventions.md).
 
 ## Rate limits
 
-- `POST /v1/auth/login`, `POST /v1/bootstrap/superadmin`, `POST /v1/public/store/signup`, `GET /v1/public/tenant/:slug`, `POST /v1/public/otp/send`, `POST /v1/public/otp/verify`, `POST /v1/public/enrollments`, `GET /v1/customers/wallet`: per-IP sliding-window limits (`backend/interfaces/httpserver/ratelimit.go`).
+- `POST /v1/sessions`, `POST /v1/setup/superadmin`, `POST /v1/public/merchant-applications`, `GET /v1/public/tenant/:slug`, `POST /v1/public/phone-verifications`, `POST /v1/public/enrollments`, `GET /v1/customers/wallet`: per-IP sliding-window limits (`backend/interfaces/http/middleware/ratelimit.go`).
 
 Optional: set `PUBLIC_ENROLL_REQUIRE_PHONE_VERIFY=true` to require a verified phone token on public enrollment.
 
@@ -159,5 +154,4 @@ Optional: set `PUBLIC_ENROLL_REQUIRE_PHONE_VERIFY=true` to require a verified ph
 | -------------------------- | ---------------------------------------------------------- |
 | Merchant settings          | `GET/PATCH /v1/tenants/:id/settings`                       |
 | Merchant customers         | `GET /v1/tenants/:id/customers`                            |
-| `GET /tenant/qr`           | `GET /v1/tenants/:id/qr/token` (merchant)                |
-| Agent legacy reads         | `GET /v1/store/*` (deprecated)                             |
+| `GET /tenant/qr`           | `GET /v1/tenants/:id/enrollment-qr` (merchant)             |

@@ -10,7 +10,7 @@ export const agentLoginFormSchema = z.object({
 
 export type AgentLoginForm = z.infer<typeof agentLoginFormSchema>;
 
-/** Wire format for POST /v1/auth/login */
+/** Wire format for POST /v1/sessions */
 export const loginRequestWireSchema = z.object({
   email: z.string(),
   password: z.string(),
@@ -48,7 +48,7 @@ export const authSessionDataSchema = z.object({
   customer_enrollments: z.array(authCustomerEnrollmentSchema).optional(),
 });
 
-/** POST /v1/auth/login — discriminated by `step`. */
+/** POST /v1/sessions — discriminated by `step`. */
 export const loginOkStepSchema = authSessionDataSchema.extend({
   step: z.literal("ok"),
   access_token: z.string(),

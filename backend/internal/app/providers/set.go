@@ -95,4 +95,10 @@ var UseCaseSet = wire.NewSet(
 	ProvideRetentionCohorts,
 	ProvideEnrollmentBalanceReader,
 	ProvideUploadRewardImage,
+	ProvideGetTenant,
+	ProvidePreviewInvitation,
+	ProvideGetEnrollmentQR,
+	ProvideListNearbyLocations,
+	ProvideSetLocationHQ,
+	ProvideQueryTenantMetrics,
 )

@@ -10,11 +10,11 @@ import {
 import { z } from "zod";
 import { joinUrl, jsonHeaders } from "./http";
 
-const otpSendOk = z.object({ sent: z.literal(true) });
-const otpSendEnvelope = z.object({ data: otpSendOk });
+const phoneVerificationCreateEnvelope = z.object({
+  data: z.object({ id: z.string().min(1), sent: z.literal(true) }),
+});
 
-const otpVerifyOk = z.object({ phone_verify_token: z.string().min(1) });
-const otpVerifyEnvelope = z.object({ data: otpVerifyOk });
+const otpVerifyEnvelope = z.object({ data: z.object({ phone_verify_token: z.string().min(1) }) });
 
 export async function publicGetTenantBySlug(slug: string) {
   const url = joinUrl(`/v1/public/tenant/${encodeURIComponent(slug)}`);
@@ -26,7 +26,7 @@ export async function publicGetTenantBySlug(slug: string) {
 }
 
 export async function publicOtpSend(phoneE164: string) {
-  const res = await fetch(joinUrl("/v1/public/otp/send"), {
+  const res = await fetch(joinUrl("/v1/public/phone-verifications"), {
     method: "POST",
     headers: jsonHeaders(),
     body: JSON.stringify({ phone_e164: phoneE164 }),
@@ -35,18 +35,21 @@ export async function publicOtpSend(phoneE164: string) {
   const text = await res.text();
   const json = parseJsonUnknown(text);
   if (!res.ok) throwFailedApiResponse(json, res.status, text);
-  const parsed = otpSendEnvelope.safeParse(json);
+  const parsed = phoneVerificationCreateEnvelope.safeParse(json);
   if (!parsed.success) throw new Error("invalid_response");
   return parsed.data.data;
 }
 
-export async function publicOtpVerify(phoneE164: string, code: string) {
-  const res = await fetch(joinUrl("/v1/public/otp/verify"), {
-    method: "POST",
-    headers: jsonHeaders(),
-    body: JSON.stringify({ phone_e164: phoneE164, code }),
-    credentials: "include",
-  });
+export async function publicOtpVerify(verificationId: string, code: string) {
+  const res = await fetch(
+    joinUrl(`/v1/public/phone-verifications/${encodeURIComponent(verificationId)}/confirmations`),
+    {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ code }),
+      credentials: "include",
+    },
+  );
   const text = await res.text();
   const json = parseJsonUnknown(text);
   if (!res.ok) throwFailedApiResponse(json, res.status, text);
@@ -66,9 +69,9 @@ export async function publicGetInvitationPreview(token: string) {
 }
 
 export async function publicAcceptInvitation(token: string, password: string) {
-  const body = acceptInvitationWireSchema.parse({ password });
-  const res = await fetch(joinUrl(`/v1/invitations/${encodeURIComponent(token)}/accept`), {
-    method: "POST",
+  const body = acceptInvitationWireSchema.parse({ status: "accepted", password });
+  const res = await fetch(joinUrl(`/v1/invitations/${encodeURIComponent(token)}`), {
+    method: "PATCH",
     headers: jsonHeaders(),
     body: JSON.stringify(body),
     credentials: "include",

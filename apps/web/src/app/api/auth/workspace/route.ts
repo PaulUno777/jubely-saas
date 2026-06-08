@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
   }
   const origin = upstreamApiOrigin();
   const bodyText = await req.text();
-  const upstream = await fetch(`${origin}/v1/auth/workspace`, {
-    method: "POST",
+  const upstream = await fetch(`${origin}/v1/sessions/current/workspace`, {
+    method: "PUT",
     headers: {
       "content-type": "application/json",
       "accept-language": req.headers.get("accept-language") ?? "en",

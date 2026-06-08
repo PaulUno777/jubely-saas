@@ -116,7 +116,7 @@ type TokenPair = { access: string; refresh: string };
 
 export async function exchangeRefreshToken(refreshToken: string): Promise<TokenPair | null> {
   const origin = upstreamApiOrigin();
-  const upstream = await fetch(`${origin}/v1/auth/refresh`, {
+  const upstream = await fetch(`${origin}/v1/sessions/refresh`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ refresh_token: refreshToken }),

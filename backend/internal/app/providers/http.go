@@ -1,11 +1,17 @@
 package providers
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/analytics"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/auth"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/billing"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/campaign"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/loyalty"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/staff"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"net/http"
 	"time"
 
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/infrastructure/authtoken"
 	"github.com/PaulUno777/jubely-saas/backend/interfaces/httpserver"
 	"github.com/PaulUno777/jubely-saas/backend/internal/config"
@@ -23,87 +29,87 @@ var HTTPSet = wire.NewSet(
 
 // HTTPServerParams groups injectable handler dependencies (unique types for Wire).
 type HTTPServerParams struct {
-	BootstrapUC             *usecase.BootstrapSuperadmin
-	LoginUC                   *usecase.Login
-	SelectWorkspaceUC         *usecase.SelectWorkspace
-	RefreshUC                 *usecase.RefreshAuth
-	LogoutUC                  *usecase.Logout
-	StoreSignupUC             *usecase.StoreSignup
-	CreateTenantUC            *usecase.CreateTenant
-	ListTenantsUC             *usecase.ListTenants
-	UpdateTenantUC            *usecase.UpdateTenant
-	ListTenantUsersUC         *usecase.ListTenantUsers
-	CreateInvitationUC        *usecase.CreateMerchantInvitation
-	AcceptInvitationUC        *usecase.AcceptMerchantInvitation
-	CreateTenantUserUC        *usecase.CreateTenantUser
-	SuperadminStatsUC         *usecase.SuperadminStats
-	CreateCustomerUC          *usecase.CreateCustomerByStaff
-	EnrollByStoreQRUC         *usecase.EnrollByStoreQR
-	GetCustomerWalletUC       *usecase.GetCustomerWallet
-	CustomerLoginUC           *usecase.CustomerLogin
-	SelectCustomerContextUC   *usecase.SelectCustomerContext
-	StaffRecordPurchaseUC     *usecase.StaffRecordPurchase
-	StaffValidateRedemptionUC *usecase.StaffValidateRedemption
-	ListStoreRewardsUC        *usecase.ListStoreRewards
-	CreateStoreRewardUC       *usecase.CreateStoreReward
-	PatchStoreRewardUC        *usecase.PatchStoreReward
-	ListCustomerRewardsUC     *usecase.ListCustomerRewards
-	CustomerClaimRewardUC     *usecase.CustomerClaimReward
-	ListStoreRulesUC          *usecase.ListStoreRules
-	CreateStoreRuleUC         *usecase.CreateStoreRule
-	PatchStoreRuleUC          *usecase.PatchStoreRule
-	SimulateStoreRulesUC      *usecase.SimulateStoreRules
-	ListStoreCustomersUC      *usecase.ListStoreCustomers
-	ListStorePointEventsUC    *usecase.ListStorePointEvents
-	ListOrgStoresUC           *usecase.ListOrgStores
-	CreateOrgStoreUC          *usecase.CreateOrgStore
-	GetOrgSubscriptionUC      *usecase.GetOrgSubscription
-	CreateMoMoInvoiceUC       *usecase.CreateMoMoInvoice
-	ConfirmMoMoInvoiceUC      *usecase.ConfirmMoMoInvoice
-	ListPlansUC               *usecase.ListPlans
-	PublicCustomerOTP         *usecase.PublicCustomerOTP
-	SetupTOTPUC               *usecase.SetupTOTP
-	ConfirmTOTPUC             *usecase.ConfirmTOTP
-	BeginPasskeyRegUC         *usecase.BeginPasskeyRegistration
-	FinishPasskeyRegUC        *usecase.FinishPasskeyRegistration
-	BeginPasskeyAuthUC        *usecase.BeginPasskeyAuthentication
-	FinishPasskeyAuthUC       *usecase.FinishPasskeyAuthentication
-	VerifyTOTPLoginUC         *usecase.VerifyLoginTOTP
-	FinishPasskeyLoginUC      *usecase.FinishLoginPasskey
+	BootstrapUC             *auth.BootstrapSuperadmin
+	LoginUC                   *auth.Login
+	SelectWorkspaceUC         *auth.SelectWorkspace
+	RefreshUC                 *auth.RefreshAuth
+	LogoutUC                  *auth.Logout
+	StoreSignupUC             *tenant.StoreSignup
+	CreateTenantUC            *tenant.CreateTenant
+	ListTenantsUC             *tenant.ListTenants
+	UpdateTenantUC            *tenant.UpdateTenant
+	ListTenantUsersUC         *tenant.ListTenantUsers
+	CreateInvitationUC        *tenant.CreateMerchantInvitation
+	AcceptInvitationUC        *tenant.AcceptMerchantInvitation
+	CreateTenantUserUC        *tenant.CreateTenantUser
+	SuperadminStatsUC         *tenant.SuperadminStats
+	CreateCustomerUC          *loyalty.CreateCustomerByStaff
+	EnrollByStoreQRUC         *loyalty.EnrollByStoreQR
+	GetCustomerWalletUC       *loyalty.GetCustomerWallet
+	CustomerLoginUC           *auth.CustomerLogin
+	SelectCustomerContextUC   *auth.SelectCustomerContext
+	StaffRecordPurchaseUC     *staff.StaffRecordPurchase
+	StaffValidateRedemptionUC *staff.StaffValidateRedemption
+	ListStoreRewardsUC        *loyalty.ListStoreRewards
+	CreateStoreRewardUC       *loyalty.CreateStoreReward
+	PatchStoreRewardUC        *loyalty.PatchStoreReward
+	ListCustomerRewardsUC     *loyalty.ListCustomerRewards
+	CustomerClaimRewardUC     *loyalty.CustomerClaimReward
+	ListStoreRulesUC          *loyalty.ListStoreRules
+	CreateStoreRuleUC         *loyalty.CreateStoreRule
+	PatchStoreRuleUC          *loyalty.PatchStoreRule
+	SimulateStoreRulesUC      *loyalty.SimulateStoreRules
+	ListStoreCustomersUC      *loyalty.ListStoreCustomers
+	ListStorePointEventsUC    *loyalty.ListStorePointEvents
+	ListOrgStoresUC           *tenant.ListOrgStores
+	CreateOrgStoreUC          *tenant.CreateOrgStore
+	GetOrgSubscriptionUC      *billing.GetOrgSubscription
+	CreateMoMoInvoiceUC       *billing.CreateMoMoInvoice
+	ConfirmMoMoInvoiceUC      *billing.ConfirmMoMoInvoice
+	ListPlansUC               *billing.ListPlans
+	PublicCustomerOTP         *auth.PublicCustomerOTP
+	SetupTOTPUC               *auth.SetupTOTP
+	ConfirmTOTPUC             *auth.ConfirmTOTP
+	BeginPasskeyRegUC         *auth.BeginPasskeyRegistration
+	FinishPasskeyRegUC        *auth.FinishPasskeyRegistration
+	BeginPasskeyAuthUC        *auth.BeginPasskeyAuthentication
+	FinishPasskeyAuthUC       *auth.FinishPasskeyAuthentication
+	VerifyTOTPLoginUC         *auth.VerifyLoginTOTP
+	FinishPasskeyLoginUC      *auth.FinishLoginPasskey
 	MFASigner                 *authtoken.JWTSigner
-	ChangePasswordUC          *usecase.ChangePassword
-	QRCodec                   ports.QRCodec
+	ChangePasswordUC          *auth.ChangePassword
 	AccessSigner              ports.TokenSigner
-	Tenants                   ports.TenantRepository
-	Stores                    ports.StoreRepository
-	Invitations               ports.InvitationRepository
-	StoreMetrics              ports.TenantLoyaltyMetrics
-	LocationDiscovery         ports.LocationDiscoveryRepository
-	UploadTenantLogoUC        *usecase.UploadTenantLogo
-	UpdateCustomerProfileUC   *usecase.UpdateCustomerProfile
-	ListTiersUC               *usecase.ListTiers
-	UpsertTierUC              *usecase.UpsertTier
-	SeedDefaultTiersUC        *usecase.SeedDefaultTiers
-	ValidateStoreRulesUC      *usecase.ValidateStoreRules
-	GetQRBrandingUC           *usecase.GetQRBranding
-	PutQRBrandingUC           *usecase.PutQRBranding
-	GetTenantLocalesUC        *usecase.GetTenantLocales
-	PutTenantLocalesUC        *usecase.PutTenantLocales
-	ListCampaignsUC           *usecase.ListCampaigns
-	GetCampaignUC             *usecase.GetCampaign
-	CreateCampaignUC          *usecase.CreateCampaign
-	UpdateCampaignUC          *usecase.UpdateCampaign
-	LaunchCampaignUC          *usecase.LaunchCampaign
-	PauseCampaignUC           *usecase.PauseCampaign
-	GetTenantCustomerUC       *usecase.GetTenantCustomer
-	AdjustCustomerPointsUC    *usecase.AdjustCustomerPoints
-	TenantAnalyticsOverviewUC *usecase.TenantAnalyticsOverview
-	MemberGrowthUC            *usecase.MemberGrowth
-	TierDistributionUC        *usecase.TierDistribution
-	HourlyHeatmapUC           *usecase.HourlyHeatmap
-	TopRewardsUC              *usecase.TopRewards
-	RetentionCohortsUC        *usecase.RetentionCohorts
-	UploadRewardImageUC       *usecase.UploadRewardImage
+	GetTenantUC               *tenant.GetTenant
+	PreviewInvitationUC       *tenant.PreviewInvitation
+	GetEnrollmentQRUC         *loyalty.GetEnrollmentQR
+	ListNearbyLocationsUC     *tenant.ListNearbyLocations
+	SetLocationHQUC           *tenant.SetLocationHQ
+	QueryTenantMetricsUC      *analytics.QueryTenantMetrics
+	UploadTenantLogoUC        *tenant.UploadTenantLogo
+	UpdateCustomerProfileUC   *loyalty.UpdateCustomerProfile
+	ListTiersUC               *loyalty.ListTiers
+	UpsertTierUC              *loyalty.UpsertTier
+	SeedDefaultTiersUC        *loyalty.SeedDefaultTiers
+	ValidateStoreRulesUC      *loyalty.ValidateStoreRules
+	GetQRBrandingUC           *tenant.GetQRBranding
+	PutQRBrandingUC           *tenant.PutQRBranding
+	GetTenantLocalesUC        *tenant.GetTenantLocales
+	PutTenantLocalesUC        *tenant.PutTenantLocales
+	ListCampaignsUC           *campaign.ListCampaigns
+	GetCampaignUC             *campaign.GetCampaign
+	CreateCampaignUC          *campaign.CreateCampaign
+	UpdateCampaignUC          *campaign.UpdateCampaign
+	LaunchCampaignUC          *campaign.LaunchCampaign
+	PauseCampaignUC           *campaign.PauseCampaign
+	GetTenantCustomerUC       *loyalty.GetTenantCustomer
+	AdjustCustomerPointsUC    *loyalty.AdjustCustomerPoints
+	TenantAnalyticsOverviewUC *analytics.TenantAnalyticsOverview
+	MemberGrowthUC            *analytics.MemberGrowth
+	TierDistributionUC        *analytics.TierDistribution
+	HourlyHeatmapUC           *analytics.HourlyHeatmap
+	TopRewardsUC              *analytics.TopRewards
+	RetentionCohortsUC        *analytics.RetentionCohorts
+	UploadRewardImageUC       *loyalty.UploadRewardImage
 }
 
 // ProvideHTTPServer maps injected use cases and ports onto the Gin server facade.
@@ -158,13 +164,13 @@ func ProvideHTTPServer(cfg config.Config, p HTTPServerParams) *httpserver.Server
 		FinishPasskeyLoginUC:      p.FinishPasskeyLoginUC,
 		MFASigner:                 p.MFASigner,
 		ChangePasswordUC:          p.ChangePasswordUC,
-		QRCodec:                   p.QRCodec,
 		AccessSigner:              p.AccessSigner,
-		Tenants:                   p.Tenants,
-		Stores:                    p.Stores,
-		Invitations:               p.Invitations,
-		StoreMetrics:              p.StoreMetrics,
-		LocationDiscovery:         p.LocationDiscovery,
+		GetTenantUC:               p.GetTenantUC,
+		PreviewInvitationUC:       p.PreviewInvitationUC,
+		GetEnrollmentQRUC:         p.GetEnrollmentQRUC,
+		ListNearbyLocationsUC:     p.ListNearbyLocationsUC,
+		SetLocationHQUC:           p.SetLocationHQUC,
+		QueryTenantMetricsUC:      p.QueryTenantMetricsUC,
 		StripeWebhookSecret:       cfg.StripeWebhookSecret,
 		CORSAllowAll:              cfg.CORSAllowAll,
 		AssetUploadDir:            cfg.AssetUploadDir,

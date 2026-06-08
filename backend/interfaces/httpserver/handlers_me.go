@@ -1,9 +1,9 @@
 package httpserver
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/auth"
 	"net/http"
 
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
 )
@@ -24,7 +24,7 @@ func (s *Server) MeChangePassword(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
-	if err := s.ChangePasswordUC.Execute(c.Request.Context(), usecase.ChangePasswordInput{
+	if err := s.ChangePasswordUC.Execute(c.Request.Context(), auth.ChangePasswordInput{
 		UserID:          claims.UserID,
 		CurrentPassword: body.CurrentPassword,
 		NewPassword:     body.NewPassword,

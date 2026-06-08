@@ -1,13 +1,13 @@
 package httpserver
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
@@ -68,7 +68,7 @@ func parseTimeRangeQuery(c *gin.Context) (from, to *time.Time) {
 
 func (s *Server) AdminListTenants(c *gin.Context) {
 	offset, limit := parsePageQuery(c)
-	out, err := s.ListTenantsUC.Execute(c.Request.Context(), usecase.ListTenantsInput{Offset: offset, Limit: limit})
+	out, err := s.ListTenantsUC.Execute(c.Request.Context(), tenant.ListTenantsInput{Offset: offset, Limit: limit})
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
 		return
@@ -90,7 +90,7 @@ func (s *Server) AdminGetTenant(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_tenant_id"})
 		return
 	}
-	t, err := s.Tenants.FindByID(c.Request.Context(), id)
+	t, err := s.GetTenantUC.Execute(c.Request.Context(), tenant.GetTenantInput{TenantID: &id})
 	if err != nil {
 		respondMapped(c, mapTenantError(err))
 		return
@@ -122,7 +122,7 @@ func (s *Server) AdminPatchTenant(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "no_fields"})
 		return
 	}
-	out, err := s.UpdateTenantUC.Execute(c.Request.Context(), usecase.UpdateTenantInput{
+	out, err := s.UpdateTenantUC.Execute(c.Request.Context(), tenant.UpdateTenantInput{
 		TenantID:       id,
 		Name:           body.Name,
 		Active:         body.Active,
@@ -154,7 +154,7 @@ func (s *Server) AdminListTenantUsers(c *gin.Context) {
 		return
 	}
 	offset, limit := parsePageQuery(c)
-	out, err := s.ListTenantUsersUC.Execute(c.Request.Context(), usecase.ListTenantUsersInput{
+	out, err := s.ListTenantUsersUC.Execute(c.Request.Context(), tenant.ListTenantUsersInput{
 		TenantID: tenantID,
 		Offset:   offset,
 		Limit:    limit,
@@ -192,7 +192,7 @@ func (s *Server) AdminCreateTenantUser(c *gin.Context) {
 		return
 	}
 	role := domain.Role(strings.TrimSpace(strings.ToLower(body.Role)))
-	out, err := s.CreateTenantUserUC.Execute(c.Request.Context(), usecase.CreateTenantUserInput{
+	out, err := s.CreateTenantUserUC.Execute(c.Request.Context(), tenant.CreateTenantUserInput{
 		TenantID:     tenantID,
 		Email:        body.Email,
 		Role:         role,

@@ -35,6 +35,7 @@ export const invitationPreviewSchema = z.union([
 export const invitationPreviewSuccessEnvelopeSchema = successEnvelopeSchema(invitationPreviewSchema);
 
 export const acceptInvitationWireSchema = z.object({
+  status: z.literal("accepted"),
   password: z.string().min(8),
 });
 

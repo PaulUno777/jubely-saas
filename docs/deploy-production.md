@@ -47,7 +47,7 @@ Or set `BOOTSTRAP_AUTO_SEED=true` with `BOOTSTRAP_SUPERADMIN_EMAIL` / `BOOTSTRAP
 | Flow | Steps |
 |------|--------|
 | 1 Join | Public OTP (`PUBLIC_OTP_LOG_CODE=true` → code in API logs) → `POST /v1/public/enrollments` |
-| 2 Award | Staff login → scan customer QR → `POST /v1/staff/purchases` |
+| 2 Award | Staff login → scan customer QR → `POST /v1/staff/transactions` |
 | 3 Claim | Customer `POST /v1/customers/me/rewards/:id/claims` → staff `POST /v1/staff/redemptions/validate` |
 
 ## CI secrets

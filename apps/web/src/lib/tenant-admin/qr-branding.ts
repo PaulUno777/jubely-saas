@@ -32,9 +32,9 @@ export async function putQRBranding(
 }
 
 export async function getQRToken(tenantId: string) {
-  return tenantFetch(buildTenantPath(tenantId, "qr/token"), tenantQrTokenSuccessEnvelopeSchema);
+  return tenantFetch(buildTenantPath(tenantId, "enrollment-qr"), tenantQrTokenSuccessEnvelopeSchema);
 }
 
 export function qrRenderSvgUrl(tenantId: string): string {
-  return joinUrl(buildTenantPath(tenantId, "qr/render.svg"));
+  return joinUrl(buildTenantPath(tenantId, "enrollment-qr/render"));
 }

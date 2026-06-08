@@ -6,6 +6,7 @@ import {
   customerWalletSuccessEnvelopeSchema,
   listCustomerRewardsSuccessEnvelopeSchema,
   claimRewardSuccessEnvelopeSchema,
+  claimRewardWireSchema,
   throwFailedApiResponse,
 } from "@jubely/api-schemas";
 import type { ClientEnrollForm, CustomerWallet } from "@jubely/api-schemas";
@@ -73,10 +74,11 @@ export async function customerListRewards(tenantId?: string) {
 }
 
 export async function customerClaimReward(rewardId: string) {
-  const res = await authedFetch(`/v1/customers/me/rewards/${encodeURIComponent(rewardId)}/claims`, {
+  const body = claimRewardWireSchema.parse({ reward_id: rewardId });
+  const res = await authedFetch("/v1/customers/me/reward-claims", {
     method: "POST",
     headers: jsonHeaders(),
-    body: JSON.stringify({}),
+    body: JSON.stringify(body),
   });
   const text = await res.text();
   const json = parseJsonUnknown(text);

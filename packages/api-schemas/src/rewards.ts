@@ -57,6 +57,10 @@ export const listCustomerRewardsSuccessEnvelopeSchema = successEnvelopeSchema(
   listCustomerRewardsDataSchema,
 );
 
+export const claimRewardWireSchema = z.object({
+  reward_id: z.string().min(1),
+});
+
 export const claimRewardDataSchema = z.object({
   redemption_id: z.string(),
   claim_qr: z.string(),

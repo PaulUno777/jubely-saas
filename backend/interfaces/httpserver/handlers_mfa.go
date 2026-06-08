@@ -1,9 +1,9 @@
 package httpserver
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/auth"
 	"net/http"
 
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -49,7 +49,7 @@ func (s *Server) MeSetupTOTP(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
-	out, err := s.SetupTOTPUC.Execute(c.Request.Context(), usecase.SetupTOTPInput{
+	out, err := s.SetupTOTPUC.Execute(c.Request.Context(), auth.SetupTOTPInput{
 		UserID: claims.UserID,
 		Label:  body.Label,
 		Email:  claims.Email,
@@ -86,7 +86,7 @@ func (s *Server) MeConfirmTOTP(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_factor_id"})
 		return
 	}
-	if err := s.ConfirmTOTPUC.Execute(c.Request.Context(), usecase.ConfirmTOTPInput{
+	if err := s.ConfirmTOTPUC.Execute(c.Request.Context(), auth.ConfirmTOTPInput{
 		UserID:   claims.UserID,
 		FactorID: id,
 		Code:     body.Code,

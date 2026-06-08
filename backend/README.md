@@ -64,7 +64,7 @@ Optional: `.env` in `backend/` (loaded via `godotenv`).
 3. Bootstrap the first superadmin (only while `users` has zero superadmins):
 
 ```http
-POST /v1/bootstrap/superadmin
+POST /v1/setup/superadmin
 X-Bootstrap-Secret: <BOOTSTRAP_SECRET>
 Content-Type: application/json
 
@@ -74,7 +74,7 @@ Content-Type: application/json
 4. Login as superadmin:
 
 ```http
-POST /v1/auth/login
+POST /v1/sessions
 {"email":"super@example.com","password":"..."}
 ```
 
@@ -94,7 +94,7 @@ Authorization: Bearer <token>
 {"email":"merchant@example.com","role":"merchant_admin"}
 ```
 
-Response includes a **one-time** `token`. Share `GET /v1/invitations/:token` and `POST /v1/invitations/:token/accept` with the merchant.
+Response includes a **one-time** `token`. Share `GET /v1/invitations/:token` and `PATCH /v1/invitations/:token` with `{ "status": "accepted", "password": "..." }` with the merchant.
 
 7. (Optional) Create a staff user for a tenant (not automated in Phase 1): insert a `users` row in Postgres with `role='staff'` for the tenant, then login with `tenant_slug` set to that tenant.
 
@@ -113,7 +113,7 @@ Response includes `customer_qr` (HMAC token string) for client display in early 
 9. Generate a store QR (superadmin token required). This token can be printed/displayed in the store for self-enrollment.
 
 ```http
-GET /v1/superadmin/tenants/<tenantId>/store-qr
+GET /v1/superadmin/tenants/<tenantId>/enrollment-qr
 Authorization: Bearer <token>
 ```
 
@@ -128,13 +128,23 @@ Content-Type: application/json
 
 Response includes `customer_qr` for client display.
 
+## HTTP transport layout
+
+| Package | Role |
+|---------|------|
+| `interfaces/httpserver/` | Gin router (`router_*.go`), handlers (`handlers_*.go`, `handlers_tenantadmin_*.go`), `Server` deps |
+| `interfaces/http/response/` | JSON envelope + `respondOK` / `respondMapped` helpers |
+| `interfaces/http/middleware/` | Auth, CORS, locale, rate limit, subscription gate |
+| `interfaces/http/query/` | Shared query parsers (tenant date range, etc.) |
+| `interfaces/http/presenter/` | JSON DTO mappers for tenant-admin resources |
+
+REST conventions: [`docs/rest-conventions.md`](docs/rest-conventions.md). Route inventory: [`docs/api-routes.md`](docs/api-routes.md).
+
 ## Merchant tenant admin routes
 
-Merchant `/store` UI calls **`/v1/tenants/:tenantId/*`** (scoped to JWT `tenant_id`). Handlers live in `interfaces/httpserver/handlers_tenant_admin.go`. Wire schemas: `packages/api-schemas/src/tenant-admin.ts`.
+Merchant `/store` UI and agent `/agent` portal call **`/v1/tenants/:tenantId/*`** (scoped to JWT `tenant_id`). Handlers are split under `interfaces/httpserver/handlers_tenantadmin_*.go`. Wire schemas: `packages/api-schemas/src/tenant-admin.ts`.
 
-Legacy **`/v1/store/*`** remains for the agent portal (`GET` metrics, tenant, customers, transactions) until `/agent` migrates.
-
-Frontend client: `apps/web/src/lib/tenant-admin/` with React Query keys `["tenant-admin", …]`.
+Frontend clients: `apps/web/src/lib/tenant-admin/` and `apps/web/src/lib/agentApi.ts` with React Query keys `["tenant-admin", …]`.
 
 ## JSON API (Phase 1 envelope)
 
@@ -191,7 +201,7 @@ Public discovery (no auth):
 |--------|------|---------|
 | `GET` | `/v1/public/locations/nearby` | Precise (`lat`+`lng`) or coarse (`country_code`+`city`) |
 
-**Naming:** SaaS account = **tenant**; physical boutique = **location** (Postgres `locations`, French UI **boutique**). The merchant portal path prefix `/store/*` is the admin shell only—not the domain resource. Legacy `/v1/store/*` and `/v1/organizations/me/*` remain until clients migrate. Merchant UI route for boutiques: **`/store/locations`**.
+**Naming:** SaaS account = **tenant**; physical boutique = **location** (Postgres `locations`, French UI **boutique**). The merchant portal path prefix `/store/*` is the admin shell only—not the domain resource. Merchant UI route for boutiques: **`/store/locations`**.
 
 ## Migrations
 

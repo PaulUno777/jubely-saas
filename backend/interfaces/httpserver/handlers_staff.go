@@ -1,10 +1,11 @@
 package httpserver
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/loyalty"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/staff"
 	"net/http"
 	"time"
 
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
 )
@@ -27,7 +28,7 @@ func (s *Server) StaffCreateCustomer(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
-	out, err := s.CreateCustomerUC.Execute(c.Request.Context(), usecase.CreateCustomerByStaffInput{
+	out, err := s.CreateCustomerUC.Execute(c.Request.Context(), loyalty.CreateCustomerByStaffInput{
 		TenantID:    *claims.TenantID,
 		ActorUserID: &claims.UserID,
 		PhoneE164:   body.PhoneE164,
@@ -82,7 +83,7 @@ func (s *Server) StaffRecordPurchase(c *gin.Context) {
 		}
 		occurredAt = &parsed
 	}
-	out, err := s.StaffRecordPurchaseUC.Execute(c.Request.Context(), usecase.StaffRecordPurchaseInput{
+	out, err := s.StaffRecordPurchaseUC.Execute(c.Request.Context(), staff.StaffRecordPurchaseInput{
 		TenantID:    *claims.TenantID,
 		StoreID:     claims.ActiveStoreID,
 		PhoneE164:   body.PhoneE164,

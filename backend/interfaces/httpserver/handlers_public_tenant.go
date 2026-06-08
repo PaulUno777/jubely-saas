@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 	"net/http"
 	"strings"
 
@@ -15,7 +16,7 @@ func (s *Server) PublicGetTenantBySlug(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_slug"})
 		return
 	}
-	t, err := s.Tenants.FindBySlug(c.Request.Context(), slug)
+	t, err := s.GetTenantUC.Execute(c.Request.Context(), tenant.GetTenantInput{Slug: slug})
 	if err != nil {
 		respondMapped(c, mapTenantError(err))
 		return

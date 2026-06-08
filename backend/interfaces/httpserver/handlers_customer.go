@@ -1,13 +1,14 @@
 package httpserver
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/auth"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/loyalty"
 	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -31,7 +32,7 @@ func (s *Server) PublicCreateEnrollment(c *gin.Context) {
 	if claims, ok := s.optionalAuthClaims(c); ok {
 		authUserID = &claims.UserID
 	}
-	out, err := s.EnrollByStoreQRUC.Execute(c.Request.Context(), usecase.EnrollByStoreQRInput{
+	out, err := s.EnrollByStoreQRUC.Execute(c.Request.Context(), loyalty.EnrollByStoreQRInput{
 		StoreQR:          body.StoreQR,
 		PhoneE164:        body.PhoneE164,
 		Name:             body.Name,
@@ -74,7 +75,7 @@ func (s *Server) optionalAuthClaims(c *gin.Context) (ports.TokenClaims, bool) {
 	return claims, true
 }
 
-func (s *Server) respondCustomerWallet(c *gin.Context, out *usecase.GetCustomerWalletOutput) {
+func (s *Server) respondCustomerWallet(c *gin.Context, out *loyalty.GetCustomerWalletOutput) {
 	events := make([]gin.H, 0, len(out.RecentEvents))
 	for _, e := range out.RecentEvents {
 		events = append(events, gin.H{
@@ -108,7 +109,7 @@ func (s *Server) CustomerGetWalletByQR(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "missing_customer_qr"})
 		return
 	}
-	out, err := s.GetCustomerWalletUC.Execute(c.Request.Context(), usecase.GetCustomerWalletInput{CustomerQR: qr})
+	out, err := s.GetCustomerWalletUC.Execute(c.Request.Context(), loyalty.GetCustomerWalletInput{CustomerQR: qr})
 	if err != nil {
 		respondMapped(c, mapCustomerError(err))
 		return
@@ -130,7 +131,7 @@ func (s *Server) CustomerGetMyWallet(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "missing_active_enrollment"})
 		return
 	}
-	out, err := s.GetCustomerWalletUC.Execute(c.Request.Context(), usecase.GetCustomerWalletInput{
+	out, err := s.GetCustomerWalletUC.Execute(c.Request.Context(), loyalty.GetCustomerWalletInput{
 		EnrollmentID: claims.ActiveEnrollmentID,
 	})
 	if err != nil {
@@ -150,7 +151,7 @@ func (s *Server) CustomerAuthLogin(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
-	out, err := s.CustomerLoginUC.Execute(c.Request.Context(), usecase.CustomerLoginInput{
+	out, err := s.CustomerLoginUC.Execute(c.Request.Context(), auth.CustomerLoginInput{
 		PhoneVerifyToken: body.PhoneVerifyToken,
 		UserAgent:        c.GetHeader("User-Agent"),
 	})
@@ -181,7 +182,7 @@ func (s *Server) CustomerSelectSession(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_enrollment_id"})
 		return
 	}
-	out, err := s.SelectCustomerContextUC.Execute(c.Request.Context(), usecase.SelectCustomerContextInput{
+	out, err := s.SelectCustomerContextUC.Execute(c.Request.Context(), auth.SelectCustomerContextInput{
 		UserID:             claims.UserID,
 		EnrollmentID:       enrollmentID,
 		ActiveMembershipID: claims.MembershipID,
@@ -229,7 +230,7 @@ func (s *Server) CustomerPatchProfile(c *gin.Context) {
 		}
 		dob = &parsed
 	}
-	out, err := s.UpdateCustomerProfileUC.Execute(c.Request.Context(), usecase.UpdateCustomerProfileInput{
+	out, err := s.UpdateCustomerProfileUC.Execute(c.Request.Context(), loyalty.UpdateCustomerProfileInput{
 		CustomerID:        *claims.CustomerID,
 		Name:              body.Name,
 		Gender:            body.Gender,

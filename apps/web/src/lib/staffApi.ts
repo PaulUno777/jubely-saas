@@ -45,7 +45,7 @@ export async function staffRecordPurchase(input: { values: RecordPurchaseForm })
     customer_qr: customerQr || undefined,
     amount_fcfa: input.values.amount_fcfa,
   });
-  const res = await authedFetch("/v1/staff/purchases", {
+  const res = await authedFetch("/v1/staff/transactions", {
     method: "POST",
     headers: jsonHeaders(),
     body: JSON.stringify(body),
@@ -63,7 +63,7 @@ export async function staffRecordPurchase(input: { values: RecordPurchaseForm })
 
 export async function staffValidateRedemption(claimQr: string) {
   const body = validateRedemptionWireSchema.parse({ claim_qr: claimQr });
-  const res = await authedFetch("/v1/staff/redemptions/validate", {
+  const res = await authedFetch("/v1/staff/redemption-validations", {
     method: "POST",
     headers: jsonHeaders(),
     body: JSON.stringify(body),

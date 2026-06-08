@@ -1,12 +1,12 @@
 package httpserver
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/auth"
 	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
 
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -18,7 +18,7 @@ func (s *Server) MePasskeyRegisterBegin(c *gin.Context) {
 		respondError(c, http.StatusUnauthorized, i18n.CodeAuthUnauthorized, nil)
 		return
 	}
-	out, err := s.BeginPasskeyRegUC.Execute(c.Request.Context(), usecase.BeginPasskeyRegistrationInput{
+	out, err := s.BeginPasskeyRegUC.Execute(c.Request.Context(), auth.BeginPasskeyRegistrationInput{
 		UserID: claims.UserID,
 	})
 	if err != nil {
@@ -60,7 +60,7 @@ func (s *Server) MePasskeyRegisterFinish(c *gin.Context) {
 	}
 
 	c.Request.Body = io.NopCloser(bytes.NewReader(raw))
-	if err := s.FinishPasskeyRegUC.Execute(c.Request.Context(), usecase.FinishPasskeyRegistrationInput{
+	if err := s.FinishPasskeyRegUC.Execute(c.Request.Context(), auth.FinishPasskeyRegistrationInput{
 		UserID:      claims.UserID,
 		ChallengeID: chID,
 		Label:       meta.Label,
@@ -87,7 +87,7 @@ func (s *Server) AuthPasskeyBegin(c *gin.Context) {
 		respondMapped(c, mapLoginError(err))
 		return
 	}
-	out, err := s.BeginPasskeyAuthUC.Execute(c.Request.Context(), usecase.BeginPasskeyAuthenticationInput{
+	out, err := s.BeginPasskeyAuthUC.Execute(c.Request.Context(), auth.BeginPasskeyAuthenticationInput{
 		UserID: claims.UserID,
 	})
 	if err != nil {
@@ -122,7 +122,7 @@ func (s *Server) AuthPasskeyFinish(c *gin.Context) {
 		return
 	}
 	c.Request.Body = io.NopCloser(bytes.NewReader(raw))
-	out, err := s.FinishPasskeyLoginUC.Execute(c.Request.Context(), usecase.FinishLoginPasskeyInput{
+	out, err := s.FinishPasskeyLoginUC.Execute(c.Request.Context(), auth.FinishLoginPasskeyInput{
 		ChallengeToken: meta.ChallengeToken,
 		ChallengeID:    chID,
 		Request:        c.Request,

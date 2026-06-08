@@ -1,9 +1,9 @@
 package httpserver
 
 import (
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/auth"
 	"net/http"
 
-	"github.com/PaulUno777/jubely-saas/backend/application/usecase"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/PaulUno777/jubely-saas/backend/pkg/i18n"
 	"github.com/gin-gonic/gin"
@@ -21,7 +21,7 @@ func (s *Server) BootstrapSuperadmin(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
-	err := s.BootstrapUC.Execute(c.Request.Context(), usecase.BootstrapSuperadminInput{
+	err := s.BootstrapUC.Execute(c.Request.Context(), auth.BootstrapSuperadminInput{
 		HeaderSecret: c.GetHeader("X-Bootstrap-Secret"),
 		Email:        body.Email,
 		Password:     body.Password,
@@ -124,7 +124,7 @@ func (s *Server) AuthLogin(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
-	out, err := s.LoginUC.Execute(c.Request.Context(), usecase.LoginInput{
+	out, err := s.LoginUC.Execute(c.Request.Context(), auth.LoginInput{
 		Email:               body.Email,
 		Password:            body.Password,
 		PreferredTenantSlug: body.TenantSlug,
@@ -189,7 +189,7 @@ func (s *Server) AuthMFATOTPVerify(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
-	out, err := s.VerifyTOTPLoginUC.Execute(c.Request.Context(), usecase.VerifyLoginTOTPInput{
+	out, err := s.VerifyTOTPLoginUC.Execute(c.Request.Context(), auth.VerifyLoginTOTPInput{
 		ChallengeToken: body.ChallengeToken,
 		Code:           body.Code,
 		UserAgent:      c.GetHeader("User-Agent"),
@@ -227,7 +227,7 @@ func (s *Server) AuthRefresh(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
-	out, err := s.RefreshUC.Execute(c.Request.Context(), usecase.RefreshAuthInput{
+	out, err := s.RefreshUC.Execute(c.Request.Context(), auth.RefreshAuthInput{
 		RefreshToken: body.RefreshToken,
 		UserAgent:    c.GetHeader("User-Agent"),
 	})
@@ -259,7 +259,7 @@ func (s *Server) AuthLogout(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_body"})
 		return
 	}
-	if err := s.LogoutUC.Execute(c.Request.Context(), usecase.LogoutInput{RefreshToken: body.RefreshToken}); err != nil {
+	if err := s.LogoutUC.Execute(c.Request.Context(), auth.LogoutInput{RefreshToken: body.RefreshToken}); err != nil {
 		respondMapped(c, mapLoginError(err))
 		return
 	}
@@ -296,7 +296,7 @@ func (s *Server) AuthSelectWorkspace(c *gin.Context) {
 		}
 		activeStoreID = &id
 	}
-	out, err := s.SelectWorkspaceUC.Execute(c.Request.Context(), usecase.SelectWorkspaceInput{
+	out, err := s.SelectWorkspaceUC.Execute(c.Request.Context(), auth.SelectWorkspaceInput{
 		UserID:             claims.UserID,
 		MembershipID:       membershipID,
 		ActiveEnrollmentID: claims.ActiveEnrollmentID,

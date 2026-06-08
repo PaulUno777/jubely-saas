@@ -20,7 +20,7 @@ function stripTokens(data: Record<string, unknown>) {
 export async function POST(req: NextRequest) {
   const origin = upstreamApiOrigin();
   const bodyText = await req.text();
-  const upstream = await fetch(`${origin}/v1/auth/login`, {
+  const upstream = await fetch(`${origin}/v1/sessions`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
