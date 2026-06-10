@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTenantRules } from "@/hooks/tenant-admin-hooks";
 import { RuleEditorShell } from "@/components/store/rules/rule-editor-shell";
+import { normalizeTierList } from "@/components/store/rules/shared/tier-normalize";
 import { useRuleEditorStore, type AdvancedRuleDraft, type BasicRuleDraft } from "@/stores/rule-editor-store";
 
 export default function EditRuleEditorPage() {
@@ -27,7 +28,9 @@ export default function EditRuleEditorPage() {
         trigger: (r.trigger as AdvancedRuleDraft["trigger"]) ?? "transaction",
         tag: r.tag ?? "Avancé",
         logic: r.logic ?? "AND",
-        conditions: r.conditions ?? [],
+        conditions: (r.conditions ?? []).map((c) =>
+          c.type === "tier" ? { ...c, tiers: normalizeTierList(c.tiers) } : c,
+        ),
         actions: r.actions ?? [],
       };
       initFromServer(draft, ruleId);

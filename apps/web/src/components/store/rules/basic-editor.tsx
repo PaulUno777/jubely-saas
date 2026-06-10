@@ -4,10 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle, Input, Label, cn } from "@jub
 import { Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRuleEditorStore, type BasicRuleDraft } from "@/stores/rule-editor-store";
-import { DAYS_FR } from "@/components/store/rules/advanced-editor-helpers";
+import { useWeekdayLabels } from "@/components/store/rules/shared/use-weekday-labels";
 
 export function BasicEditor() {
   const t = useTranslations("store.pointsRules");
+  const weekdays = useWeekdayLabels();
   const draft = useRuleEditorStore((s) => s.draft) as BasicRuleDraft;
   const patchDraft = useRuleEditorStore((s) => s.patchDraft);
 
@@ -133,7 +134,7 @@ export function BasicEditor() {
           <div>
             <Label className="mb-2 block">{t("activeDays")}</Label>
             <div className="flex flex-wrap gap-1">
-              {DAYS_FR.map((d, i) => {
+              {weekdays.map((d, i) => {
                 const on = draft.days.includes(i);
                 return (
                   <button
@@ -188,7 +189,7 @@ export function BasicEditor() {
             <div className="mt-2 flex flex-wrap gap-1">
               {draft.days.map((d) => (
                 <span key={d} className="rounded-full bg-background px-2 py-0.5 text-xs">
-                  {DAYS_FR[d]}
+                  {weekdays[d]}
                 </span>
               ))}
             </div>

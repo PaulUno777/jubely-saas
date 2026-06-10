@@ -142,7 +142,10 @@ export const ruleConflictSchema = z.object({
 });
 
 export const validateRulesSuccessEnvelopeSchema = successEnvelopeSchema(
-  z.object({ conflicts: z.array(ruleConflictSchema) }),
+  z.object({
+    valid: z.boolean(),
+    conflicts: z.array(ruleConflictSchema),
+  }),
 );
 
 export {

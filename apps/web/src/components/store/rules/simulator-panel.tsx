@@ -9,7 +9,10 @@ import type { z } from "zod";
 import type { loyaltyRuleSchema } from "@jubely/api-schemas";
 import { simulateRules } from "@/lib/tenant-admin";
 import { useTenantId } from "@/hooks/useTenantId";
-import { DAYS_FR, simDateFromDayHour } from "@/components/store/rules/advanced-editor-helpers";
+import { TIER_CODES } from "@/components/store/rules/shared/constants";
+import { simDateFromDayHour } from "@/components/store/rules/shared/sim-date";
+import { useTierLabels } from "@/components/store/rules/shared/use-tier-labels";
+import { useWeekdayLabels } from "@/components/store/rules/shared/use-weekday-labels";
 
 type LoyaltyRule = z.infer<typeof loyaltyRuleSchema>;
 
@@ -21,9 +24,11 @@ export function SimulatorPanel({
   draftRules?: LoyaltyRule[];
 }) {
   const t = useTranslations("store.pointsRules");
+  const { tierLabel } = useTierLabels();
+  const weekdays = useWeekdayLabels();
   const tenantId = useTenantId();
   const [amount, setAmount] = useState("5000");
-  const [tier, setTier] = useState("or");
+  const [tier, setTier] = useState("gold");
   const [day, setDay] = useState(5);
   const [hour, setHour] = useState(18);
   const [isNew, setIsNew] = useState(false);
@@ -58,14 +63,15 @@ export function SimulatorPanel({
               value={tier}
               onChange={(e) => setTier(e.target.value)}
             >
-              <option value="bronze">Bronze</option>
-              <option value="argent">Argent</option>
-              <option value="or">Or</option>
-              <option value="platine">Platine</option>
+              {TIER_CODES.map((code) => (
+                <option key={code} value={code}>
+                  {tierLabel(code)}
+                </option>
+              ))}
             </select>
           </div>
           <div className="flex flex-wrap gap-1">
-            {DAYS_FR.map((d, i) => (
+            {weekdays.map((d, i) => (
               <button
                 key={d}
                 type="button"

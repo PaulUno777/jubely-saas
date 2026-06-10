@@ -245,5 +245,5 @@ func (s *Server) TenantValidateRules(c *gin.Context) {
 		respondMapped(c, mapCustomerError(err))
 		return
 	}
-	respondOK(c, gin.H{"conflicts": out.Conflicts})
+	respondOK(c, gin.H{"valid": out.Valid, "conflicts": out.Conflicts})
 }

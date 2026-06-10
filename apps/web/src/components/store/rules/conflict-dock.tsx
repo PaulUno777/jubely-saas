@@ -34,7 +34,9 @@ export function ConflictDock({ refreshKey }: { refreshKey: string | number }) {
         ) : (
           conflicts.map((c, i) => (
             <div key={i} className="rounded-md border p-2 text-sm">
-              <Badge variant={c.level === "error" ? "destructive" : "outline"}>{c.level}</Badge>
+              <Badge variant={c.level === "error" ? "destructive" : "outline"}>
+                {c.level}
+              </Badge>
               <span className="ml-2">{c.msg}</span>
             </div>
           ))
