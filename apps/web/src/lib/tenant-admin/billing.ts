@@ -13,6 +13,7 @@ const subscriptionSchema = z.object({
       max_stores: z.number(),
       price_monthly_fcfa: z.number(),
       price_yearly_fcfa: z.number(),
+      features: z.record(z.unknown()).optional(),
     })
     .optional(),
 });

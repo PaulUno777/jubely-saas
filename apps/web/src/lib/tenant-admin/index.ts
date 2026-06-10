@@ -19,8 +19,12 @@ export { getSettings, patchSettings, getLocales, putLocales } from "./settings";
 export { listRewards, createReward, patchReward, uploadRewardImage } from "./rewards";
 export {
   listRules,
+  getRulesHealth,
   createRule,
   patchRule,
+  deleteRule,
+  listRuleVersions,
+  restoreRuleVersion,
   simulateRules,
   validateRules,
   listTiers,

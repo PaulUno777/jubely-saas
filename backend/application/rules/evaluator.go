@@ -8,13 +8,43 @@ import (
 
 // Rule matches the admin simulator JSON (stored in points_rules.rule_json).
 type Rule struct {
-	ID      string          `json:"id"`
-	Name    string          `json:"name"`
-	Tag     string          `json:"tag,omitempty"`
-	On      bool            `json:"on"`
-	Trigger string          `json:"trigger"`
-	Cond    RuleCondition   `json:"cond"`
-	Action  RuleAction      `json:"action"`
+	ID            string        `json:"id"`
+	Name          string        `json:"name"`
+	Tag           string        `json:"tag,omitempty"`
+	On            bool          `json:"on"`
+	Trigger       string        `json:"trigger"`
+	Cond          RuleCondition `json:"cond"`
+	Action        RuleAction    `json:"action"`
+	SchemaVersion int           `json:"schemaVersion,omitempty"`
+	EditorTier    string        `json:"editorTier,omitempty"`
+	Frozen        bool          `json:"frozen,omitempty"`
+	FrozenReason  string        `json:"frozenReason,omitempty"`
+	Logic         string        `json:"logic,omitempty"`
+	Conditions    []AstCondition `json:"conditions,omitempty"`
+	Actions       []AstAction    `json:"actions,omitempty"`
+}
+
+type AstCondition struct {
+	Type  string   `json:"type"`
+	Op    string   `json:"op,omitempty"`
+	Value float64  `json:"value,omitempty"`
+	Days  []int    `json:"days,omitempty"`
+	From  int      `json:"from,omitempty"`
+	To    int      `json:"to,omitempty"`
+	Tiers []string `json:"tiers,omitempty"`
+	Store string   `json:"store,omitempty"`
+}
+
+type AstAction struct {
+	Type   string  `json:"type"`
+	Factor float64 `json:"factor,omitempty"`
+	Pts    int     `json:"pts,omitempty"`
+	Via    string  `json:"via,omitempty"`
+	Reward string  `json:"reward,omitempty"`
+}
+
+func (r Rule) IsAdvanced() bool {
+	return r.SchemaVersion >= 2 || r.EditorTier == "advanced"
 }
 
 type RuleCondition struct {
@@ -79,7 +109,25 @@ func EvaluateTransaction(rules []Rule, ctx EvalContext) EvalResult {
 	total := 0
 	active := filterOn(rules)
 
+	// Advanced rules first pass (side effects on factor/total).
+	factor := 1.0
 	for _, r := range active {
+		if !r.IsAdvanced() || r.Frozen {
+			if r.IsAdvanced() && r.Frozen {
+				trace = append(trace, TraceEntry{
+					RuleID: r.ID, RuleName: r.Name, Applied: false,
+					Reason: "Règle gelée (plan Standard)",
+				})
+			}
+			continue
+		}
+		evaluateAdvancedRule(r, ctx, &base, &total, &factor, &trace)
+	}
+
+	for _, r := range active {
+		if r.IsAdvanced() || r.Frozen {
+			continue
+		}
 		if r.Action.Type != "rate" || r.Trigger != "transaction" {
 			continue
 		}
@@ -99,6 +147,9 @@ func EvaluateTransaction(rules []Rule, ctx EvalContext) EvalResult {
 	}
 
 	for _, r := range active {
+		if r.IsAdvanced() || r.Frozen {
+			continue
+		}
 		if r.Action.Type != "flat" {
 			continue
 		}
@@ -121,8 +172,10 @@ func EvaluateTransaction(rules []Rule, ctx EvalContext) EvalResult {
 		trace = append(trace, entry)
 	}
 
-	factor := 1.0
 	for _, r := range active {
+		if r.IsAdvanced() || r.Frozen {
+			continue
+		}
 		if r.Action.Type != "mult" || r.Trigger != "transaction" {
 			continue
 		}
@@ -142,6 +195,17 @@ func EvaluateTransaction(rules []Rule, ctx EvalContext) EvalResult {
 	bonus := total - base
 	final := int(float64(base)*factor) + bonus
 	return EvalResult{Trace: trace, Base: base, Factor: factor, Bonus: bonus, Total: final}
+}
+
+// AppliedRuleIDs extracts rule IDs from a trace where the rule was applied.
+func AppliedRuleIDs(trace []TraceEntry) []string {
+	out := make([]string, 0, len(trace))
+	for _, e := range trace {
+		if e.Applied && e.RuleID != "" {
+			out = append(out, e.RuleID)
+		}
+	}
+	return out
 }
 
 func filterOn(rules []Rule) []Rule {

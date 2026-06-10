@@ -38,6 +38,8 @@ var PostgresSet = wire.NewSet(
 	NewRewardRepository,
 	NewRedemptionRepository,
 	NewPointsRuleRepository,
+	NewRuleVersionRepository,
+	NewPurchaseIngestionRepository,
 	NewLoyaltyTierRepository,
 	NewLocalizedStringRepository,
 	NewQRBrandingRepository,
@@ -66,6 +68,8 @@ var PostgresSet = wire.NewSet(
 	wire.Bind(new(ports.RewardRepository), new(*postgres.RewardRepository)),
 	wire.Bind(new(ports.RedemptionRepository), new(*postgres.RedemptionRepository)),
 	wire.Bind(new(ports.PointsRuleRepository), new(*postgres.PointsRuleRepository)),
+	wire.Bind(new(ports.RuleVersionRepository), new(*postgres.RuleVersionRepository)),
+	wire.Bind(new(ports.PurchaseIngestionRepository), new(*postgres.PurchaseIngestionRepository)),
 	wire.Bind(new(ports.TenantLoyaltyMetrics), new(*postgres.StoreLoyaltyMetrics)),
 	wire.Bind(new(ports.LocationDiscoveryRepository), new(*postgres.LocationDiscoveryRepository)),
 	wire.Bind(new(ports.LoyaltyTierRepository), new(*postgres.LoyaltyTierRepository)),
@@ -180,6 +184,14 @@ func NewRedemptionRepository(pool *pgxpool.Pool) *postgres.RedemptionRepository 
 
 func NewPointsRuleRepository(pool *pgxpool.Pool) *postgres.PointsRuleRepository {
 	return &postgres.PointsRuleRepository{Pool: pool}
+}
+
+func NewRuleVersionRepository(pool *pgxpool.Pool) *postgres.RuleVersionRepository {
+	return &postgres.RuleVersionRepository{Pool: pool}
+}
+
+func NewPurchaseIngestionRepository(pool *pgxpool.Pool) *postgres.PurchaseIngestionRepository {
+	return &postgres.PurchaseIngestionRepository{Pool: pool}
 }
 
 func NewLoyaltyTierRepository(pool *pgxpool.Pool) *postgres.LoyaltyTierRepository {

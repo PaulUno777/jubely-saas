@@ -24,8 +24,12 @@ func registerTenantRoutes(v1 *gin.RouterGroup, signer *authtoken.JWTSigner, s *S
 	tenants.GET("/agents", RequirePermission(domain.PermManageStaff), s.TenantListAgents)
 
 	tenants.GET("/rules", RequirePermission(domain.PermManageRules), s.TenantListRules)
+	tenants.GET("/rules/health", RequirePermission(domain.PermManageRules), s.TenantRulesHealth)
 	tenants.POST("/rules", RequirePermission(domain.PermManageRules), s.TenantCreateRule)
 	tenants.PATCH("/rules/:ruleId", RequirePermission(domain.PermManageRules), s.TenantPatchRule)
+	tenants.DELETE("/rules/:ruleId", RequirePermission(domain.PermManageRules), s.TenantDeleteRule)
+	tenants.GET("/rules/:ruleId/versions", RequirePermission(domain.PermManageRules), s.TenantListRuleVersions)
+	tenants.POST("/rules/:ruleId/versions/:versionId/restore", RequirePermission(domain.PermManageRules), s.TenantRestoreRuleVersion)
 	tenants.POST("/rule-simulations", RequirePermission(domain.PermManageRules), s.TenantSimulateRules)
 	tenants.POST("/rule-validations", RequirePermission(domain.PermManageRules), s.TenantValidateRules)
 

@@ -44,6 +44,10 @@ type Server struct {
 	ListStoreRulesUC        *loyalty.ListStoreRules
 	CreateStoreRuleUC       *loyalty.CreateStoreRule
 	PatchStoreRuleUC        *loyalty.PatchStoreRule
+	DeleteStoreRuleUC       *loyalty.DeleteStoreRule
+	GetRulesHealthUC        *loyalty.GetRulesHealth
+	ListRuleVersionsUC      *loyalty.ListRuleVersions
+	RestoreRuleVersionUC    *loyalty.RestoreRuleVersion
 	SimulateStoreRulesUC    *loyalty.SimulateStoreRules
 	ListStoreCustomersUC  *loyalty.ListStoreCustomers
 	ListStorePointEventsUC *loyalty.ListStorePointEvents

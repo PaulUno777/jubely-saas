@@ -58,6 +58,10 @@ type HTTPServerParams struct {
 	ListStoreRulesUC          *loyalty.ListStoreRules
 	CreateStoreRuleUC         *loyalty.CreateStoreRule
 	PatchStoreRuleUC          *loyalty.PatchStoreRule
+	DeleteStoreRuleUC         *loyalty.DeleteStoreRule
+	GetRulesHealthUC          *loyalty.GetRulesHealth
+	ListRuleVersionsUC        *loyalty.ListRuleVersions
+	RestoreRuleVersionUC      *loyalty.RestoreRuleVersion
 	SimulateStoreRulesUC      *loyalty.SimulateStoreRules
 	ListStoreCustomersUC      *loyalty.ListStoreCustomers
 	ListStorePointEventsUC    *loyalty.ListStorePointEvents
@@ -144,6 +148,10 @@ func ProvideHTTPServer(cfg config.Config, p HTTPServerParams) *httpserver.Server
 		ListStoreRulesUC:          p.ListStoreRulesUC,
 		CreateStoreRuleUC:         p.CreateStoreRuleUC,
 		PatchStoreRuleUC:          p.PatchStoreRuleUC,
+		DeleteStoreRuleUC:         p.DeleteStoreRuleUC,
+		GetRulesHealthUC:          p.GetRulesHealthUC,
+		ListRuleVersionsUC:        p.ListRuleVersionsUC,
+		RestoreRuleVersionUC:      p.RestoreRuleVersionUC,
 		SimulateStoreRulesUC:      p.SimulateStoreRulesUC,
 		ListStoreCustomersUC:      p.ListStoreCustomersUC,
 		ListStorePointEventsUC:    p.ListStorePointEventsUC,

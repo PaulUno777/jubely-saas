@@ -51,6 +51,8 @@ func ProvideEnrollByStoreQR(
 	enrollments ports.LoyaltyEnrollmentRepository,
 	stores ports.StoreRepository,
 	subscriptions ports.SubscriptionRepository,
+	rules ports.PointsRuleRepository,
+	points ports.PointEventWriter,
 	qrCodec ports.QRCodec,
 	phoneProof ports.PhoneEnrollmentProofParser,
 	requirePhone bool,
@@ -65,6 +67,8 @@ func ProvideEnrollByStoreQR(
 		Enrollments:              enrollments,
 		Stores:                   stores,
 		Subscriptions:            subscriptions,
+		Rules:                    rules,
+		Points:                   points,
 		QRCodec:                  qrCodec,
 		PhoneProofParser:         phoneProof,
 		RequirePhoneVerification: requirePhone,
@@ -151,12 +155,49 @@ func ProvideListStoreRules(rules ports.PointsRuleRepository) *loyalty.ListStoreR
 	return &loyalty.ListStoreRules{Rules: rules}
 }
 
-func ProvideCreateStoreRule(rules ports.PointsRuleRepository) *loyalty.CreateStoreRule {
-	return &loyalty.CreateStoreRule{Rules: rules}
+func ProvideCreateStoreRule(
+	rules ports.PointsRuleRepository,
+	versions ports.RuleVersionRepository,
+	subs ports.SubscriptionRepository,
+	plans ports.PlanCatalogRepository,
+) *loyalty.CreateStoreRule {
+	return &loyalty.CreateStoreRule{Rules: rules, Versions: versions, Subs: subs, Plans: plans}
 }
 
-func ProvidePatchStoreRule(rules ports.PointsRuleRepository) *loyalty.PatchStoreRule {
-	return &loyalty.PatchStoreRule{Rules: rules}
+func ProvidePatchStoreRule(
+	rules ports.PointsRuleRepository,
+	versions ports.RuleVersionRepository,
+	subs ports.SubscriptionRepository,
+	plans ports.PlanCatalogRepository,
+) *loyalty.PatchStoreRule {
+	return &loyalty.PatchStoreRule{Rules: rules, Versions: versions, Subs: subs, Plans: plans}
+}
+
+func ProvideDeleteStoreRule(rules ports.PointsRuleRepository) *loyalty.DeleteStoreRule {
+	return &loyalty.DeleteStoreRule{Rules: rules}
+}
+
+func ProvideGetRulesHealth(rules ports.PointsRuleRepository) *loyalty.GetRulesHealth {
+	return &loyalty.GetRulesHealth{Rules: rules}
+}
+
+func ProvideListRuleVersions(versions ports.RuleVersionRepository) *loyalty.ListRuleVersions {
+	return &loyalty.ListRuleVersions{Versions: versions}
+}
+
+func ProvideRestoreRuleVersion(
+	rules ports.PointsRuleRepository,
+	versions ports.RuleVersionRepository,
+) *loyalty.RestoreRuleVersion {
+	return &loyalty.RestoreRuleVersion{Rules: rules, Versions: versions}
+}
+
+func ProvideFreezeAdvancedRulesOnDowngrade(
+	rules ports.PointsRuleRepository,
+	subs ports.SubscriptionRepository,
+	plans ports.PlanCatalogRepository,
+) *loyalty.FreezeAdvancedRulesOnDowngrade {
+	return &loyalty.FreezeAdvancedRulesOnDowngrade{Rules: rules, Subs: subs, Plans: plans}
 }
 
 func ProvideSimulateStoreRules(rules ports.PointsRuleRepository) *loyalty.SimulateStoreRules {
@@ -171,6 +212,9 @@ func ProvideStaffRecordPurchase(
 	points ports.PointEventWriter,
 	catalog *postgres.StoreCatalog,
 	rules ports.PointsRuleRepository,
+	ingestions ports.PurchaseIngestionRepository,
+	tierRecalc *loyalty.RecalculateEnrollmentTier,
+	events ports.EventBus,
 	clock ports.Clock,
 ) *staff.StaffRecordPurchase {
 	return &staff.StaffRecordPurchase{
@@ -181,6 +225,9 @@ func ProvideStaffRecordPurchase(
 		Points:      points,
 		Balances:    catalog,
 		Rules:       rules,
+		Ingestions:  ingestions,
+		TierRecalc:  tierRecalc,
+		Events:      events,
 		Clock:       clock,
 	}
 }

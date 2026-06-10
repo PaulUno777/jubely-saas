@@ -1,4 +1,7 @@
 import {
+  listRuleVersionsSuccessEnvelopeSchema,
+  rulesHealthSuccessEnvelopeSchema,
+  successEnvelopeSchema,
   tenantCreateRuleWireSchema,
   tenantPatchRuleWireSchema,
   tenantRuleSuccessEnvelopeSchema,
@@ -8,10 +11,13 @@ import {
   tenantTiersSuccessEnvelopeSchema,
   tenantUpsertTierWireSchema,
   validateRulesSuccessEnvelopeSchema,
+  validateRulesWireSchema,
 } from "@jubely/api-schemas";
-import type { z } from "zod";
+import { z } from "zod";
+import type { z as Zod } from "zod";
 import {
   buildTenantPath,
+  jsonDelete,
   jsonPatch,
   jsonPost,
   jsonPut,
@@ -27,9 +33,13 @@ export async function listRules(tenantId: string) {
   return data.rules;
 }
 
+export async function getRulesHealth(tenantId: string) {
+  return tenantFetch(buildTenantPath(tenantId, "rules/health"), rulesHealthSuccessEnvelopeSchema);
+}
+
 export async function createRule(
   tenantId: string,
-  input: z.infer<typeof tenantCreateRuleWireSchema>,
+  input: Zod.infer<typeof tenantCreateRuleWireSchema>,
 ) {
   const payload = tenantCreateRuleWireSchema.parse(input);
   return tenantMutate(
@@ -39,6 +49,7 @@ export async function createRule(
       rule: payload.rule,
       priority: payload.priority ?? 0,
       active: payload.active ?? true,
+      summary: payload.summary,
     }),
   );
 }
@@ -46,7 +57,7 @@ export async function createRule(
 export async function patchRule(
   tenantId: string,
   ruleId: string,
-  input: z.infer<typeof tenantPatchRuleWireSchema>,
+  input: Zod.infer<typeof tenantPatchRuleWireSchema>,
 ) {
   const payload = tenantPatchRuleWireSchema.parse(input);
   return tenantMutate(
@@ -56,9 +67,38 @@ export async function patchRule(
   );
 }
 
+const deleteRuleEnvelopeSchema = successEnvelopeSchema(z.object({ deleted: z.boolean() }));
+
+export async function deleteRule(tenantId: string, ruleId: string) {
+  return tenantMutate(
+    buildTenantPath(tenantId, `rules/${encodeURIComponent(ruleId)}`),
+    deleteRuleEnvelopeSchema,
+    jsonDelete(),
+  );
+}
+
+export async function listRuleVersions(tenantId: string, ruleId: string) {
+  const data = await tenantFetch(
+    buildTenantPath(tenantId, `rules/${encodeURIComponent(ruleId)}/versions`),
+    listRuleVersionsSuccessEnvelopeSchema,
+  );
+  return data.versions;
+}
+
+export async function restoreRuleVersion(tenantId: string, ruleId: string, versionId: string) {
+  return tenantMutate(
+    buildTenantPath(
+      tenantId,
+      `rules/${encodeURIComponent(ruleId)}/versions/${encodeURIComponent(versionId)}/restore`,
+    ),
+    tenantRuleSuccessEnvelopeSchema,
+    jsonPost({}),
+  );
+}
+
 export async function simulateRules(
   tenantId: string,
-  input: z.infer<typeof tenantSimulateRulesWireSchema>,
+  input: Zod.infer<typeof tenantSimulateRulesWireSchema>,
 ) {
   const payload = tenantSimulateRulesWireSchema.parse(input);
   return tenantMutate(
@@ -68,11 +108,15 @@ export async function simulateRules(
   );
 }
 
-export async function validateRules(tenantId: string) {
+export async function validateRules(
+  tenantId: string,
+  input?: Zod.infer<typeof validateRulesWireSchema>,
+) {
+  const payload = input ? validateRulesWireSchema.parse(input) : {};
   return tenantMutate(
     buildTenantPath(tenantId, "rule-validations"),
     validateRulesSuccessEnvelopeSchema,
-    { method: "POST" },
+    jsonPost(payload),
   );
 }
 
@@ -86,7 +130,7 @@ export async function listTiers(tenantId: string) {
 
 export async function upsertTier(
   tenantId: string,
-  body: z.infer<typeof tenantUpsertTierWireSchema>,
+  body: Zod.infer<typeof tenantUpsertTierWireSchema>,
 ) {
   const payload = tenantUpsertTierWireSchema.parse(body);
   return tenantMutate(

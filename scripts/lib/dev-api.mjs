@@ -369,11 +369,20 @@ export async function tenantListRules(apiBase, token, tenantId) {
   return asArray(asObject(data(res.json), "tenant rules").rules);
 }
 
-export async function tenantCreateRule(apiBase, token, tenantId, rule, priority = 0) {
+export async function tenantCreateRule(apiBase, token, tenantId, rule, opts = {}) {
+  const priority = typeof opts === "number" ? opts : (opts.priority ?? 0);
+  const summary = typeof opts === "object" && opts && "summary" in opts ? opts.summary : undefined;
   await api(apiBase, "POST", tenantPath(tenantId, "rules"), {
     headers: { authorization: `Bearer ${token}` },
-    body: { rule, priority, active: true },
+    body: { rule, priority, active: true, ...(summary ? { summary } : {}) },
   });
+}
+
+export async function tenantGetRulesHealth(apiBase, token, tenantId) {
+  const res = await api(apiBase, "GET", tenantPath(tenantId, "rules/health"), {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  return asObject(data(res.json), "rules health");
 }
 
 export async function tenantListRewards(apiBase, token, tenantId, activeOnly = false) {
@@ -450,6 +459,7 @@ export async function tenantAdminSmoke(apiBase, token, tenantId, label = "") {
   const customers = await tenantListCustomers(apiBase, token, tenantId, { limit: 5 });
   const transactions = await tenantListTransactions(apiBase, token, tenantId, { limit: 5 });
   const rules = await tenantListRules(apiBase, token, tenantId);
+  const rulesHealth = await tenantGetRulesHealth(apiBase, token, tenantId);
   const rewards = await tenantListRewards(apiBase, token, tenantId, true);
   const qrToken = await tenantGetQrToken(apiBase, token, tenantId);
   const branding = await tenantGetQrBranding(apiBase, token, tenantId);
@@ -464,11 +474,12 @@ export async function tenantAdminSmoke(apiBase, token, tenantId, label = "") {
     customerCount: customers.length,
     transactionSample: transactions.length,
     ruleCount: rules.length,
+    rulesProgramActive: rulesHealth.program_active === true,
     rewardCount: rewards.length,
     hasQrToken: Boolean(qrToken),
     hasBranding: Boolean(branding),
     campaignCount: campaigns.length,
     hasAnalytics: Boolean(analytics),
-    logLine: `${prefix}tenant API ok — settings=${settings.name ?? "?"} customers≥${customers.length} tx≥${transactions.length} rules=${rules.length} rewards=${rewards.length} campaigns=${campaigns.length}`,
+    logLine: `${prefix}tenant API ok — settings=${settings.name ?? "?"} customers≥${customers.length} tx≥${transactions.length} rules=${rules.length} program_active=${rulesHealth.program_active === true} rewards=${rewards.length} campaigns=${campaigns.length}`,
   };
 }

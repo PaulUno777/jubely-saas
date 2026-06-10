@@ -16,19 +16,27 @@ type storeCreateRuleBody struct {
 	Rule     rules.Rule `json:"rule"`
 	Priority int        `json:"priority"`
 	Active   bool       `json:"active"`
+	Summary  string     `json:"summary"`
 }
 
 type storePatchRuleBody struct {
 	Rule     *rules.Rule `json:"rule"`
 	Active   *bool       `json:"active"`
 	Priority *int        `json:"priority"`
+	Summary  string      `json:"summary"`
 }
 
 type simulateRulesBody struct {
-	AmountFcfa int64  `json:"amount_fcfa"`
-	OccurredAt string `json:"occurred_at"`
-	Tier       string `json:"tier"`
-	IsNew      bool   `json:"is_new"`
+	AmountFcfa      int64        `json:"amount_fcfa"`
+	OccurredAt      string       `json:"occurred_at"`
+	Tier            string       `json:"tier"`
+	IsNew           bool         `json:"is_new"`
+	FallbackDefault bool         `json:"fallback_default"`
+	DraftRules      []rules.Rule `json:"draft_rules"`
+}
+
+type validateRulesBody struct {
+	DraftRules []rules.Rule `json:"draft_rules"`
 }
 
 func (s *Server) TenantListRules(c *gin.Context) {
@@ -44,7 +52,7 @@ func (s *Server) TenantListRules(c *gin.Context) {
 	}
 	items := make([]gin.H, 0, len(recs))
 	for _, rec := range recs {
-		items = append(items, presenter.RuleRecord(rec.ID, rec.Active, rec.Priority, rec.RuleJSON))
+		items = append(items, presenter.RuleRecord(rec))
 	}
 	respondOK(c, gin.H{"rules": items})
 }
@@ -65,12 +73,13 @@ func (s *Server) TenantCreateRule(c *gin.Context) {
 		Rule:     body.Rule,
 		Priority: body.Priority,
 		Active:   body.Active,
+		Summary:  body.Summary,
 	})
 	if err != nil {
 		respondMapped(c, mapCustomerError(err))
 		return
 	}
-	respondCreated(c, presenter.RuleRecord(rec.ID, rec.Active, rec.Priority, rec.RuleJSON))
+	respondCreated(c, presenter.RuleRecord(*rec))
 }
 
 func (s *Server) TenantPatchRule(c *gin.Context) {
@@ -95,12 +104,94 @@ func (s *Server) TenantPatchRule(c *gin.Context) {
 		Rule:     body.Rule,
 		Active:   body.Active,
 		Priority: body.Priority,
+		Summary:  body.Summary,
 	})
 	if err != nil {
 		respondMapped(c, mapCustomerError(err))
 		return
 	}
-	respondOK(c, presenter.RuleRecord(rec.ID, rec.Active, rec.Priority, rec.RuleJSON))
+	respondOK(c, presenter.RuleRecord(*rec))
+}
+
+func (s *Server) TenantDeleteRule(c *gin.Context) {
+	tenantID, ok := tenantIDFromScope(c)
+	if !ok {
+		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
+		return
+	}
+	ruleID, err := uuid.Parse(c.Param("ruleId"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_rule_id"})
+		return
+	}
+	if err := s.DeleteStoreRuleUC.Execute(c.Request.Context(), tenantID, ruleID); err != nil {
+		respondMapped(c, mapCustomerError(err))
+		return
+	}
+	respondOK(c, gin.H{"deleted": true})
+}
+
+func (s *Server) TenantRulesHealth(c *gin.Context) {
+	tenantID, ok := tenantIDFromScope(c)
+	if !ok {
+		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
+		return
+	}
+	out, err := s.GetRulesHealthUC.Execute(c.Request.Context(), tenantID)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
+		return
+	}
+	respondOK(c, out)
+}
+
+func (s *Server) TenantListRuleVersions(c *gin.Context) {
+	tenantID, ok := tenantIDFromScope(c)
+	if !ok {
+		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
+		return
+	}
+	ruleID, err := uuid.Parse(c.Param("ruleId"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_rule_id"})
+		return
+	}
+	vers, err := s.ListRuleVersionsUC.Execute(c.Request.Context(), tenantID, ruleID)
+	if err != nil {
+		respondMapped(c, mapCustomerError(err))
+		return
+	}
+	items := make([]gin.H, 0, len(vers))
+	for _, v := range vers {
+		items = append(items, presenter.RuleVersion(v))
+	}
+	respondOK(c, gin.H{"versions": items})
+}
+
+func (s *Server) TenantRestoreRuleVersion(c *gin.Context) {
+	tenantID, ok := tenantIDFromScope(c)
+	if !ok {
+		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
+		return
+	}
+	ruleID, err := uuid.Parse(c.Param("ruleId"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_rule_id"})
+		return
+	}
+	versionID, err := uuid.Parse(c.Param("versionId"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, i18n.CodeValidationInvalid, gin.H{"reason": "invalid_version_id"})
+		return
+	}
+	rec, err := s.RestoreRuleVersionUC.Execute(c.Request.Context(), loyalty.RestoreRuleVersionInput{
+		TenantID: tenantID, RuleID: ruleID, VersionID: versionID,
+	})
+	if err != nil {
+		respondMapped(c, mapCustomerError(err))
+		return
+	}
+	respondOK(c, presenter.RuleRecord(*rec))
 }
 
 func (s *Server) TenantSimulateRules(c *gin.Context) {
@@ -124,11 +215,13 @@ func (s *Server) TenantSimulateRules(c *gin.Context) {
 		occurredAt = parsed.UTC()
 	}
 	out, err := s.SimulateStoreRulesUC.Execute(c.Request.Context(), loyalty.SimulateStoreRulesInput{
-		TenantID:   tenantID,
-		AmountFcfa: body.AmountFcfa,
-		OccurredAt: occurredAt,
-		Tier:       body.Tier,
-		IsNew:      body.IsNew,
+		TenantID:        tenantID,
+		AmountFcfa:      body.AmountFcfa,
+		OccurredAt:      occurredAt,
+		Tier:            body.Tier,
+		IsNew:           body.IsNew,
+		DraftRules:      body.DraftRules,
+		FallbackDefault: body.FallbackDefault,
 	})
 	if err != nil {
 		respondMapped(c, mapCustomerError(err))
@@ -143,7 +236,11 @@ func (s *Server) TenantValidateRules(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, i18n.CodeInternal, nil)
 		return
 	}
-	out, err := s.ValidateStoreRulesUC.Execute(c.Request.Context(), loyalty.ValidateStoreRulesInput{TenantID: tenantID})
+	var body validateRulesBody
+	_ = c.ShouldBindJSON(&body)
+	out, err := s.ValidateStoreRulesUC.Execute(c.Request.Context(), loyalty.ValidateStoreRulesInput{
+		TenantID: tenantID, DraftRules: body.DraftRules,
+	})
 	if err != nil {
 		respondMapped(c, mapCustomerError(err))
 		return

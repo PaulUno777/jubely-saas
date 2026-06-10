@@ -2,11 +2,13 @@ package loyalty
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
+	"github.com/PaulUno777/jubely-saas/backend/application/rules"
 	"github.com/PaulUno777/jubely-saas/backend/application/usecase/billing"
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/google/uuid"
@@ -24,6 +26,8 @@ type EnrollByStoreQR struct {
 	Enrollments              ports.LoyaltyEnrollmentRepository
 	Stores                   ports.StoreRepository
 	Subscriptions            ports.SubscriptionRepository
+	Rules                    ports.PointsRuleRepository
+	Points                   ports.PointEventWriter
 	QRCodec                  ports.QRCodec
 	PhoneProofParser         ports.PhoneEnrollmentProofParser
 	RequirePhoneVerification bool
@@ -193,6 +197,18 @@ func (uc *EnrollByStoreQR) Execute(ctx context.Context, in EnrollByStoreQRInput)
 			return err
 		}
 
+		if uc.Rules != nil && uc.Points != nil {
+			evalOut, err := EvaluateEnrollmentPoints(ctx, uc.Rules, tenantID, e.Tier, now.UTC())
+			if err == nil && evalOut.Total > 0 {
+				ruleIDs := enrollRuleUUIDs(rules.AppliedRuleIDs(evalOut.Trace))
+				payload, _ := json.Marshal(map[string]any{
+					"event_type": "enroll_bonus",
+					"rules_eval": evalOut,
+				})
+				_ = uc.Points.AppendAt(ctx, tenantID, enrollmentLocID, &e.ID, "earn", evalOut.Total, payload, now.UTC(), ruleIDs)
+			}
+		}
+
 		qr, err := uc.QRCodec.SignCustomerQR(ctx, tenantID, ci.ID)
 		if err != nil {
 			return err
@@ -213,6 +229,16 @@ func (uc *EnrollByStoreQR) Execute(ctx context.Context, in EnrollByStoreQRInput)
 }
 
 // Keep util local (KISS) until it needs sharing.
+func enrollRuleUUIDs(ids []string) []uuid.UUID {
+	out := make([]uuid.UUID, 0, len(ids))
+	for _, id := range ids {
+		if u, err := uuid.Parse(id); err == nil {
+			out = append(out, u)
+		}
+	}
+	return out
+}
+
 func isE164PhoneEnroll(phone string) bool {
 	if len(phone) < 10 || len(phone) > 32 {
 		return false

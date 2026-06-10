@@ -12,6 +12,7 @@ import {
   simulateRulesSuccessEnvelopeSchema,
   simulateRulesWireSchema,
   storeRuleRecordSchema,
+  validateRulesWireSchema,
 } from "./rules";
 import { storePointEventSchema } from "./store";
 import { userPublicSchema } from "./admin";
@@ -150,18 +151,21 @@ export {
   loyaltyRuleSchema as tenantLoyaltyRuleSchema,
   simulateRulesWireSchema as tenantSimulateRulesWireSchema,
   simulateRulesSuccessEnvelopeSchema as tenantSimulateRulesSuccessEnvelopeSchema,
+  validateRulesWireSchema,
 };
 
 export const tenantCreateRuleWireSchema = z.object({
   rule: loyaltyRuleSchema,
   priority: z.number().optional(),
   active: z.boolean().optional(),
+  summary: z.string().optional(),
 });
 
 export const tenantPatchRuleWireSchema = z.object({
   rule: loyaltyRuleSchema.optional(),
   priority: z.number().optional(),
   active: z.boolean().optional(),
+  summary: z.string().optional(),
 });
 
 export const tenantRuleSuccessEnvelopeSchema = successEnvelopeSchema(storeRuleRecordSchema);

@@ -6,7 +6,8 @@
  * - superadmin + organizations (each new org gets HQ store `main` + Growth trialing subscription)
  * - Chez Mama: activate MoMo subscription, then extra boutiques via POST /v1/tenants/:tenantId/locations
  * - separate single-store orgs for multi-workspace agent demo
- * - org-wide rules + rewards via /v1/tenants/:id/*; purchases tagged per boutique
+ * - org-wide rules + rewards via /v1/tenants/:id/* (plan-gated advanced rules, health check)
+ * - purchases tagged per boutique; enroll bonus via enroll-trigger rules on PWA QR enroll
  * - 15 days of backdated purchase activity (occurred_at) for charts / analytics
  * - pooled loyalty: one enrollment per org; OTP claim + staff validation on primary org
  * - tenant admin smoke: settings, stats, metrics, customers, transactions, analytics, QR
@@ -40,6 +41,7 @@ import {
   tenantListCustomers,
   tenantListRewards,
   tenantListRules,
+  tenantGetRulesHealth,
   tenantPatchSettings,
   waitForApi,
 } from "./lib/dev-api.mjs";
@@ -192,48 +194,115 @@ function buildSeedPurchasePlan(org, orgStores, customers, activityDays, rng) {
   return plan;
 }
 
-/** Design-aligned rule presets (admin simulator). */
-function pilotRulesForStore(storeSlug) {
+/** Plans that may persist AST / advanced rules (matches plan_catalog.features). */
+function planAllowsAdvancedRules(plan) {
+  return plan === "growth" || plan === "business";
+}
+
+/**
+ * Design-aligned rule presets (admin-simulator.jsx + admin-rules.jsx).
+ * @param {{ slug: string; plan?: string; richDemo?: boolean }} org
+ */
+function pilotRulesForOrg(org) {
+  const slug = org.slug;
+  const rich = Boolean(org.richDemo);
+  const advancedPlan = planAllowsAdvancedRules(org.plan ?? "starter");
+
+  /** @type {Array<Record<string, unknown>>} */
   const rules = [
     {
-      id: `${storeSlug}-std`,
+      id: `${slug}-std`,
       name: "Achat standard",
       tag: "Base",
       on: true,
       trigger: "transaction",
+      schemaVersion: 1,
+      editorTier: "basic",
       cond: { days: ALL_DAYS, tier: "all", minAmount: 0 },
       action: { type: "rate", per: 100, pts: 1 },
     },
     {
-      id: `${storeSlug}-hh`,
+      id: `${slug}-hh`,
       name: "Happy hour",
       tag: "Multiplicateur",
-      on: storeSlug === "main" || storeSlug === config.tenantSlug,
+      on: rich,
       trigger: "transaction",
+      schemaVersion: 1,
+      editorTier: "basic",
       cond: { days: [0, 1, 2, 3, 4], hours: [17, 19], tier: "all", minAmount: 0 },
       action: { type: "mult", factor: 2 },
     },
     {
-      id: `${storeSlug}-first`,
+      id: `${slug}-first`,
       name: "Première visite",
       tag: "Bonus",
-      on: storeSlug === "main" || storeSlug === config.tenantSlug,
+      on: rich,
       trigger: "enroll",
+      schemaVersion: 1,
+      editorTier: "basic",
       cond: { days: ALL_DAYS, tier: "new", minAmount: 0 },
-      action: { type: "flat", pts: 50 },
+      action: { type: "flat", pts: 200 },
     },
   ];
+
+  if (rich) {
+    rules.push({
+      id: `${slug}-birth`,
+      name: "Anniversaire client",
+      tag: "Bonus",
+      on: false,
+      trigger: "birthday",
+      schemaVersion: 1,
+      editorTier: "basic",
+      cond: { days: ALL_DAYS, tier: "all", minAmount: 0 },
+      action: { type: "flat", pts: 500 },
+    });
+  }
+
+  if (rich && advancedPlan) {
+    rules.push(
+      {
+        id: `${slug}-adv-vip`,
+        name: "VIP gros panier",
+        tag: "Avancé",
+        on: true,
+        schemaVersion: 2,
+        editorTier: "advanced",
+        trigger: "transaction",
+        logic: "AND",
+        conditions: [{ type: "amount", op: ">=", value: 10000 }],
+        actions: [{ type: "mult", factor: 1.5 }],
+      },
+      {
+        id: `${slug}-adv-weekend`,
+        name: "Bonus Or week-end",
+        tag: "Avancé",
+        on: true,
+        schemaVersion: 2,
+        editorTier: "advanced",
+        trigger: "transaction",
+        logic: "AND",
+        conditions: [
+          { type: "amount", op: ">=", value: 2000 },
+          { type: "weekday", days: [5, 6] },
+          { type: "tier", tiers: ["gold", "platinum"] },
+        ],
+        actions: [{ type: "mult", factor: 2 }],
+      },
+    );
+  }
+
   return rules;
 }
 
-/** Reward catalog rows per store (point costs tuned for demo balances). */
-function pilotRewardsForStore(storeSlug) {
+/** Reward catalog rows (point costs tuned for demo balances). */
+function pilotRewardsForOrg(org) {
   const base = [
     { name: "Boisson offerte", description: "Jus ou café maison", point_cost: 80, min_tier: "bronze" },
     { name: "Dessert gratuit", description: "Dessert du jour", point_cost: 150, min_tier: "bronze" },
     { name: "Réduction 10%", description: "Sur la prochaine note", point_cost: 300, min_tier: "silver" },
   ];
-  if (storeSlug === "main" || storeSlug === config.tenantSlug) {
+  if (org.richDemo) {
     base.push({
       name: "Menu découverte",
       description: "Entrée + plat signature",
@@ -328,7 +397,7 @@ function callApi(method, path, opts = {}) {
   return api(config.apiBase, method, path, opts);
 }
 
-/** Default earn rule: 1 pt / 100 FCFA (matches rule engine). */
+/** Rough base-rate estimate for seed summary logs (ignores multipliers/bonuses). */
 function pointsForAmount(amountFcfa) {
   return Math.floor(amountFcfa / 100);
 }
@@ -478,26 +547,48 @@ async function ensureWorkspaceAccess(inviterAuthToken, email, role, password, in
   await inviteAndAccept(inviterAuthToken, email, role, password, invPath);
 }
 
-async function ensureTenantRules(authToken, tenantId, storeSlug) {
+async function ensureTenantRules(authToken, tenantId, org) {
   const existing = await tenantListRules(config.apiBase, authToken, tenantId);
-  if (existing.length > 0) {
-    return existing.length;
+  const existingRuleIds = new Set(
+    existing
+      .map((row) => {
+        const rec = asObject(row, "rule row");
+        const inner = asObject(rec.rule, "rule json");
+        return typeof inner.id === "string" ? inner.id : "";
+      })
+      .filter(Boolean),
+  );
+
+  const desired = pilotRulesForOrg(org);
+  let created = 0;
+  for (const rule of desired) {
+    const ruleId = typeof rule.id === "string" ? rule.id : "";
+    if (ruleId && existingRuleIds.has(ruleId)) {
+      continue;
+    }
+    await tenantCreateRule(config.apiBase, authToken, tenantId, rule, {
+      summary: "Seed pilot rule",
+    });
+    created++;
   }
-  let n = 0;
-  for (const [i, rule] of pilotRulesForStore(storeSlug).entries()) {
-    await tenantCreateRule(config.apiBase, authToken, tenantId, rule, i);
-    n++;
+
+  const health = await tenantGetRulesHealth(config.apiBase, authToken, tenantId);
+  if (health.program_active !== true) {
+    throw new Error(
+      `[${org.slug}] Rules health check failed: no active base rate rule (program inactive)`,
+    );
   }
-  return n;
+
+  return existing.length + created;
 }
 
-async function ensureTenantRewardsCatalog(authToken, tenantId, storeSlug) {
+async function ensureTenantRewardsCatalog(authToken, tenantId, org) {
   const existing = await tenantListRewards(config.apiBase, authToken, tenantId, false);
   if (existing.length > 0) {
     return existing;
   }
   const created = [];
-  for (const row of pilotRewardsForStore(storeSlug)) {
+  for (const row of pilotRewardsForOrg(org)) {
     created.push(await tenantCreateReward(config.apiBase, authToken, tenantId, row));
   }
   return created;
@@ -675,8 +766,8 @@ async function seedOrgLoyaltyDemo(org, tenantId, merchantEmail, merchantPassword
     allow_staff_self_enrollment: true,
   });
   log(`[${org.slug}] Seed org-wide rules + rewards (HQ ${hq.slug})`);
-  const ruleCount = await ensureTenantRules(merchantToken, tenantId, hq.slug ?? "main");
-  const rewards = await ensureTenantRewardsCatalog(merchantToken, tenantId, hq.slug ?? "main");
+  const ruleCount = await ensureTenantRules(merchantToken, tenantId, org);
+  const rewards = await ensureTenantRewardsCatalog(merchantToken, tenantId, org);
   if (org.richDemo) {
     await ensurePilotCampaign(merchantToken, tenantId);
   }

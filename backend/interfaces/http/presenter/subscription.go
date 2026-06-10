@@ -1,6 +1,8 @@
 package presenter
 
 import (
+	"encoding/json"
+
 	"github.com/PaulUno777/jubely-saas/backend/domain"
 	"github.com/gin-gonic/gin"
 )
@@ -20,7 +22,7 @@ func Subscription(sub *domain.Subscription, plan *domain.PlanCatalog) gin.H {
 		h["current_period_end"] = sub.CurrentPeriodEnd
 	}
 	if plan != nil {
-		h["plan"] = gin.H{
+		ph := gin.H{
 			"code":                 plan.Code,
 			"name":                 plan.Name,
 			"max_stores":           plan.MaxStores,
@@ -29,6 +31,13 @@ func Subscription(sub *domain.Subscription, plan *domain.PlanCatalog) gin.H {
 			"price_monthly_fcfa":   plan.PriceMonthlyFCFA,
 			"price_yearly_fcfa":    plan.PriceYearlyFCFA,
 		}
+		if len(plan.Features) > 0 {
+			var feats map[string]any
+			if err := json.Unmarshal(plan.Features, &feats); err == nil {
+				ph["features"] = feats
+			}
+		}
+		h["plan"] = ph
 	}
 	return h
 }

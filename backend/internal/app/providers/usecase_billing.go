@@ -3,6 +3,7 @@ package providers
 import (
 	"github.com/PaulUno777/jubely-saas/backend/application/ports"
 	"github.com/PaulUno777/jubely-saas/backend/application/usecase/billing"
+	"github.com/PaulUno777/jubely-saas/backend/application/usecase/loyalty"
 	"github.com/PaulUno777/jubely-saas/backend/application/usecase/tenant"
 )
 
@@ -53,4 +54,16 @@ func ProvideConfirmMoMoInvoice(
 
 func ProvideListPlans(plans ports.PlanCatalogRepository) *billing.ListPlans {
 	return &billing.ListPlans{Plans: plans}
+}
+
+func ProvidePatchOrgSubscription(
+	subscriptions ports.SubscriptionRepository,
+	clock ports.Clock,
+	freeze *loyalty.FreezeAdvancedRulesOnDowngrade,
+) *billing.PatchOrgSubscription {
+	return &billing.PatchOrgSubscription{
+		Subscriptions: subscriptions,
+		Clock:         clock,
+		FreezeRules:   freeze,
+	}
 }

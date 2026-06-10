@@ -47,10 +47,11 @@ func (s *Server) StaffCreateCustomer(c *gin.Context) {
 }
 
 type staffPurchaseBody struct {
-	PhoneE164   string `json:"phone_e164"`
-	CustomerQR  string `json:"customer_qr"`
-	AmountFcfa  int64  `json:"amount_fcfa"`
-	OccurredAt  string `json:"occurred_at"`
+	PhoneE164      string `json:"phone_e164"`
+	CustomerQR     string `json:"customer_qr"`
+	AmountFcfa     int64  `json:"amount_fcfa"`
+	OccurredAt     string `json:"occurred_at"`
+	IdempotencyKey string `json:"idempotency_key"`
 }
 
 func (s *Server) StaffRecordPurchase(c *gin.Context) {
@@ -84,12 +85,13 @@ func (s *Server) StaffRecordPurchase(c *gin.Context) {
 		occurredAt = &parsed
 	}
 	out, err := s.StaffRecordPurchaseUC.Execute(c.Request.Context(), staff.StaffRecordPurchaseInput{
-		TenantID:    *claims.TenantID,
-		StoreID:     claims.ActiveStoreID,
-		PhoneE164:   body.PhoneE164,
-		CustomerQR:  body.CustomerQR,
-		AmountFcfa:  body.AmountFcfa,
-		OccurredAt:  occurredAt,
+		TenantID:       *claims.TenantID,
+		StoreID:        claims.ActiveStoreID,
+		PhoneE164:      body.PhoneE164,
+		CustomerQR:     body.CustomerQR,
+		AmountFcfa:     body.AmountFcfa,
+		OccurredAt:     occurredAt,
+		IdempotencyKey: body.IdempotencyKey,
 	})
 	if err != nil {
 		respondMapped(c, mapCustomerError(err))

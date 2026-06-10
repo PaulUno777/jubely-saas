@@ -151,6 +151,12 @@ func (uc *ListPlans) Execute(ctx context.Context) ([]domain.PlanCatalog, error) 
 type PatchOrgSubscription struct {
 	Subscriptions ports.SubscriptionRepository
 	Clock         ports.Clock
+	FreezeRules   FreezeAdvancedRulesExecutor
+}
+
+// FreezeAdvancedRulesExecutor freezes advanced rules on plan downgrade.
+type FreezeAdvancedRulesExecutor interface {
+	Execute(ctx context.Context, tenantID uuid.UUID, newPlanCode string) error
 }
 
 type PatchOrgSubscriptionInput struct {
@@ -166,7 +172,13 @@ func (uc *PatchOrgSubscription) Execute(ctx context.Context, in PatchOrgSubscrip
 		return nil, err
 	}
 	if in.PlanCode != nil {
-		sub.PlanCode = strings.TrimSpace(*in.PlanCode)
+		newPlan := strings.TrimSpace(*in.PlanCode)
+		if uc.FreezeRules != nil && newPlan != sub.PlanCode {
+			if err := uc.FreezeRules.Execute(ctx, in.TenantID, newPlan); err != nil {
+				return nil, err
+			}
+		}
+		sub.PlanCode = newPlan
 	}
 	if in.Status != nil {
 		sub.Status = *in.Status

@@ -58,14 +58,19 @@ func Initialize(ctx context.Context) (*App, func(), error) {
 	enrollmentRepository := providers.NewEnrollmentRepository(pool)
 	hmacqrCodec := providers.ProvideQRCodec(config)
 	createCustomerByStaff := providers.ProvideCreateCustomerByStaff(txManager, tenantRepository, userRepository, tenantMembershipRepository, customerRepository, enrollmentRepository, hmacqrCodec)
+	pointsRuleRepository := providers.NewPointsRuleRepository(pool)
+	pointEventRepository := providers.NewPointEventRepository(pool)
 	bool2 := providers.ProvidePublicEnrollRequirePhoneVerify(config)
-	enrollByStoreQR := providers.ProvideEnrollByStoreQR(txManager, systemClock, tenantRepository, userRepository, tenantMembershipRepository, customerRepository, enrollmentRepository, storeRepository, subscriptionRepository, hmacqrCodec, jwtSigner, bool2)
+	enrollByStoreQR := providers.ProvideEnrollByStoreQR(txManager, systemClock, tenantRepository, userRepository, tenantMembershipRepository, customerRepository, enrollmentRepository, storeRepository, subscriptionRepository, pointsRuleRepository, pointEventRepository, hmacqrCodec, jwtSigner, bool2)
 	getCustomerWallet := providers.ProvideGetCustomerWallet(hmacqrCodec, tenantRepository, enrollmentRepository, storeCatalog)
 	customerLogin := providers.ProvideCustomerLogin(txManager, userRepository, customerRepository, tenantMembershipRepository, refreshTokenRepository, jwtSigner, jwtSigner, storeCatalog, systemClock, timing)
 	selectCustomerContext := providers.ProvideSelectCustomerContext(userRepository, tenantMembershipRepository, customerRepository, storeCatalog, refreshTokenRepository, jwtSigner, systemClock, timing)
-	pointEventRepository := providers.NewPointEventRepository(pool)
-	pointsRuleRepository := providers.NewPointsRuleRepository(pool)
-	staffRecordPurchase := providers.ProvideStaffRecordPurchase(hmacqrCodec, tenantRepository, customerRepository, enrollmentRepository, pointEventRepository, storeCatalog, pointsRuleRepository, systemClock)
+	purchaseIngestionRepository := providers.NewPurchaseIngestionRepository(pool)
+	loyaltyTierRepository := providers.NewLoyaltyTierRepository(pool)
+	enrollmentBalanceReader := providers.ProvideEnrollmentBalanceReader(storeCatalog)
+	recalculateEnrollmentTier := providers.ProvideRecalculateEnrollmentTier(loyaltyTierRepository, enrollmentRepository, enrollmentBalanceReader)
+	inMemoryBus := providers.ProvideEventBus(pool)
+	staffRecordPurchase := providers.ProvideStaffRecordPurchase(hmacqrCodec, tenantRepository, customerRepository, enrollmentRepository, pointEventRepository, storeCatalog, pointsRuleRepository, purchaseIngestionRepository, recalculateEnrollmentTier, inMemoryBus, systemClock)
 	redemptionRepository := providers.NewRedemptionRepository(pool)
 	rewardRepository := providers.NewRewardRepository(pool)
 	staffValidateRedemption := providers.ProvideStaffValidateRedemption(hmacqrCodec, redemptionRepository, rewardRepository, enrollmentRepository, customerRepository, systemClock)
@@ -76,13 +81,18 @@ func Initialize(ctx context.Context) (*App, func(), error) {
 	listCustomerRewards := providers.ProvideListCustomerRewards(rewardRepository, rewardStoreAvailabilityRepository, enrollmentRepository, storeCatalog)
 	customerClaimReward := providers.ProvideCustomerClaimReward(txManager, hmacqrCodec, rewardRepository, rewardStoreAvailabilityRepository, redemptionRepository, enrollmentRepository, storeCatalog, pointEventRepository, systemClock)
 	listStoreRules := providers.ProvideListStoreRules(pointsRuleRepository)
-	createStoreRule := providers.ProvideCreateStoreRule(pointsRuleRepository)
-	patchStoreRule := providers.ProvidePatchStoreRule(pointsRuleRepository)
+	ruleVersionRepository := providers.NewRuleVersionRepository(pool)
+	planCatalogRepository := providers.NewPlanCatalogRepository(pool)
+	createStoreRule := providers.ProvideCreateStoreRule(pointsRuleRepository, ruleVersionRepository, subscriptionRepository, planCatalogRepository)
+	patchStoreRule := providers.ProvidePatchStoreRule(pointsRuleRepository, ruleVersionRepository, subscriptionRepository, planCatalogRepository)
+	deleteStoreRule := providers.ProvideDeleteStoreRule(pointsRuleRepository)
+	getRulesHealth := providers.ProvideGetRulesHealth(pointsRuleRepository)
+	listRuleVersions := providers.ProvideListRuleVersions(ruleVersionRepository)
+	restoreRuleVersion := providers.ProvideRestoreRuleVersion(pointsRuleRepository, ruleVersionRepository)
 	simulateStoreRules := providers.ProvideSimulateStoreRules(pointsRuleRepository)
 	listStoreCustomers := providers.ProvideListStoreCustomers(storeCatalog)
 	listStorePointEvents := providers.ProvideListStorePointEvents(storeCatalog)
 	listOrgStores := providers.ProvideListOrgStores(storeRepository)
-	planCatalogRepository := providers.NewPlanCatalogRepository(pool)
 	quotaChecker := providers.ProvideQuotaChecker(planCatalogRepository, subscriptionRepository, storeRepository, storeMembershipRepository, enrollmentRepository)
 	createOrgStore := providers.ProvideCreateOrgStore(storeRepository, quotaChecker, systemClock)
 	getOrgSubscription := providers.ProvideGetOrgSubscription(subscriptionRepository, planCatalogRepository)
@@ -123,7 +133,6 @@ func Initialize(ctx context.Context) (*App, func(), error) {
 	}
 	uploadTenantLogo := providers.ProvideUploadTenantLogo(objectStorage)
 	updateCustomerProfile := providers.ProvideUpdateCustomerProfile(customerRepository, systemClock)
-	loyaltyTierRepository := providers.NewLoyaltyTierRepository(pool)
 	listTiers := providers.ProvideListTiers(loyaltyTierRepository)
 	upsertTier := providers.ProvideUpsertTier(loyaltyTierRepository, systemClock)
 	seedDefaultTiers := providers.ProvideSeedDefaultTiers(loyaltyTierRepository, systemClock)
@@ -142,9 +151,7 @@ func Initialize(ctx context.Context) (*App, func(), error) {
 	updateCampaign := providers.ProvideUpdateCampaign(campaignRepository, subscriptionRepository, planCatalogRepository, systemClock)
 	launchCampaign := providers.ProvideLaunchCampaign(campaignRepository, subscriptionRepository, planCatalogRepository, systemClock)
 	pauseCampaign := providers.ProvidePauseCampaign(campaignRepository, subscriptionRepository, planCatalogRepository, systemClock)
-	enrollmentBalanceReader := providers.ProvideEnrollmentBalanceReader(storeCatalog)
 	getTenantCustomer := providers.ProvideGetTenantCustomer(enrollmentRepository, customerRepository, enrollmentBalanceReader, loyaltyTierRepository)
-	recalculateEnrollmentTier := providers.ProvideRecalculateEnrollmentTier(loyaltyTierRepository, enrollmentRepository, enrollmentBalanceReader)
 	adjustCustomerPoints := providers.ProvideAdjustCustomerPoints(enrollmentRepository, pointEventRepository, enrollmentBalanceReader, recalculateEnrollmentTier)
 	tenantAnalyticsRepository := providers.NewTenantAnalyticsRepository(pool)
 	tenantAnalyticsOverview := providers.ProvideTenantAnalyticsOverview(tenantAnalyticsRepository)
@@ -184,6 +191,10 @@ func Initialize(ctx context.Context) (*App, func(), error) {
 		ListStoreRulesUC:          listStoreRules,
 		CreateStoreRuleUC:         createStoreRule,
 		PatchStoreRuleUC:          patchStoreRule,
+		DeleteStoreRuleUC:         deleteStoreRule,
+		GetRulesHealthUC:          getRulesHealth,
+		ListRuleVersionsUC:        listRuleVersions,
+		RestoreRuleVersionUC:      restoreRuleVersion,
 		SimulateStoreRulesUC:      simulateStoreRules,
 		ListStoreCustomersUC:      listStoreCustomers,
 		ListStorePointEventsUC:    listStorePointEvents,

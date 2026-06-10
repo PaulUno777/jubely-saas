@@ -16,7 +16,14 @@ import (
 type memPointsRuleRepo struct{}
 
 func (m *memPointsRuleRepo) ListByTenant(context.Context, uuid.UUID) ([]ports.PointsRuleRecord, error) {
-	return nil, nil
+	raw, _ := json.Marshal(map[string]any{
+		"id": "r1", "name": "Standard", "on": true, "trigger": "transaction",
+		"cond":   map[string]any{"days": []int{0, 1, 2, 3, 4, 5, 6}, "tier": "all", "minAmount": 0},
+		"action": map[string]any{"type": "rate", "per": 100, "pts": 1},
+	})
+	return []ports.PointsRuleRecord{{
+		ID: uuid.New(), Active: true, RuleJSON: raw,
+	}}, nil
 }
 
 func (m *memPointsRuleRepo) FindByID(context.Context, uuid.UUID, uuid.UUID) (*ports.PointsRuleRecord, error) {
@@ -27,16 +34,24 @@ func (m *memPointsRuleRepo) Create(context.Context, *ports.PointsRuleRecord) err
 
 func (m *memPointsRuleRepo) Update(context.Context, *ports.PointsRuleRecord) error { return nil }
 
+func (m *memPointsRuleRepo) Delete(context.Context, uuid.UUID, uuid.UUID) error { return nil }
+
+func (m *memPointsRuleRepo) FreezeAdvancedByTenant(context.Context, uuid.UUID, string) error { return nil }
+
+func (m *memPointsRuleRepo) RecomputePriorities(context.Context, uuid.UUID, map[uuid.UUID]int) error {
+	return nil
+}
+
 type memPointAppend struct {
 	lastDelta int
 	lastType  string
 }
 
-func (m *memPointAppend) Append(ctx context.Context, tenantID uuid.UUID, storeID *uuid.UUID, enrollmentID *uuid.UUID, eventType string, delta int, payload json.RawMessage) error {
-	return m.AppendAt(ctx, tenantID, storeID, enrollmentID, eventType, delta, payload, time.Now().UTC())
+func (m *memPointAppend) Append(ctx context.Context, tenantID uuid.UUID, storeID *uuid.UUID, enrollmentID *uuid.UUID, eventType string, delta int, payload json.RawMessage, ruleIDs []uuid.UUID) error {
+	return m.AppendAt(ctx, tenantID, storeID, enrollmentID, eventType, delta, payload, time.Now().UTC(), ruleIDs)
 }
 
-func (m *memPointAppend) AppendAt(ctx context.Context, tenantID uuid.UUID, storeID *uuid.UUID, enrollmentID *uuid.UUID, eventType string, delta int, payload json.RawMessage, occurredAt time.Time) error {
+func (m *memPointAppend) AppendAt(ctx context.Context, tenantID uuid.UUID, storeID *uuid.UUID, enrollmentID *uuid.UUID, eventType string, delta int, payload json.RawMessage, occurredAt time.Time, ruleIDs []uuid.UUID) error {
 	m.lastDelta = delta
 	m.lastType = eventType
 	_ = tenantID

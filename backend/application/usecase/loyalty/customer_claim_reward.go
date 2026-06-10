@@ -114,7 +114,7 @@ func (uc *CustomerClaimReward) Execute(ctx context.Context, in CustomerClaimRewa
 			"reward_name":  rw.Name,
 			"display_code": displayCode,
 		})
-		if err := uc.Points.Append(txCtx, enr.TenantID, nil, &enr.ID, "redeem", -rw.PointCost, payload); err != nil {
+		if err := uc.Points.Append(txCtx, enr.TenantID, nil, &enr.ID, "redeem", -rw.PointCost, payload, nil); err != nil {
 			return err
 		}
 		out = &CustomerClaimRewardOutput{

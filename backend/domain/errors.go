@@ -15,4 +15,5 @@ var (
 	ErrSelfEnrollmentForbidden = errors.New("self_enrollment_forbidden")
 	ErrQuotaExceeded           = errors.New("quota_exceeded")
 	ErrSubscriptionInactive    = errors.New("subscription_inactive")
+	ErrLoyaltyInactive         = errors.New("loyalty_inactive")
 )

@@ -107,7 +107,7 @@ func (uc *AdjustCustomerPoints) Execute(ctx context.Context, in AdjustCustomerPo
 		"adjustment":    true,
 	})
 	eventType := "adjust"
-	if err := uc.Points.Append(ctx, in.TenantID, nil, &enr.ID, eventType, in.Delta, payload); err != nil {
+	if err := uc.Points.Append(ctx, in.TenantID, nil, &enr.ID, eventType, in.Delta, payload, nil); err != nil {
 		return nil, err
 	}
 	balanceAfter := balanceBefore + int64(in.Delta)

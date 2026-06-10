@@ -16,7 +16,8 @@ type ValidateStoreRules struct {
 }
 
 type ValidateStoreRulesInput struct {
-	TenantID uuid.UUID
+	TenantID   uuid.UUID
+	DraftRules []rules.Rule
 }
 
 type ValidateStoreRulesOutput struct {
@@ -24,22 +25,19 @@ type ValidateStoreRulesOutput struct {
 }
 
 func (uc *ValidateStoreRules) Execute(ctx context.Context, in ValidateStoreRulesInput) (*ValidateStoreRulesOutput, error) {
-	recs, err := uc.Rules.ListByTenant(ctx, in.TenantID)
-	if err != nil {
-		return nil, err
-	}
-	parsed, err := recordsToRules(recs)
-	if err != nil {
-		return nil, err
-	}
-	active := make([]rules.Rule, 0, len(parsed))
-	for i, rec := range recs {
-		if rec.Active && parsed[i].On {
-			active = append(active, parsed[i])
+	var active []rules.Rule
+	if len(in.DraftRules) > 0 {
+		active = in.DraftRules
+	} else {
+		recs, err := uc.Rules.ListByTenant(ctx, in.TenantID)
+		if err != nil {
+			return nil, err
 		}
-	}
-	if len(active) == 0 {
-		active = rules.DefaultPilotRules()
+		parsed, err := recordsToRules(recs)
+		if err != nil {
+			return nil, err
+		}
+		active = activeRules(recs, parsed)
 	}
 	if err := requireAdvancedRulesIfNeeded(ctx, uc.Subs, uc.Plans, in.TenantID, active); err != nil {
 		return nil, err
@@ -55,6 +53,9 @@ func requireAdvancedRulesIfNeeded(
 	active []rules.Rule,
 ) error {
 	for _, r := range active {
+		if r.IsAdvanced() || r.EditorTier == "advanced" {
+			return billing.RequirePlanFeature(ctx, subs, plans, tenantID, billing.PlanFeatureAdvancedRules)
+		}
 		if r.Action.Type == "mult" || (r.Trigger != "transaction" && r.Trigger != "enroll") {
 			return billing.RequirePlanFeature(ctx, subs, plans, tenantID, billing.PlanFeatureAdvancedRules)
 		}

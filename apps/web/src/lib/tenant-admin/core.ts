@@ -111,3 +111,8 @@ export const jsonPut = (body: unknown): RequestInit => ({
   headers: jsonHeaders(),
   body: JSON.stringify(body),
 });
+
+export const jsonDelete = (): RequestInit => ({
+  method: "DELETE",
+  headers: jsonHeaders(),
+});

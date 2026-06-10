@@ -16,6 +16,7 @@ import {
   listCampaigns,
   listCustomers,
   listRewards,
+  getRulesHealth,
   listRules,
   listTiers,
   listTransactions,
@@ -51,6 +52,10 @@ export function useTenantAgents(params: Omit<TenantQueryBase, "tenantId"> = {}) 
 
 export function useTenantRules() {
   return useTenantAdminQuery("rules", [], (tenantId) => listRules(tenantId));
+}
+
+export function useTenantRulesHealth() {
+  return useTenantAdminQuery("rules-health", [], (tenantId) => getRulesHealth(tenantId));
 }
 
 export function useTenantTiers() {
