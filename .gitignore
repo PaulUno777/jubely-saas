@@ -16,5 +16,9 @@ backend/.uploads/
 .DS_Store
 .vscode
 
+# Fallow
+fallow-dead-code.json
 
+
+# Environment variables
 .env

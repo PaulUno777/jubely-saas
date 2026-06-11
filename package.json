@@ -9,6 +9,12 @@
     "test:backend": "cd backend && go test ./...",
     "test:web": "pnpm --dir apps/web exec tsc --noEmit && pnpm --dir apps/web lint",
     "build:web": "pnpm -r --filter \"@jubely/*\" build",
-    "lint:web": "pnpm -r --filter \"@jubely/*\" lint"
+    "lint:web": "pnpm -r --filter \"@jubely/*\" lint",
+    "audit:code": "fallow audit",
+    "dead-code": "fallow dead-code",
+    "health": "fallow health --score --hotspots"
+  },
+  "devDependencies": {
+    "fallow": "^2.92.1"
   }
 }
