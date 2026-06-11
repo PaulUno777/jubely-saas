@@ -36,7 +36,8 @@ type simulateRulesBody struct {
 }
 
 type validateRulesBody struct {
-	DraftRules []rules.Rule `json:"draft_rules"`
+	DraftRules    []rules.Rule `json:"draft_rules"`
+	ExcludeRuleID string       `json:"exclude_rule_id"`
 }
 
 func (s *Server) TenantListRules(c *gin.Context) {
@@ -239,7 +240,7 @@ func (s *Server) TenantValidateRules(c *gin.Context) {
 	var body validateRulesBody
 	_ = c.ShouldBindJSON(&body)
 	out, err := s.ValidateStoreRulesUC.Execute(c.Request.Context(), loyalty.ValidateStoreRulesInput{
-		TenantID: tenantID, DraftRules: body.DraftRules,
+		TenantID: tenantID, DraftRules: body.DraftRules, ExcludeRuleID: body.ExcludeRuleID,
 	})
 	if err != nil {
 		respondMapped(c, mapCustomerError(err))

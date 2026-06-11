@@ -1,3 +1,5 @@
+import { AdvancedEditor } from "@/components/store/rules/advanced-editor";
+
 const store = {
   shell: {
     tenantFallback: "Your store",
@@ -364,6 +366,16 @@ const store = {
     sectionThen: "Then (actions)",
     naturalLanguageLabel: "Natural language",
     ruleValid: "Rule valid",
+    ruleInvalid: "Invalid rule",
+    ruleChecking: "Checking…",
+    ruleHasWarnings: "Warnings",
+    validationNameRequired: "Rule name is required",
+    editorCancelConfirmTitle: "Discard changes?",
+    editorCancelConfirmBody: "You have unsaved changes. Leave without saving?",
+    editorCancelConfirmAction: "Leave",
+    openSimulator: "Open simulator",
+    advancedEditor: "Advanced editor",
+    basicEditor: "Basic editor",
     addConditionHint: "Click a condition in the palette to add it",
     addActionHint: "Click an action in the palette to add it",
     triggerLabel: "Trigger",
@@ -378,8 +390,6 @@ const store = {
     ruleTypeBonus: "Bonus",
     previewTitle: "Preview",
     previewLive: "Live update",
-    advancedEditorGrowth: "Visual editor · Growth",
-    basicEditorStandard: "Basic editor · Standard",
     ruleTypeLabel: "Rule type",
     pointsPer: "Points awarded",
     perAmount: "Per slice (FCFA)",

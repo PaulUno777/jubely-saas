@@ -3,8 +3,10 @@
 import { Card, CardContent, CardHeader, CardTitle, Input, Label, cn } from "@jubely/ui";
 import { Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRuleEditorStore, type BasicRuleDraft } from "@/stores/rule-editor-store";
+import { RuleEditorCardHeader } from "@/components/store/rules/rule-editor-card-header";
+import { RuleEditorFooter } from "@/components/store/rules/rule-editor-footer";
 import { useWeekdayLabels } from "@/components/store/rules/shared/use-weekday-labels";
+import { useRuleEditorStore, type BasicRuleDraft } from "@/stores/rule-editor-store";
 
 export function BasicEditor() {
   const t = useTranslations("store.pointsRules");
@@ -20,9 +22,11 @@ export function BasicEditor() {
         : `+${draft.bonusPts}`;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-      <Card>
-        <CardContent className="space-y-5 p-6">
+    <Card className="overflow-hidden p-0">
+      <RuleEditorCardHeader />
+
+      <div className="grid gap-4 p-4 lg:grid-cols-[1fr_320px] lg:p-6">
+        <div className="space-y-5">
           <div>
             <Label className="mb-2 block">{t("ruleTypeLabel")}</Label>
             <div className="grid grid-cols-3 gap-2">
@@ -51,7 +55,11 @@ export function BasicEditor() {
 
           <div className="grid gap-2">
             <Label>{t("name")}</Label>
-            <Input value={draft.name} onChange={(e) => patchDraft({ name: e.target.value })} />
+            <Input
+              value={draft.name}
+              onChange={(e) => patchDraft({ name: e.target.value })}
+              required
+            />
           </div>
 
           {draft.ruleType === "base" ? (
@@ -168,38 +176,40 @@ export function BasicEditor() {
               <p className="text-xs text-muted-foreground">{t("activateNowHint")}</p>
             </div>
           </label>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card className="sticky top-20 h-fit">
-        <CardHeader>
-          <CardTitle className="text-base">{t("previewTitle")}</CardTitle>
-          <p className="text-xs text-muted-foreground">{t("previewLive")}</p>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="rounded-xl bg-muted/40 p-4">
-            <p className="font-semibold">{draft.name || "—"}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {draft.ruleType === "base"
-                ? t("previewBase", { pts: String(draft.pts), per: String(draft.per) })
-                : draft.ruleType === "mult"
-                  ? t("previewMult")
-                  : t("previewBonus")}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {draft.days.map((d) => (
-                <span key={d} className="rounded-full bg-background px-2 py-0.5 text-xs">
-                  {weekdays[d]}
-                </span>
-              ))}
+        <Card className="h-fit lg:sticky lg:top-20">
+          <CardHeader>
+            <CardTitle className="text-base">{t("previewTitle")}</CardTitle>
+            <p className="text-xs text-muted-foreground">{t("previewLive")}</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="rounded-xl bg-muted/40 p-4">
+              <p className="font-semibold">{draft.name || "—"}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {draft.ruleType === "base"
+                  ? t("previewBase", { pts: String(draft.pts), per: String(draft.per) })
+                  : draft.ruleType === "mult"
+                    ? t("previewMult")
+                    : t("previewBonus")}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {draft.days.map((d) => (
+                  <span key={d} className="rounded-full bg-background px-2 py-0.5 text-xs">
+                    {weekdays[d]}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="flex gap-2 rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground">
-            <Lock className="mt-0.5 size-4 shrink-0" />
-            <p>{t("upgradeGrowthHint")}</p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            <div className="flex gap-2 rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground">
+              <Lock className="mt-0.5 size-4 shrink-0" />
+              <p>{t("upgradeGrowthHint")}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <RuleEditorFooter />
+    </Card>
   );
 }

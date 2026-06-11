@@ -10,7 +10,7 @@ import { MerchantPageShell } from "@/components/store/merchant-page-shell";
 import { ConflictDock } from "@/components/store/rules/conflict-dock";
 import { RulesList } from "@/components/store/rules/rules-list";
 import { RulesPlanBanner } from "@/components/store/rules/rules-plan-banner";
-import { SimulatorPanel } from "@/components/store/rules/simulator-panel";
+import { RulesSimulatorDialog } from "@/components/store/rules/rules-simulator-dialog";
 import { useMerchantLocationScope } from "@/hooks/useMerchantLocationScope";
 import { useTenantRules, useTenantTiers } from "@/hooks/tenant-admin-hooks";
 import { getSubscription } from "@/lib/tenant-admin";
@@ -21,6 +21,7 @@ export default function StorePointsRulesPage() {
   const { headerContext } = useMerchantLocationScope();
   const tenantId = useTenantId();
   const [tab, setTab] = useState("rules");
+  const [simOpen, setSimOpen] = useState(false);
   const rulesQ = useTenantRules();
   const tiersQ = useTenantTiers();
 
@@ -38,7 +39,7 @@ export default function StorePointsRulesPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => setTab("simulation")}>
+          <Button type="button" variant="outline" size="sm" onClick={() => setSimOpen(true)}>
             <Eye className="mr-1 size-4" />
             {t("simulateTab")}
           </Button>
@@ -103,10 +104,22 @@ export default function StorePointsRulesPage() {
         </TabsContent>
 
         <TabsContent value="simulation" className="mt-4 space-y-4">
-          <SimulatorPanel />
+          <Card>
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 p-6">
+              <div>
+                <p className="font-semibold">{t("simulatorTitle")}</p>
+                <p className="text-sm text-muted-foreground">{t("simulatorDescription")}</p>
+              </div>
+              <Button type="button" onClick={() => setSimOpen(true)}>
+                {t("openSimulator")}
+              </Button>
+            </CardContent>
+          </Card>
           <ConflictDock refreshKey={rulesQ.dataUpdatedAt} />
         </TabsContent>
       </Tabs>
+
+      <RulesSimulatorDialog open={simOpen} onOpenChange={setSimOpen} />
     </MerchantPageShell>
   );
 }

@@ -4,23 +4,15 @@ import { cn } from "@jubely/ui";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { PaletteBlockIcon } from "@/components/store/rules/advanced-editor/icons";
-import type { EditorZone, PaletteBlockDef } from "@/components/store/rules/shared/constants";
+import type { PaletteBlockDef } from "@/components/store/rules/shared/constants";
 
 type PaletteBlockProps = {
   block: PaletteBlockDef;
   isActive?: boolean;
   onAdd: () => void;
-  onFocusZone: (zone: EditorZone) => void;
-  onClearZoneFocus: () => void;
 };
 
-export function PaletteBlock({
-  block,
-  isActive,
-  onAdd,
-  onFocusZone,
-  onClearZoneFocus,
-}: PaletteBlockProps) {
+export function PaletteBlock({ block, isActive, onAdd }: PaletteBlockProps) {
   const t = useTranslations("store.pointsRules");
 
   return (
@@ -30,8 +22,6 @@ export function PaletteBlock({
         isActive && "bg-muted/80 ring-1 ring-border",
       )}
       onClick={onAdd}
-      onMouseEnter={() => onFocusZone(block.zone)}
-      onMouseLeave={onClearZoneFocus}
       onKeyDown={(e) => e.key === "Enter" && onAdd()}
       role="button"
       tabIndex={0}

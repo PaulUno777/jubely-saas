@@ -3,7 +3,7 @@
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useTranslations } from "next-intl";
 import { SortableCondition } from "@/components/store/rules/advanced-editor/sortable-condition";
-import { zoneFocusClass } from "@/components/store/rules/shared/zone-theme";
+import { zoneFocusClass, zoneSectionHeadingClass } from "@/components/store/rules/shared/zone-theme";
 import type { AdvancedRuleDraft } from "@/stores/rule-editor-store";
 
 export function ConditionsSection({
@@ -25,7 +25,7 @@ export function ConditionsSection({
 
   return (
     <div>
-      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-violet-700/80">{t("sectionIf")}</p>
+      <p className={zoneSectionHeadingClass("conditions")}>{t("sectionIf")}</p>
       <div className={zoneFocusClass("conditions", isFocused)}>
         <div className="p-3">
           <SortableContext items={condIds} strategy={verticalListSortingStrategy}>

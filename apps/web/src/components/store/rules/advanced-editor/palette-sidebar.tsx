@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@jubely/ui";
 import { useTranslations } from "next-intl";
 import { PaletteBlock } from "@/components/store/rules/advanced-editor/palette-block";
 import {
@@ -9,6 +10,7 @@ import {
   type EditorZone,
   type PaletteBlockDef,
 } from "@/components/store/rules/shared/constants";
+import { zoneLabelClass } from "@/components/store/rules/shared/zone-theme";
 import type { AdvancedRuleDraft } from "@/stores/rule-editor-store";
 
 const SECTIONS: { key: EditorZone; labelKey: string; blocks: PaletteBlockDef[] }[] = [
@@ -44,11 +46,14 @@ export function PaletteSidebar({
 
   return (
     <aside className="space-y-3 border-r bg-muted/20 p-2 md:w-[220px] md:shrink-0">
+      <p className="px-1.5 text-[10px] text-muted-foreground">{t("paletteHint")}</p>
       {SECTIONS.map(({ key, labelKey, blocks }) => (
-        <div key={key}>
-          <p className="px-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            {t(labelKey as "paletteTriggers")}
-          </p>
+        <div
+          key={key}
+          onMouseEnter={() => onFocusZone(key)}
+          onMouseLeave={onClearZoneFocus}
+        >
+          <p className={cn("px-1.5 pb-1", zoneLabelClass(key))}>{t(labelKey as "paletteTriggers")}</p>
           <div className="space-y-0.5">
             {blocks.map((block) => (
               <PaletteBlock
@@ -56,8 +61,6 @@ export function PaletteSidebar({
                 block={block}
                 isActive={key === "triggers" && draft.trigger === block.type}
                 onAdd={() => handleAdd(key, block.type)}
-                onFocusZone={onFocusZone}
-                onClearZoneFocus={onClearZoneFocus}
               />
             ))}
           </div>

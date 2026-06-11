@@ -1,10 +1,9 @@
 "use client";
 
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SortableAction } from "@/components/store/rules/advanced-editor/sortable-action";
-import { ZONE_THEME, zoneFocusClass } from "@/components/store/rules/shared/zone-theme";
+import { zoneFocusClass, zoneSectionHeadingClass } from "@/components/store/rules/shared/zone-theme";
 import type { AdvancedRuleDraft } from "@/stores/rule-editor-store";
 
 export function ActionsSection({
@@ -24,12 +23,8 @@ export function ActionsSection({
 
   return (
     <div>
-      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-teal-700/80">{t("sectionThen")}</p>
+      <p className={zoneSectionHeadingClass("actions")}>{t("sectionThen")}</p>
       <div className={zoneFocusClass("actions", isFocused)}>
-        <div className={`flex items-center gap-2 rounded-t-xl px-3 py-2 text-sm font-semibold ${ZONE_THEME.actions.headerBg} ${ZONE_THEME.actions.headerText}`}>
-          <Zap className="size-4" />
-          {t("actionsToRun")}
-        </div>
         <div className="space-y-2 p-3">
           <SortableContext items={actIds} strategy={verticalListSortingStrategy}>
             {draft.actions.map((act, i) => (

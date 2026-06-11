@@ -37,6 +37,14 @@ export const ZONE_THEME: Record<
   },
 };
 
+export function zoneLabelClass(zone: EditorZone): string {
+  return `text-[10px] font-bold uppercase tracking-wider ${ZONE_THEME[zone].headerText}`;
+}
+
+export function zoneSectionHeadingClass(zone: EditorZone): string {
+  return `mb-2 text-xs font-bold uppercase tracking-wide ${ZONE_THEME[zone].headerText}`;
+}
+
 export function zoneFocusClass(zone: EditorZone, focused: boolean): string {
   const theme = ZONE_THEME[zone];
   if (!focused) {

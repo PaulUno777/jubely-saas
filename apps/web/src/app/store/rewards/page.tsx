@@ -61,10 +61,19 @@ export default function StoreRewardsPage() {
   };
 
   return (
-    <MerchantPageShell title={t("title")} context={headerContext} className="space-y-6">
+    <MerchantPageShell
+      title={t("title")}
+      context={headerContext}
+      className="space-y-6"
+    >
       <div className="flex flex-wrap items-end justify-between gap-4">
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-        <Button type="button" size="sm" className="gap-1.5" onClick={openCreate}>
+        <Button
+          type="button"
+          size="sm"
+          className="gap-1.5"
+          onClick={openCreate}
+        >
           <Plus size={14} />
           {t("create")}
         </Button>
@@ -77,15 +86,16 @@ export default function StoreRewardsPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         {rewards.map((reward) => (
-          <Card
-            key={reward.id}
-            className={reward.active ? "" : "opacity-60"}
-          >
+          <Card key={reward.id} className={reward.active ? "" : "opacity-60"}>
             <CardContent className="flex gap-4 p-5">
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-[14px] bg-[var(--g0,#FBF0D4)] text-[var(--g4,#6B4510)]">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-[14px] bg-(--g0,#FBF0D4) text-(--g4,#6B4510)">
                 {reward.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={reward.image_url} alt="" className="size-12 rounded-[14px] object-cover" />
+                  <img
+                    src={reward.image_url}
+                    alt=""
+                    className="size-12 rounded-[14px] object-cover"
+                  />
                 ) : (
                   <Gift size={22} />
                 )}
@@ -93,20 +103,27 @@ export default function StoreRewardsPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="font-serif text-xl font-medium italic">{reward.name}</h3>
+                    <h3 className="font-serif text-xl font-medium italic">
+                      {reward.name}
+                    </h3>
                     <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
                       {reward.description || "—"}
                     </p>
                   </div>
                   <div className="flex gap-1">
-                    <Button type="button" variant="ghost" size="icon" onClick={() => openEdit(reward)}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEdit(reward)}
+                    >
                       <Pencil size={14} />
                     </Button>
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3">
                   <div>
-                    <div className="font-mono text-base font-semibold text-[var(--reward,#C89B3C)]">
+                    <div className="font-mono text-base font-semibold text-(--reward,#C89B3C)">
                       {reward.point_cost.toLocaleString()}
                     </div>
                     <div className="text-[10px] tracking-wider text-muted-foreground uppercase">
@@ -123,7 +140,10 @@ export default function StoreRewardsPage() {
                       checked={reward.active}
                       disabled={toggleMut.isPending}
                       onChange={(e) =>
-                        toggleMut.mutate({ id: reward.id, active: e.target.checked })
+                        toggleMut.mutate({
+                          id: reward.id,
+                          active: e.target.checked,
+                        })
                       }
                     />
                     {t("toggleActive")}
@@ -137,7 +157,7 @@ export default function StoreRewardsPage() {
         <button
           type="button"
           onClick={openCreate}
-          className="flex min-h-29 items-center justify-center rounded-2xl border border-dashed border-border bg-[var(--surface-2,#F5F0E8)] p-6 text-center transition-colors hover:bg-muted/50"
+          className="flex min-h-29 items-center justify-center rounded-2xl border border-dashed border-border bg-(--surface-2,#F5F0E8) p-6 text-center transition-colors hover:bg-muted/50"
         >
           <div>
             <div className="mx-auto mb-2 flex size-11 items-center justify-center rounded-xl bg-background">

@@ -91,6 +91,7 @@ export const simulateRulesWireSchema = z.object({
 
 export const validateRulesWireSchema = z.object({
   draft_rules: z.array(loyaltyRuleSchema).optional(),
+  exclude_rule_id: z.string().uuid().optional(),
 });
 
 export const ruleTraceEntrySchema = z.object({
